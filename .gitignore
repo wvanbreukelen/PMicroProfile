@@ -1,0 +1,10 @@
+kernels/*
+qemu/*
+fedora/*
+debian/*
+debian_small/*
+
+!/fedora/*.sh
+!/debian/*.sh
+!/debian_small/*.sh
+!/debian_small/image/*.sh
