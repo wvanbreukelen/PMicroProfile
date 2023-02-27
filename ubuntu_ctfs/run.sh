@@ -1,4 +1,5 @@
 qemu-system-x86_64 \
+	-s \
 	-cpu host \
 	-enable-kvm \
 	-smp cores=16 \
