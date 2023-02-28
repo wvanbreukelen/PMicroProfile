@@ -1,0 +1,1 @@
+cmd_drivers/rtc/built-in.a := rm -f drivers/rtc/built-in.a; ar cDPrST drivers/rtc/built-in.a drivers/rtc/lib.o drivers/rtc/systohc.o drivers/rtc/class.o drivers/rtc/interface.o drivers/rtc/nvmem.o drivers/rtc/dev.o drivers/rtc/proc.o drivers/rtc/sysfs.o drivers/rtc/rtc-mc146818-lib.o drivers/rtc/rtc-cmos.o

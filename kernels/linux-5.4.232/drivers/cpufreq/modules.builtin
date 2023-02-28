@@ -1,0 +1,4 @@
+drivers/cpufreq/cpufreq_performance.ko
+drivers/cpufreq/cpufreq_userspace.ko
+drivers/cpufreq/cpufreq_ondemand.ko
+drivers/cpufreq/acpi-cpufreq.ko

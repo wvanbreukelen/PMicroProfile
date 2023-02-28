@@ -1,0 +1,12 @@
+drivers/usb/class/usblp.ko
+drivers/usb/common/usb-common.ko
+drivers/usb/core/usbcore.ko
+drivers/usb/host/ehci-hcd.ko
+drivers/usb/host/ehci-pci.ko
+drivers/usb/host/ohci-hcd.ko
+drivers/usb/host/ohci-pci.ko
+drivers/usb/host/uhci-hcd.ko
+drivers/usb/host/xhci-hcd.ko
+drivers/usb/host/xhci-pci.ko
+drivers/usb/mon/usbmon.ko
+drivers/usb/storage/usb-storage.ko

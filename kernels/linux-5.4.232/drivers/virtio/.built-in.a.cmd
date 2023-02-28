@@ -1,0 +1,1 @@
+cmd_drivers/virtio/built-in.a := rm -f drivers/virtio/built-in.a; ar cDPrST drivers/virtio/built-in.a drivers/virtio/virtio.o drivers/virtio/virtio_ring.o drivers/virtio/virtio_mmio.o drivers/virtio/virtio_pci_modern.o drivers/virtio/virtio_pci_common.o drivers/virtio/virtio_pci_legacy.o drivers/virtio/virtio_balloon.o drivers/virtio/virtio_input.o

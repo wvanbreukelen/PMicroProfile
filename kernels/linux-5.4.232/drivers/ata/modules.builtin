@@ -1,0 +1,7 @@
+drivers/ata/libata.ko
+drivers/ata/ahci.ko
+drivers/ata/libahci.ko
+drivers/ata/ata_piix.ko
+drivers/ata/pata_amd.ko
+drivers/ata/pata_oldpiix.ko
+drivers/ata/pata_sch.ko

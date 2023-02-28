@@ -1,0 +1,1 @@
+cmd_drivers/firmware/efi/libstub/lib.a := rm -f drivers/firmware/efi/libstub/lib.a; ar cDPrsT drivers/firmware/efi/libstub/lib.a drivers/firmware/efi/libstub/efi-stub-helper.o drivers/firmware/efi/libstub/gop.o drivers/firmware/efi/libstub/secureboot.o drivers/firmware/efi/libstub/tpm.o

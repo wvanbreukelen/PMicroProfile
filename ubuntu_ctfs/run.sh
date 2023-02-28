@@ -1,14 +1,13 @@
-qemu-system-x86_64 \
-	-s \
+qemu-system-x86_64\
 	-cpu host \
 	-enable-kvm \
-	-smp cores=16 \
+	-smp cores=1 \
 	-drive file=ubuntu.img.qcow2,format=qcow2 \
-	-append "console=ttyS0 root=/dev/sda5 earlyprintk=serial net.ifnames=0 nokaslr " \
+	-append "root=/dev/sda5 earlyprintk=serial net.ifnames=0 nokaslr " \
 	-kernel $1/arch/x86/boot/bzImage \
-	-machine pc,accel=kvm,nvdimm=on,nvdimm-persistence=cpu \
+	-machine pc,nvdimm=on \
 	-m 4G,slots=2,maxmem=32G \
-	-object memory-backend-file,id=mem1,mem-path=nvdimm0,share=off,size=24G,pmem=on,align=2M \
+	-object memory-backend-file,id=mem1,mem-path=./nvdimm0,share=off,pmem=on,size=4G,align=2M \
 	-device nvdimm,memdev=mem1,id=nv1,label-size=256K \
 	-net user,host=10.0.2.10,hostfwd=tcp:127.0.0.1:2222-:22 \
 	-net nic,model=e1000 \

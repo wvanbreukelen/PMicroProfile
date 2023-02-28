@@ -1,0 +1,2 @@
+drivers/edac/edac_core.ko
+drivers/edac/edac_mce_amd.ko

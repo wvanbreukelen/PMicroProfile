@@ -1,0 +1,1 @@
+cmd_arch/x86/built-in.a := rm -f arch/x86/built-in.a; ar cDPrST arch/x86/built-in.a arch/x86/entry/built-in.a arch/x86/events/built-in.a arch/x86/kvm/built-in.a arch/x86/realmode/built-in.a arch/x86/kernel/built-in.a arch/x86/mm/built-in.a arch/x86/crypto/built-in.a arch/x86/ia32/built-in.a arch/x86/platform/built-in.a arch/x86/net/built-in.a

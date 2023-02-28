@@ -1,0 +1,48 @@
+!<thin>
+//                                              388       `
+input.o/
+input-compat.o/
+input-mt.o/
+input-poller.o/
+ff-core.o/
+ff-memless.o/
+input-polldev.o/
+sparse-keymap.o/
+input-leds.o/
+evdev.o/
+keyboard/atkbd.o/
+mouse/psmouse-base.o/
+mouse/synaptics.o/
+mouse/focaltech.o/
+mouse/alps.o/
+mouse/byd.o/
+mouse/logips2pp.o/
+mouse/lifebook.o/
+mouse/trackpoint.o/
+mouse/cypress_ps2.o/
+mouse/vmmouse.o/
+mouse/psmouse-smbus.o/
+touchscreen/of_touchscreen.o/
+/0              0           0     0     644     417928    `
+/9              0           0     0     644     106384    `
+/25             0           0     0     644     161936    `
+/37             0           0     0     644     151136    `
+/53             0           0     0     644     168792    `
+/64             0           0     0     644     187240    `
+/78             0           0     0     644     168624    `
+/95             0           0     0     644     156848    `
+/112            0           0     0     644     157600    `
+/126            0           0     0     644     274056    `
+/135            0           0     0     644     283072    `
+/153            0           0     0     644     303472    `
+/175            0           0     0     644     287776    `
+/194            0           0     0     644     158320    `
+/213            0           0     0     644     327752    `
+/227            0           0     0     644     157792    `
+/240            0           0     0     644     153840    `
+/259            0           0     0     644     158608    `
+/277            0           0     0     644     190832    `
+/297            0           0     0     644     186760    `
+/318            0           0     0     644     171480    `
+/335            0           0     0     644     174240    `
+/358            0           0     0     644     154656    `

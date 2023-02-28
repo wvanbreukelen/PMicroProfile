@@ -1,0 +1,10 @@
+!<thin>
+//                                              114       `
+supply/power_supply_core.o/
+supply/power_supply_sysfs.o/
+supply/power_supply_leds.o/
+supply/power_supply_hwmon.o/
+/0              0           0     0     644     219112    `
+/28             0           0     0     644     127416    `
+/57             0           0     0     644     94072     `
+/85             0           0     0     644     118624    `

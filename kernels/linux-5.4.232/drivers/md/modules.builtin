@@ -1,0 +1,6 @@
+drivers/md/md-mod.ko
+drivers/md/dm-mod.ko
+drivers/md/dm-mirror.ko
+drivers/md/dm-log.ko
+drivers/md/dm-region-hash.ko
+drivers/md/dm-zero.ko
