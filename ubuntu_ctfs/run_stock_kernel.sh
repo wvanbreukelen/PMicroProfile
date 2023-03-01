@@ -1,4 +1,4 @@
-sudo /home/wiebe/Downloads/qemu-7.2.0/build/qemu-system-x86_64 \
+/home/wiebe/Downloads/qemu-7.2.0/build/qemu-system-x86_64 \
 	-cpu host\
 	-enable-kvm \
 	-smp cores=16 \

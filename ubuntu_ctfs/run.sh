@@ -1,7 +1,7 @@
 qemu-system-x86_64\
 	-cpu host \
 	-enable-kvm \
-	-smp cores=1 \
+	-smp cores=4 \
 	-drive file=ubuntu.img.qcow2,format=qcow2 \
 	-append "root=/dev/sda5 earlyprintk=serial net.ifnames=0 nokaslr " \
 	-kernel $1/arch/x86/boot/bzImage \
