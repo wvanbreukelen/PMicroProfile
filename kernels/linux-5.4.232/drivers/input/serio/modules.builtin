@@ -1,0 +1,4 @@
+drivers/input/serio/serio.ko
+drivers/input/serio/i8042.ko
+drivers/input/serio/serport.ko
+drivers/input/serio/libps2.ko

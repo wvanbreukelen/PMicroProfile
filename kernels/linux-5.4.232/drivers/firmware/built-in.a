@@ -1,0 +1,37 @@
+!<thin>
+//                                              252       `
+dmi_scan.o/
+dmi-id.o/
+memmap.o/
+efi/efi-bgrt.o/
+efi/efi.o/
+efi/vars.o/
+efi/reboot.o/
+efi/memattr.o/
+efi/tpm.o/
+efi/capsule.o/
+efi/memmap.o/
+efi/efivars.o/
+efi/esrt.o/
+efi/runtime-map.o/
+efi/runtime-wrappers.o/
+efi/libstub/lib-ksyms.o/
+efi/earlycon.o/
+
+/0              0           0     0     644     222856    `
+/12             0           0     0     644     118976    `
+/22             0           0     0     644     161760    `
+/32             0           0     0     644     23608     `
+/48             0           0     0     644     230552    `
+/59             0           0     0     644     221176    `
+/71             0           0     0     644     24520     `
+/85             0           0     0     644     137816    `
+/100            0           0     0     644     37984     `
+/111            0           0     0     644     145384    `
+/126            0           0     0     644     138136    `
+/140            0           0     0     644     194000    `
+/155            0           0     0     644     164688    `
+/167            0           0     0     644     147888    `
+/186            0           0     0     644     302136    `
+/210            0           0     0     644     760       `
+/235            0           0     0     644     160096    `

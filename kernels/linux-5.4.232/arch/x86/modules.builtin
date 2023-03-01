@@ -1,0 +1,9 @@
+arch/x86/events/rapl.ko
+arch/x86/events/intel/intel-uncore.ko
+arch/x86/events/intel/intel-cstate.ko
+arch/x86/kernel/msr.ko
+arch/x86/kernel/cpuid.ko
+arch/x86/kvm/kvm.ko
+arch/x86/kvm/kvm-intel.ko
+arch/x86/kvm/kvm-amd.ko
+arch/x86/platform/intel/iosf_mbi.ko

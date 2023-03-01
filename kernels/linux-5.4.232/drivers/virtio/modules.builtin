@@ -1,0 +1,6 @@
+drivers/virtio/virtio.ko
+drivers/virtio/virtio_ring.ko
+drivers/virtio/virtio_mmio.ko
+drivers/virtio/virtio_pci.ko
+drivers/virtio/virtio_balloon.ko
+drivers/virtio/virtio_input.ko

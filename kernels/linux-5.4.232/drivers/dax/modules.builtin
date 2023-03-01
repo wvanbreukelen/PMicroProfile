@@ -1,0 +1,5 @@
+drivers/dax/dax.ko
+drivers/dax/device_dax.ko
+drivers/dax/kmem.ko
+drivers/dax/pmem/dax_pmem.ko
+drivers/dax/pmem/dax_pmem_core.ko

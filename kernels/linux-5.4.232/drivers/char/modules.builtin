@@ -1,0 +1,9 @@
+drivers/char/virtio_console.ko
+drivers/char/nvram.ko
+drivers/char/agp/agpgart.ko
+drivers/char/agp/amd64-agp.ko
+drivers/char/agp/intel-agp.ko
+drivers/char/agp/intel-gtt.ko
+drivers/char/hw_random/rng-core.ko
+drivers/char/hw_random/via-rng.ko
+drivers/char/hw_random/virtio-rng.ko

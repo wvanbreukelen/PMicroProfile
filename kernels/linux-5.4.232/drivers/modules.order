@@ -1,0 +1,3 @@
+drivers/net/dummy.ko
+drivers/net/vxlan.ko
+drivers/thermal/intel/x86_pkg_temp_thermal.ko

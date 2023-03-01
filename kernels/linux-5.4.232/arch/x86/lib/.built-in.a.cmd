@@ -1,0 +1,1 @@
+cmd_arch/x86/lib/built-in.a := rm -f arch/x86/lib/built-in.a; ar cDPrST arch/x86/lib/built-in.a arch/x86/lib/msr-smp.o arch/x86/lib/cache-smp.o arch/x86/lib/msr.o arch/x86/lib/msr-reg.o arch/x86/lib/msr-reg-export.o arch/x86/lib/hweight.o arch/x86/lib/iomem.o arch/x86/lib/iomap_copy_64.o arch/x86/lib/lib-ksyms.o

@@ -1,0 +1,9 @@
+drivers/input/input-core.ko
+drivers/input/ff-memless.ko
+drivers/input/input-polldev.ko
+drivers/input/sparse-keymap.ko
+drivers/input/input-leds.ko
+drivers/input/evdev.ko
+drivers/input/keyboard/atkbd.ko
+drivers/input/mouse/psmouse.ko
+drivers/input/touchscreen/of_touchscreen.ko

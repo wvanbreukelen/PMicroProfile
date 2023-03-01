@@ -1,0 +1,1 @@
+cmd_drivers/net/ethernet/intel/e1000/built-in.a := rm -f drivers/net/ethernet/intel/e1000/built-in.a; ar cDPrST drivers/net/ethernet/intel/e1000/built-in.a drivers/net/ethernet/intel/e1000/e1000_main.o drivers/net/ethernet/intel/e1000/e1000_hw.o drivers/net/ethernet/intel/e1000/e1000_ethtool.o drivers/net/ethernet/intel/e1000/e1000_param.o

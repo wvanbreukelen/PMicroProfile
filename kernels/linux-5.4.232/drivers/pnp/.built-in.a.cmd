@@ -1,0 +1,1 @@
+cmd_drivers/pnp/built-in.a := rm -f drivers/pnp/built-in.a; ar cDPrST drivers/pnp/built-in.a drivers/pnp/core.o drivers/pnp/card.o drivers/pnp/driver.o drivers/pnp/resource.o drivers/pnp/manager.o drivers/pnp/support.o drivers/pnp/interface.o drivers/pnp/quirks.o drivers/pnp/system.o drivers/pnp/pnpacpi/built-in.a

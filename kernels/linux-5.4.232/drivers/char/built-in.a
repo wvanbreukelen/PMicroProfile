@@ -1,0 +1,37 @@
+!<thin>
+//                                              254       `
+mem.o/
+random.o/
+misc.o/
+virtio_console.o/
+hpet.o/
+nvram.o/
+hw_random/core.o/
+hw_random/via-rng.o/
+hw_random/virtio-rng.o/
+agp/backend.o/
+agp/frontend.o/
+agp/generic.o/
+agp/isoch.o/
+agp/compat_ioctl.o/
+agp/amd64-agp.o/
+agp/intel-agp.o/
+agp/intel-gtt.o/
+
+/0              0           0     0     644     250504    `
+/7              0           0     0     644     362184    `
+/17             0           0     0     644     160576    `
+/25             0           0     0     644     416032    `
+/43             0           0     0     644     269816    `
+/51             0           0     0     644     208736    `
+/60             0           0     0     644     210288    `
+/78             0           0     0     644     34656     `
+/99             0           0     0     644     164200    `
+/123            0           0     0     644     191992    `
+/138            0           0     0     644     227600    `
+/154            0           0     0     644     279312    `
+/169            0           0     0     644     172552    `
+/182            0           0     0     644     158008    `
+/202            0           0     0     644     209432    `
+/219            0           0     0     644     221408    `
+/236            0           0     0     644     262560    `

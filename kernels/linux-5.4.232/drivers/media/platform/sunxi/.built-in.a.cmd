@@ -1,0 +1,1 @@
+cmd_drivers/media/platform/sunxi/built-in.a := rm -f drivers/media/platform/sunxi/built-in.a; ar cDPrST drivers/media/platform/sunxi/built-in.a drivers/media/platform/sunxi/sun4i-csi/built-in.a drivers/media/platform/sunxi/sun6i-csi/built-in.a

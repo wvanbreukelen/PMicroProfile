@@ -1,0 +1,5 @@
+drivers/scsi/scsi_mod.ko
+drivers/scsi/scsi_transport_spi.ko
+drivers/scsi/sd_mod.ko
+drivers/scsi/sr_mod.ko
+drivers/scsi/sg.ko
