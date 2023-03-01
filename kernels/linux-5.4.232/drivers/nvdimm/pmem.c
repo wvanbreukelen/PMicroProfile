@@ -119,7 +119,7 @@ static void write_pmem(void *pmem_addr, struct page *page,
 	}
 }
 
-static blk_status_t read_pmem(struct page *page, unsigned int off,
+blk_status_t read_pmem(struct page *page, unsigned int off,
 		void *pmem_addr, unsigned int len)
 {
 	unsigned int chunk;
@@ -271,7 +271,7 @@ __weak long __pmem_direct_access(struct pmem_device *pmem, pgoff_t pgoff,
 	if (unlikely(pmem->bb.count))
 		return nr_pages;
 
-	printk("pmem->virt_addr: %p, pgoff: %p pgoff physical: %p, pmem->data_offset: %p, offset: %p\n", pmem->virt_addr, pgoff, PFN_PHYS(pgoff), pmem->data_offset, offset);
+	//printk("pmem->virt_addr: %p, pgoff: %p pgoff physical: %p, pmem->data_offset: %p, offset: %p\n", pmem->virt_addr, pgoff, PFN_PHYS(pgoff), pmem->data_offset, offset);
 	//mmiotrace_ioremap(PHYS_PFN(pmem->size - pmem->pfn_pad - offset), nr_pages * PAGE_SIZE, pmem->size - pmem->pfn_pad - offset);
 
 	return PHYS_PFN(pmem->size - pmem->pfn_pad - offset);
@@ -283,7 +283,7 @@ static const struct block_device_operations pmem_fops = {
 	.revalidate_disk =	nvdimm_revalidate_disk,
 };
 
-static long pmem_dax_direct_access(struct dax_device *dax_dev,
+long pmem_dax_direct_access(struct dax_device *dax_dev,
 		pgoff_t pgoff, long nr_pages, void **kaddr, pfn_t *pfn)
 {
 	struct pmem_device *pmem = dax_get_private(dax_dev);
