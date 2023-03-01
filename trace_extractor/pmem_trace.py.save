@@ -1,0 +1,45 @@
+from __future__ import print_function
+from bcc import BPF
+from bcc.utils import printb
+
+import binascii
+
+b = BPF(text="""
+#include <uapi/linux/ptrace.h>
+#include <linux/blk-mq.h>
+#include <uapi/linux/virtio_pmem.h>
+#include <linux/libnvdimm.h>
+
+void trace_write(struct pt_regs *ctx, void *pmem_addr) {
+	bpf_trace_printk("W %p \\n", pmem_addr);
+}
+
+void trace_read(struct pt_regs *ctx, void *pmem_addr) {
+	bpf_trace_printk("R %p \\n", pmem_addr);
+}
+""")
+
+if BPF.get_kprobe_functions(b'write_pmem'):
+	b.attach_kprobe(event="write_pmem", fn_name="trace_write")
+	print("Found write_pmem function!")
+
+if BPF.get_kprobe_functions(b'read_pmem'):
+	b.attach_kprobe(event="read_pmem", fn_name="trace_read")
+	print("Found read_pmem function!")
+
+
+
+while 1:
+	try:
+		(task, pid, cpu, flags, ts, msg) = b.trace_fields()
+		(op, pmem_addr) = msg.split()
+
+		if op == b'W':
+			print("
+WRITE {}".format(hex(pmem_addr)))
+		elif op == b'R':
+			print(f"READ {pmem_addr}")
+		else:
+			print(f"UNKNOWN OP {op}")
+	except KeyboardInterrupt:
+		exit()
