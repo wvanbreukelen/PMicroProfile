@@ -11,7 +11,7 @@ total_read = 0
 total_written = 0
 sector_stats = {}
 
-sector_group_size = 100000
+sector_group_size = 10000000
 
 if len(sys.argv) > 1:
 	trace_filename = str(sys.argv[1])
@@ -36,6 +36,7 @@ with open(trace_filename, 'r') as f:
 		    op_type = str(tokens[0]).strip()
 		    cpu_core = int(tokens[1])
 		    sector = int(tokens[2][2:-1], 16)  # convert hex string to int
+		   
 		    size = int(tokens[3][2:-1])
 		except ValueError:
 		    print(f"Error: could not parse line '{line.strip()}'")
@@ -55,15 +56,17 @@ with open(trace_filename, 'r') as f:
 			sector_stats[sector_group] = {'read': {'count': 0, 'size': 0}, 'write': {'count': 0, 'size': 0}}
 		if op_type == 'READ':
 			sector_stats[sector_group]['read']['count'] += 1
-			sector_stats[sector_group]['read']['size'] += (size * 512)
-			total_read += (size * 512)
+			sector_stats[sector_group]['read']['size'] += size
+			total_read += size
 		elif op_type == 'WRITE':
 			sector_stats[sector_group]['write']['count'] += 1
-			sector_stats[sector_group]['write']['size'] += (size * 512)
-			total_written += (size * 512)
+			sector_stats[sector_group]['write']['size'] += size
+			total_written += size
 
-print(f"Total amount of data read: {total_read} bytes")
-print(f"Total amount of data written: {total_written} bytes")
+
+
+print(f"Total amount of data read: {total_read} bytes ({round(total_read / (1024 ** 2), 2)} MiB, {round(total_read / (1024 ** 1), 2)} GiB)")
+print(f"Total amount of data written: {total_written} bytes ({round(total_written / (1024 ** 2), 2)} MiB, {round(total_written / (1024 ** 3), 2)} GiB)")
 
 # get the list of unique CPU core IDs and sort them in ascending order
 cores = sorted(set(reads_per_core.keys()) | set(writes_per_core.keys()))
@@ -113,7 +116,7 @@ ax.plot(x_labels, read_counts, label='Reads')
 ax.plot(x_labels2, write_counts, label='Writes')
 
 # add the x-axis label, y-axis label and legend
-ax.set_xlabel(f'Device Sector')
+ax.set_xlabel(f'Device Address')
 ax.set_ylabel('Frequency')
 ax.legend()
 
@@ -132,8 +135,8 @@ ax.plot(sector_groups, read_sizes, label='Reads')
 ax.plot(sector_groups, write_sizes, label='Writes')
 
 # add the x-axis label, y-axis label and legend
-ax.set_xlabel(f'Device Sector')
-ax.set_ylabel('Average Size')
+ax.set_xlabel(f'Device Address')
+ax.set_ylabel('Average Request Size')
 ax.legend()
 plt.show()
 
