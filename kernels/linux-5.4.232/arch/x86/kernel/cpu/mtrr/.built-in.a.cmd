@@ -1,1 +1,0 @@
-cmd_arch/x86/kernel/cpu/mtrr/built-in.a := rm -f arch/x86/kernel/cpu/mtrr/built-in.a; ar cDPrST arch/x86/kernel/cpu/mtrr/built-in.a arch/x86/kernel/cpu/mtrr/mtrr.o arch/x86/kernel/cpu/mtrr/if.o arch/x86/kernel/cpu/mtrr/generic.o arch/x86/kernel/cpu/mtrr/cleanup.o
