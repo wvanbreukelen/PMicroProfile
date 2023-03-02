@@ -1,6 +1,7 @@
 import sys
 import os
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
 
 trace_filename = ""
@@ -114,37 +115,54 @@ dax_counts = [sector_stats[sg]['dax']['count'] for sg in sector_groups]
 x_labels = np.array(sector_groups) * sector_group_size + (sector_group_size / 2)
 
 
+
+
 # create the line plot
+
 fig, ax = plt.subplots()
+
+
 ax.plot(x_labels, read_counts, label='Reads')
 ax.plot(x_labels, write_counts, label='Writes')
 ax.plot(x_labels, dax_counts, label='DAX')
 
+
+plt.xticks(np.arange(0, max(x_labels), int("50000000", 16)))
+#plt.xlim([0, int("FFFFFFFF", 16)])
+
+xlabels = map(lambda t: '0x%08X' % int(t), ax.get_xticks())    
+ax.set_xticklabels(xlabels);
+
 # add the x-axis label, y-axis label and legend
-ax.set_xlabel(f'Virtual Address')
+ax.set_xlabel(f'Namespace Virtual Address')
 ax.set_ylabel('Number of operations')
 
-ax.set_title('PMEM Operations Varmail EXT4-DAX')
+ax.set_title('PMEM (24 GiB; QEMU) Operations Varmail SplitFS')
 ax.legend()
+
 
 
 plt.show()
 
-# create a list of average read sizes and write sizes for each sector group
-read_sizes = [sector_stats[sg]['read']['size'] / sector_stats[sg]['read']['count']
-              if sector_stats[sg]['read']['count'] > 0 else 0 for sg in sector_groups]
-write_sizes = [sector_stats[sg]['write']['size'] / sector_stats[sg]['write']['count']
-               if sector_stats[sg]['write']['count'] > 0 else 0 for sg in sector_groups]
 
-# create the line plot
+# create a list of write sizes and read sizes for each sector group
+read_sizes = [sector_stats[sg]['read']['size'] / sector_stats[sg]['read']['count'] if sector_stats[sg]['read']['count'] > 0 else 0 for sg in sector_groups]
+write_sizes = [sector_stats[sg]['write']['size'] / sector_stats[sg]['write']['count'] if sector_stats[sg]['write']['count'] > 0 else 0 for sg in sector_groups]
+
+# create the x-axis labels as integers from 0 to the number of sector groups
+x_labels = np.arange(len(sector_groups))
+
+# create the boxplot
 fig, ax = plt.subplots()
-ax.plot(x_labels, read_sizes, label='Reads')
-ax.plot(x_labels, write_sizes, label='Writes')
+ax.boxplot([read_sizes, write_sizes], labels=['Reads', 'Writes'])
 
-# add the x-axis label, y-axis label and legend
-ax.set_xlabel(f'Device Address')
-ax.set_ylabel('Average Request Size (bytes)')
-ax.legend()
+# add the x-axis ticks and labels
+
+# add the y-axis label and title
+ax.set_ylabel('Average request size (bytes)')
+ax.set_title('Average Request Size of Reads and Writes')
+
+# show the plot
 plt.show()
 
 
