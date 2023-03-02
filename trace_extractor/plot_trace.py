@@ -11,7 +11,7 @@ total_read = 0
 total_written = 0
 sector_stats = {}
 
-sector_group_size = 10000000
+sector_group_size = 30000000
 
 if len(sys.argv) > 1:
 	trace_filename = str(sys.argv[1])
@@ -28,16 +28,15 @@ with open(trace_filename, 'r') as f:
 	for line in f:
 		tokens = line.split()
 
-		if len(tokens) != 4:
-		    print(f"Error: line '{line.strip()}' has {len(tokens)} tokens instead of 4")
-		    continue
-
 		try:
 		    op_type = str(tokens[0]).strip()
 		    cpu_core = int(tokens[1])
-		    sector = int(tokens[2][2:-1], 16)  # convert hex string to int
+		    pmem_addr = int(tokens[2][2:-1], 16)  # convert hex string to int
 		   
-		    size = int(tokens[3][2:-1])
+		    if len(tokens) > 3:
+		    	size = int(tokens[3][2:-1])
+		    else:
+		    	size = 0
 		except ValueError:
 		    print(f"Error: could not parse line '{line.strip()}'")
 		    continue
@@ -51,9 +50,9 @@ with open(trace_filename, 'r') as f:
 				writes_per_core[cpu_core] = 0
 			writes_per_core[cpu_core] += 1
 		
-		sector_group = sector // sector_group_size
+		sector_group = pmem_addr // sector_group_size
 		if sector_group not in sector_stats:
-			sector_stats[sector_group] = {'read': {'count': 0, 'size': 0}, 'write': {'count': 0, 'size': 0}}
+			sector_stats[sector_group] = {'read': {'count': 0, 'size': 0}, 'write': {'count': 0, 'size': 0}, 'dax': {'count': 0}}
 		if op_type == 'READ':
 			sector_stats[sector_group]['read']['count'] += 1
 			sector_stats[sector_group]['read']['size'] += size
@@ -62,11 +61,14 @@ with open(trace_filename, 'r') as f:
 			sector_stats[sector_group]['write']['count'] += 1
 			sector_stats[sector_group]['write']['size'] += size
 			total_written += size
+		elif op_type == 'DAX':
+			sector_stats[sector_group]['dax']['count'] += 1
 
 
 
-print(f"Total amount of data read: {total_read} bytes ({round(total_read / (1024 ** 2), 2)} MiB, {round(total_read / (1024 ** 1), 2)} GiB)")
+print(f"Total amount of data read: {total_read} bytes ({round(total_read / (1024 ** 2), 2)} MiB, {round(total_read / (1024 ** 3), 2)} GiB)")
 print(f"Total amount of data written: {total_written} bytes ({round(total_written / (1024 ** 2), 2)} MiB, {round(total_written / (1024 ** 3), 2)} GiB)")
+print(f"DAX operations: {sum(sector['dax']['count'] for sector in sector_stats.values())}")
 
 # get the list of unique CPU core IDs and sort them in ascending order
 cores = sorted(set(reads_per_core.keys()) | set(writes_per_core.keys()))
@@ -91,6 +93,7 @@ ax.set_xticklabels(cores)
 
 # add the y-axis label and legend
 ax.set_ylabel('Number of operations')
+ax.set_xlabel('CPU core')
 ax.legend()
 
 # ensure that the bars do not overlap
@@ -105,19 +108,23 @@ sector_groups = sorted(sector_stats.keys())
 # create a list of write counts for each sector group
 read_counts = [sector_stats[sg]['read']['count'] for sg in sector_groups]
 write_counts = [sector_stats[sg]['write']['count'] for sg in sector_groups]
+dax_counts = [sector_stats[sg]['dax']['count'] for sg in sector_groups]
 
 
 x_labels = np.array(sector_groups) * sector_group_size + (sector_group_size / 2)
-x_labels2 = np.array(sector_groups) * sector_group_size + (sector_group_size / 2)
+
 
 # create the line plot
 fig, ax = plt.subplots()
 ax.plot(x_labels, read_counts, label='Reads')
-ax.plot(x_labels2, write_counts, label='Writes')
+ax.plot(x_labels, write_counts, label='Writes')
+ax.plot(x_labels, dax_counts, label='DAX')
 
 # add the x-axis label, y-axis label and legend
-ax.set_xlabel(f'Device Address')
-ax.set_ylabel('Frequency')
+ax.set_xlabel(f'Virtual Address')
+ax.set_ylabel('Number of operations')
+
+ax.set_title('PMEM Operations Varmail EXT4-DAX')
 ax.legend()
 
 
@@ -131,12 +138,12 @@ write_sizes = [sector_stats[sg]['write']['size'] / sector_stats[sg]['write']['co
 
 # create the line plot
 fig, ax = plt.subplots()
-ax.plot(sector_groups, read_sizes, label='Reads')
-ax.plot(sector_groups, write_sizes, label='Writes')
+ax.plot(x_labels, read_sizes, label='Reads')
+ax.plot(x_labels, write_sizes, label='Writes')
 
 # add the x-axis label, y-axis label and legend
 ax.set_xlabel(f'Device Address')
-ax.set_ylabel('Average Request Size')
+ax.set_ylabel('Average Request Size (bytes)')
 ax.legend()
 plt.show()
 

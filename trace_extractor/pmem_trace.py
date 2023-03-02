@@ -48,8 +48,8 @@ void trace_pmem_req(struct pt_regs *ctx, void* pmem_device, struct page *page, u
 }
 
 //void trace_dax_request(struct pt_regs *ctx, struct dax_device *dax_dev, pgoff_t pgoff, long nr_pages, void **kaddr) {
-void trace_dax_request(struct pt_regs *ctx, void** kaddr, void* addr, long nr_pages) {	
-	bpf_trace_printk("DAX %p %lu\\n", addr, nr_pages);
+void trace_dax_request(struct pt_regs *ctx, resource_size_t offset, void* pmem_virt_addr, void **kaddr) {	
+	bpf_trace_printk("DAX %p\\n", (pmem_virt_addr + offset));
 }
 """)
 
@@ -99,9 +99,9 @@ while 1:
 				trace_file.write(f"READ {cpu} {pmem_addr} {length}\n")
 			#print(f"READ {cpu} {pmem_addr} {off}")
 		elif op == b'DAX':
-			(op, map_addr, num_pages) = msg.split()
-			trace_file.write(f"DAX {cpu} {map_addr} {num_pages}\n")
-			print(f"DAX {cpu} {map_addr} {num_pages}")
+			(op, pmem_addr) = msg.split()
+			trace_file.write(f"DAX {cpu} {pmem_addr}\n")
+			#print(f"DAX {cpu} {map_addr} {num_pages}")
 		elif op == b'REQ':
 			(op, op_r_or_w, sector, length) = msg.split()
 			
