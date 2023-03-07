@@ -169,10 +169,18 @@ fig, ax = plt.subplots()
 
 ax.set_yscale('log')
 
+
 ax.plot(x_labels, read_counts, label='Reads')
 ax.plot(x_labels, write_counts, label='Writes')
 ax.plot(x_labels, dax_counts, label='DAX')
 ax.plot(x_labels, write_counts_mmio, label='Write MMIO')
+
+
+plt.xticks(np.arange(0, max(x_labels), int("50000000", 16)))
+#plt.xlim([0, int("FFFFFFFF", 16)])
+
+xlabels = map(lambda t: '0x%08X' % int(t), ax.get_xticks())    
+ax.set_xticklabels(xlabels);
 
 
 plt.xticks(np.arange(0, max(x_labels), int("50000000", 16)))
