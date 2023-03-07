@@ -99,13 +99,13 @@ static blk_status_t pmem_clear_poison(struct pmem_device *pmem,
 	return rc;
 }
 
-static void write_pmem(void *pmem_addr, struct page *page,
+void write_pmem(void *pmem_addr, struct page *page,
 		unsigned int off, unsigned int len)
 {
 	unsigned int chunk;
 	void *mem;
 
-	printk("Writing to %p for %u bytes\n", pmem_addr, len);
+	//printk("Writing to %p for %u bytes\n", pmem_addr, len);
 
 	while (len) {
 		mem = kmap_atomic(page);
@@ -126,7 +126,7 @@ blk_status_t read_pmem(struct page *page, unsigned int off,
 	unsigned long rem;
 	void *mem;
 
-	printk("Reading from %p for %u bytes\n", pmem_addr, len);
+	//printk("Reading from %p for %u bytes (page mapped at: %p)\n", pmem_addr, len, kmap(page));
 
 	while (len) {
 		mem = kmap_atomic(page);
@@ -245,6 +245,12 @@ static int pmem_rw_page(struct block_device *bdev, sector_t sector,
 	return blk_status_to_errno(rc);
 }
 
+noinline void set_dax_kaddr(resource_size_t offset, void* pmem_virt_addr, void **kaddr)
+{
+	if (kaddr)
+		*kaddr = pmem_virt_addr + offset;	
+}
+
 /* see "strong" declaration in tools/testing/nvdimm/pmem-dax.c */
 __weak long __pmem_direct_access(struct pmem_device *pmem, pgoff_t pgoff,
 		long nr_pages, void **kaddr, pfn_t *pfn)
@@ -255,11 +261,12 @@ __weak long __pmem_direct_access(struct pmem_device *pmem, pgoff_t pgoff,
 					PFN_PHYS(nr_pages))))
 		return -EIO;
 
-	if (kaddr) {
-		*kaddr = pmem->virt_addr + offset;
-		printk("DAX to address: %p (num pages: %lu)\n", pmem->virt_addr + offset, nr_pages);
+	set_dax_kaddr(offset, pmem->virt_addr, kaddr);
+	// if (kaddr) {
+	// 	*kaddr = pmem->virt_addr + offset;
+	// 	//printk("DAX to address: %p (num pages: %lu)\n", pmem->virt_addr + offset, nr_pages);
 		
-	}
+	// }
 		
 	if (pfn)
 		*pfn = phys_to_pfn_t(pmem->phys_addr + offset, pmem->pfn_flags);
@@ -271,8 +278,10 @@ __weak long __pmem_direct_access(struct pmem_device *pmem, pgoff_t pgoff,
 	if (unlikely(pmem->bb.count))
 		return nr_pages;
 
-	//printk("pmem->virt_addr: %p, pgoff: %p pgoff physical: %p, pmem->data_offset: %p, offset: %p\n", pmem->virt_addr, pgoff, PFN_PHYS(pgoff), pmem->data_offset, offset);
-	//mmiotrace_ioremap(PHYS_PFN(pmem->size - pmem->pfn_pad - offset), nr_pages * PAGE_SIZE, pmem->size - pmem->pfn_pad - offset);
+	printk("pmem->virt_addr: %p, pgoff: %p pgoff physical: %p, pmem->data_offset: %p, offset: %p\n", pmem->virt_addr, pgoff, PFN_PHYS(pgoff), pmem->data_offset, offset);
+	
+	//unmap_kernel_range((unsigned long) pmem->virt_addr + offset, nr_pages * PAGE_SIZE);
+	//mmiotrace_ioremap(pmem->phys_addr + offset, PFN_PHYS(nr_pages), (void __iomem *) pmem->virt_addr + offset);
 
 	return PHYS_PFN(pmem->size - pmem->pfn_pad - offset);
 }
@@ -498,6 +507,8 @@ static int pmem_attach_disk(struct device *dev,
 					  "badblocks");
 	if (!pmem->bb_state)
 		dev_warn(dev, "'badblocks' notification disabled\n");
+
+	mmiotrace_ioremap(pmem->phys_addr, pmem->size, pmem->virt_addr);
 
 	return 0;
 }
