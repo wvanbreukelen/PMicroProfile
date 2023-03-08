@@ -1,1 +1,0 @@
-cmd_drivers/leds/built-in.a := rm -f drivers/leds/built-in.a; ar cDPrST drivers/leds/built-in.a drivers/leds/led-core.o drivers/leds/led-class.o drivers/leds/led-triggers.o drivers/leds/trigger/built-in.a

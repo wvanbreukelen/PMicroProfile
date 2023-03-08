@@ -304,6 +304,9 @@ void *memremap_pages(struct dev_pagemap *pgmap, int nid)
 				PHYS_PFN(res->start),
 				PHYS_PFN(resource_size(res)), pgmap);
 	percpu_ref_get_many(pgmap->ref, pfn_end(pgmap) - pfn_first(pgmap));
+
+	pr_info("memremap_pages initialized region %p (pa: %p) for %lx bytes\n", __va(res->start), PHYS_PFN(res->start), (size_t) PHYS_PFN(resource_size(res)));
+
 	return __va(res->start);
 
  err_add_memory:

@@ -1,3 +1,0 @@
-drivers/dma/virt-dma.ko
-drivers/dma/dw/dw_dmac_core.ko
-drivers/dma/hsu/hsu_dma.ko
