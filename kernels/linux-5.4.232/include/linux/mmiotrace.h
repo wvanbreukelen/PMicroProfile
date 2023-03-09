@@ -9,7 +9,7 @@ struct kmmio_probe;
 struct pt_regs;
 
 typedef void (*kmmio_pre_handler_t)(struct kmmio_probe *,
-				struct pt_regs *, unsigned long addr);
+				struct pt_regs *, unsigned long addr, unsigned long hw_error_code);
 typedef void (*kmmio_post_handler_t)(struct kmmio_probe *,
 				unsigned long condition, struct pt_regs *);
 
@@ -42,7 +42,7 @@ static inline int is_kmmio_active(void)
 }
 
 /* Called from page fault handler. */
-extern int kmmio_handler(struct pt_regs *regs, unsigned long addr);
+extern int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_error_code);
 
 /* Called from ioremap.c */
 extern void mmiotrace_ioremap(resource_size_t offset, unsigned long size,

@@ -38,10 +38,10 @@
  * handled by mmiotrace:
  */
 static nokprobe_inline int
-kmmio_fault(struct pt_regs *regs, unsigned long addr)
+kmmio_fault(struct pt_regs *regs, unsigned long addr, unsigned long hw_error_code)
 {
 	if (unlikely(is_kmmio_active()))
-		if (kmmio_handler(regs, addr) == 1)
+		if (kmmio_handler(regs, addr, hw_error_code) == 1)
 			return -1;
 	return 0;
 }
@@ -1518,7 +1518,7 @@ __do_page_fault(struct pt_regs *regs, unsigned long hw_error_code,
 {
 	prefetchw(&current->mm->mmap_sem);
 
-	if (unlikely(kmmio_fault(regs, address)))
+	if (unlikely(kmmio_fault(regs, address, hw_error_code)))
 		return;
 
 	/* Was the fault on kernel-controlled part of the address space? */

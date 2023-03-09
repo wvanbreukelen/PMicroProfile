@@ -244,7 +244,7 @@ static void disarm_kmmio_fault_page(struct kmmio_fault_page *f)
  * Interrupts are disabled on entry as trap3 is an interrupt gate
  * and they remain disabled throughout this function.
  */
-int kmmio_handler(struct pt_regs *regs, unsigned long addr)
+int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_error_code)
 {
 	struct kmmio_context *ctx;
 	struct kmmio_fault_page *faultpage;
@@ -312,7 +312,7 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr)
 	ctx->addr = page_base;
 
 	if (ctx->probe && ctx->probe->pre_handler)
-		ctx->probe->pre_handler(ctx->probe, regs, addr);
+		ctx->probe->pre_handler(ctx->probe, regs, addr, hw_error_code);
 
 	/*
 	 * Enable single-stepping and disable interrupts for the faulting
