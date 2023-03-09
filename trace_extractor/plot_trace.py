@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
+import re
 
 trace_filename = ""
 
@@ -11,8 +12,11 @@ writes_per_core = {}
 total_read = 0
 total_written = 0
 sector_stats = {}
+sector_stats_mmio = {}
+
 
 sector_group_size = 30000000
+mmiotrace_filename = None
 
 if len(sys.argv) > 1:
 	trace_filename = str(sys.argv[1])
@@ -20,6 +24,13 @@ if len(sys.argv) > 1:
 	if not os.path.exists(trace_filename):
     		print(f"Error: file '{trace_filename}' does not exist")
     		exit(1)
+    		
+	if len(sys.argv) > 2:
+    		mmiotrace_filename = str(sys.argv[2])
+    		
+    		if not os.path.exists(mmiotrace_filename):
+    			print(f"Error: file '{mmiotrace_filename}' does not exist")
+    			exit(1)
 else:
 	print("Please provide trace file!")
 	exit(1)
@@ -53,7 +64,7 @@ with open(trace_filename, 'r') as f:
 		
 		sector_group = pmem_addr // sector_group_size
 		if sector_group not in sector_stats:
-			sector_stats[sector_group] = {'read': {'count': 0, 'size': 0}, 'write': {'count': 0, 'size': 0}, 'dax': {'count': 0}}
+			sector_stats[sector_group] = {'read': {'count': 0, 'size': 0}, 'write': {'count': 0, 'size': 0}, 'dax': {'count': 0}, 'write_mmio': {'count': 0}}
 		if op_type == 'READ':
 			sector_stats[sector_group]['read']['count'] += 1
 			sector_stats[sector_group]['read']['size'] += size
@@ -64,6 +75,40 @@ with open(trace_filename, 'r') as f:
 			total_written += size
 		elif op_type == 'DAX':
 			sector_stats[sector_group]['dax']['count'] += 1
+
+
+if mmiotrace_filename:
+	mark_start_pattern = re.compile(r"^MARK.*WRITE_START$")
+	mark_end_pattern = re.compile(r"^MARK.*WRITE_STOP$")
+	
+	line_count = 0
+	found_start = False
+	
+	with open(mmiotrace_filename, "r") as file:
+		for line in file:
+			line = line.strip()
+			# Check if the current line contains the start mark
+			if mark_start_pattern.search(line) and not found_start:
+				print("Found start")
+				found_start = True
+				continue  # Skip to the next line
+
+			# Check if the current line contains the end mark
+			if mark_end_pattern.search(line):
+				break
+			    
+			# If we've found the start mark, increment the line count
+			if found_start:
+				line_count += 1
+				
+				line_parts = line.split(' ')
+				addr = int(line_parts[3], 16)
+			    
+				sector_group = addr // sector_group_size
+				if sector_group not in sector_stats:
+					sector_stats[sector_group] = {'read': {'count': 0, 'size': 0}, 'write': {'count': 0, 'size': 0}, 'dax': {'count': 0}, 'write_mmio': {'count': 0}}
+			    
+				sector_stats[sector_group]['write_mmio']['count'] += 1
 
 
 
@@ -110,6 +155,7 @@ sector_groups = sorted(sector_stats.keys())
 read_counts = [sector_stats[sg]['read']['count'] for sg in sector_groups]
 write_counts = [sector_stats[sg]['write']['count'] for sg in sector_groups]
 dax_counts = [sector_stats[sg]['dax']['count'] for sg in sector_groups]
+write_counts_mmio = [sector_stats[sg]['write_mmio']['count'] for sg in sector_groups]
 
 
 x_labels = np.array(sector_groups) * sector_group_size + (sector_group_size / 2)
@@ -121,10 +167,20 @@ x_labels = np.array(sector_groups) * sector_group_size + (sector_group_size / 2)
 
 fig, ax = plt.subplots()
 
+ax.set_yscale('log')
+
 
 ax.plot(x_labels, read_counts, label='Reads')
 ax.plot(x_labels, write_counts, label='Writes')
 ax.plot(x_labels, dax_counts, label='DAX')
+ax.plot(x_labels, write_counts_mmio, label='Write MMIO')
+
+
+plt.xticks(np.arange(0, max(x_labels), int("50000000", 16)))
+#plt.xlim([0, int("FFFFFFFF", 16)])
+
+xlabels = map(lambda t: '0x%08X' % int(t), ax.get_xticks())    
+ax.set_xticklabels(xlabels);
 
 
 plt.xticks(np.arange(0, max(x_labels), int("50000000", 16)))
