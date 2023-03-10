@@ -317,13 +317,13 @@ static void iounmap_trace_core(volatile void __iomem *addr)
 
 	list_for_each_entry_safe(trace, tmp, &trace_list, list) {
 		if ((unsigned long)addr == trace->probe.addr) {
-			// if (!nommiotrace)
-			// 	unregister_kmmio_probe(&trace->probe);
-			// list_del(&trace->list);
-			// found_trace = trace;
-			// break;
-			pr_debug("Skipping %p, already mapped...\n", addr);
-			goto not_enabled;
+			if (!nommiotrace)
+				unregister_kmmio_probe(&trace->probe);
+			list_del(&trace->list);
+			found_trace = trace;
+			break;
+			//pr_debug("Skipping %p, already mapped...\n", addr);
+			//goto not_enabled;
 		}
 	}
 	map.map_id = (found_trace) ? found_trace->id : -1;

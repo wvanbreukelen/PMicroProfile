@@ -508,6 +508,69 @@ static void rcu_free_kmmio_fault_pages(struct rcu_head *head)
 	kfree(dr);
 }
 
+/**
+ * 
+ * GNU gdb (Ubuntu 12.1-0ubuntu1~22.04) 12.1
+Copyright (C) 2022 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+Type "show copying" and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<https://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+    <http://www.gnu.org/software/gdb/documentation/>.
+--Type <RET> for more, q to quit, c to continue without paging--c
+
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from vmlinux...
+(gdb) target remote :1234
+Remote debugging using :1234
+default_idle () at arch/x86/kernel/process.c:573
+573             trace_cpu_idle_rcuidle(PWR_EVENT_EXIT, smp_processor_id());
+(gdb) c
+Continuing.
+^C
+Thread 1 received signal SIGINT, Interrupt.
+0xffffffff810c7113 in halt () at ./arch/x86/include/asm/irqflags.h:113
+113     }
+(gdb) bt
+#0  0xffffffff810c7113 in halt ()
+    at ./arch/x86/include/asm/irqflags.h:113
+#1  kvm_wait (val=<optimized out>, ptr=<optimized out>)
+    at arch/x86/kernel/kvm.c:847
+#2  kvm_wait (ptr=0xffffffff83271f60 <kmmio_lock> "\003", val=3 '\003')
+    at arch/x86/kernel/kvm.c:829
+#3  0xffffffff81129cc6 in pv_wait (val=<optimized out>, 
+    ptr=<optimized out>) at ./arch/x86/include/asm/paravirt.h:652
+#4  pv_wait_head_or_lock (node=<optimized out>, lock=<optimized out>)
+    at kernel/locking/qspinlock_paravirt.h:470
+#5  __pv_queued_spin_lock_slowpath (
+    lock=0xffffffff83271f60 <kmmio_lock>, val=<optimized out>)
+    at kernel/locking/qspinlock.c:507
+--Type <RET> for more, q to quit, c to continue without paging--c
+#6  0xffffffff81c73b45 in pv_queued_spin_lock_slowpath (val=<optimized out>, lock=<optimized out>) at ./arch/x86/include/asm/paravirt.h:642
+#7  queued_spin_lock_slowpath (val=<optimized out>, lock=<optimized out>) at ./arch/x86/include/asm/qspinlock.h:50
+#8  queued_spin_lock (lock=<optimized out>) at ./include/asm-generic/qspinlock.h:81
+#9  do_raw_spin_lock_flags (flags=<optimized out>, lock=<optimized out>) at ./include/linux/spinlock.h:193
+#10 __raw_spin_lock_irqsave (lock=<optimized out>) at ./include/linux/spinlock_api_smp.h:119
+#11 _raw_spin_lock_irqsave (lock=0xffffffff83271f60 <kmmio_lock>) at kernel/locking/spinlock.c:159
+#12 0xffffffff810d5640 in remove_kmmio_fault_pages (head=0xffff8880afaf2b40) at ./include/linux/spinlock.h:327
+#13 0xffffffff8114a32c in __rcu_reclaim (head=<optimized out>, rn=<optimized out>) at kernel/rcu/rcu.h:222
+#14 rcu_do_batch (rdp=<optimized out>) at kernel/rcu/tree.c:2165
+#15 rcu_core () at kernel/rcu/tree.c:2385
+#16 0xffffffff820000c7 in __do_softirq () at kernel/softirq.c:292
+#17 0xffffffff810e7d1e in invoke_softirq () at kernel/softirq.c:373
+#18 irq_exit () at kernel/softirq.c:413
+#19 0xffffffff81e02458 in exiting_irq () at ./arch/x86/include/asm/apic.h:538
+#20 smp_apic_timer_interrupt (regs=<optimized out>) at arch/x86/kernel/apic/apic.c:1150
+#21 0xffffffff81e01b0f in apic_timer_interrupt () at arch/x86/entry/entry_64.S:834
+#22 0xffffc900006dfe98 in ?? ()
+*/
+
 static void remove_kmmio_fault_pages(struct rcu_head *head)
 {
 	struct kmmio_delayed_release *dr =
@@ -567,7 +630,9 @@ void unregister_kmmio_probe(struct kmmio_probe *p)
 		release_kmmio_fault_page(addr + size, &release_list);
 		size += page_level_size(l);
 	}
-	list_del_rcu(&p->list);
+
+	if ((&p->list))
+		list_del_rcu(&p->list);
 	kmmio_count--;
 	spin_unlock_irqrestore(&kmmio_lock, flags);
 
