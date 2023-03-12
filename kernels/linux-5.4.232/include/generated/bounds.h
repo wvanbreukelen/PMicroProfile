@@ -9,6 +9,6 @@
 #define NR_PAGEFLAGS 23 /* __NR_PAGEFLAGS */
 #define MAX_NR_ZONES 5 /* __MAX_NR_ZONES */
 #define NR_CPUS_BITS 6 /* ilog2(CONFIG_NR_CPUS) */
-#define SPINLOCK_SIZE 4 /* sizeof(spinlock_t) */
+#define SPINLOCK_SIZE 72 /* sizeof(spinlock_t) */
 
 #endif

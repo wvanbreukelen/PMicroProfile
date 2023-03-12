@@ -23,6 +23,7 @@
 #include <linux/atomic.h>
 #include <linux/percpu.h>
 #include <linux/cpu.h>
+#include <asm/traps.h>			/* dotraplinkage, ...		*/
 
 #include "pf_in.h"
 
@@ -128,7 +129,7 @@ static void die_kmmio_nesting_error(struct pt_regs *regs, unsigned long addr)
 }
 
 static void pre(struct kmmio_probe *p, struct pt_regs *regs,
-						unsigned long addr)
+						unsigned long addr, unsigned long hw_error_code)
 {
 	struct trap_reason *my_reason = &get_cpu_var(pf_reason);
 	struct mmiotrace_rw *my_trace = &get_cpu_var(cpu_trace);
@@ -164,30 +165,46 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 	 * on event ordering?
 	 */
 
-	switch (type) {
-	case REG_READ:
-		my_trace->opcode = MMIO_READ;
-		my_trace->width = get_ins_mem_width(instptr);
-		break;
-	case REG_WRITE:
+	unsigned char *ip = (unsigned char *)instptr;
+
+	// switch (hw_error_code) {
+	// 	case X86_PF_READ:
+	if (hw_error_code & X86_PF_WRITE) {
 		my_trace->opcode = MMIO_WRITE;
-		my_trace->width = get_ins_mem_width(instptr);
-		my_trace->value = get_ins_reg_val(instptr, regs);
-		break;
-	case IMM_WRITE:
-		my_trace->opcode = MMIO_WRITE;
-		my_trace->width = get_ins_mem_width(instptr);
-		my_trace->value = get_ins_imm_val(instptr);
-		break;
-	default:
-		{
-			unsigned char *ip = (unsigned char *)instptr;
-			my_trace->opcode = MMIO_UNKNOWN_OP;
-			my_trace->width = 0;
-			my_trace->value = (*ip) << 16 | *(ip + 1) << 8 |
+		my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
+		my_trace->value = (*ip) << 16 | *(ip + 1) << 8 |
 								*(ip + 2);
-		}
+	} else {
+		my_trace->opcode = MMIO_READ;
+		my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
+		my_trace->value = (*ip) << 16 | *(ip + 1) << 8 |
+							*(ip + 2);
 	}
+
+	// switch (type) {
+	// case REG_READ:
+	// 	my_trace->opcode = MMIO_READ;
+	// 	my_trace->width = get_ins_mem_width(instptr);
+	// 	break;
+	// case REG_WRITE:
+	// 	my_trace->opcode = MMIO_WRITE;
+	// 	my_trace->width = get_ins_mem_width(instptr);
+	// 	my_trace->value = get_ins_reg_val(instptr, regs);
+	// 	break;
+	// case IMM_WRITE:
+	// 	my_trace->opcode = MMIO_WRITE;
+	// 	my_trace->width = get_ins_mem_width(instptr);
+	// 	my_trace->value = get_ins_imm_val(instptr);
+	// 	break;
+	// default:
+	// 	{
+	// 		unsigned char *ip = (unsigned char *)instptr;
+	// 		my_trace->opcode = MMIO_UNKNOWN_OP;
+	// 		my_trace->width = 0;
+	// 		my_trace->value = (*ip) << 16 | *(ip + 1) << 8 |
+	// 							*(ip + 2);
+	// 	}
+	// }
 	put_cpu_var(cpu_trace);
 	put_cpu_var(pf_reason);
 }
@@ -305,6 +322,8 @@ static void iounmap_trace_core(volatile void __iomem *addr)
 			list_del(&trace->list);
 			found_trace = trace;
 			break;
+			//pr_debug("Skipping %p, already mapped...\n", addr);
+			//goto not_enabled;
 		}
 	}
 	map.map_id = (found_trace) ? found_trace->id : -1;

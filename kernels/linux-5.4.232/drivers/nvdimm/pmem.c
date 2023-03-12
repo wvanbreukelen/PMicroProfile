@@ -278,8 +278,10 @@ __weak long __pmem_direct_access(struct pmem_device *pmem, pgoff_t pgoff,
 	if (unlikely(pmem->bb.count))
 		return nr_pages;
 
-	printk("pmem->virt_addr: %p, pgoff: %p pgoff physical: %p, pmem->data_offset: %p, offset: %p\n", pmem->virt_addr, pgoff, PFN_PHYS(pgoff), pmem->data_offset, offset);
+	//printk("pmem->virt_addr: %p, pgoff: %p pgoff physical: %p, pmem->data_offset: %p, offset: %p\n", pmem->virt_addr, pgoff, PFN_PHYS(pgoff), pmem->data_offset, offset);
 	
+	printk("DAX: PA: 0x%llx VA: 0x%llx (size: %lx)\n", (unsigned long) pmem->phys_addr + offset, (unsigned long) pmem->virt_addr + offset,  nr_pages * PAGE_SIZE);
+
 	//unmap_kernel_range((unsigned long) pmem->virt_addr + offset, nr_pages * PAGE_SIZE);
 	//mmiotrace_ioremap(pmem->phys_addr + offset, PFN_PHYS(nr_pages), (void __iomem *) pmem->virt_addr + offset);
 
@@ -593,6 +595,15 @@ static void nd_pmem_notify(struct device *dev, enum nvdimm_event event)
 	struct resource res;
 	struct badblocks *bb;
 	struct kernfs_node *bb_state;
+
+	if (event == NVDIMM_DO_TRACE) {
+		struct pmem_device *pmem = dev_get_drvdata(dev);
+		pr_info("Tracing PMEM accesses at [%p %p] (size: %lu, virt_addr: %p)\n", pmem->phys_addr, pmem->phys_addr + pmem->size, pmem->size, pmem->virt_addr);
+
+		mmiotrace_ioremap(pmem->phys_addr, pmem->size, pmem->virt_addr);
+
+		return;
+	}
 
 	if (event != NVDIMM_REVALIDATE_POISON)
 		return;

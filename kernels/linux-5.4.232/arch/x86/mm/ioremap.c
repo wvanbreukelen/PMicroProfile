@@ -289,7 +289,7 @@ __ioremap_caller(resource_size_t phys_addr, unsigned long size,
 		goto err_free_area;
 
 	ret_addr = (void __iomem *) (vaddr + offset);
-	mmiotrace_ioremap(unaligned_phys_addr, unaligned_size, ret_addr);
+	//mmiotrace_ioremap(unaligned_phys_addr, unaligned_size, ret_addr);
 
 	/*
 	 * Check if the request spans more than any BAR in the iomem resource
