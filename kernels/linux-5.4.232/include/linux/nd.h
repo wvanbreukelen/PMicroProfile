@@ -11,6 +11,7 @@
 
 enum nvdimm_event {
 	NVDIMM_REVALIDATE_POISON,
+	NVDIMM_DO_TRACE,
 };
 
 enum nvdimm_claim_class {

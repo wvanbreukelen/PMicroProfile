@@ -117,6 +117,7 @@ enum {
 	ND_CMD_VENDOR_EFFECT_LOG = 8,
 	ND_CMD_VENDOR = 9,
 	ND_CMD_CALL = 10,
+	ND_CMD_TRACE = 11,
 };
 
 enum {
@@ -151,6 +152,7 @@ static inline const char *nvdimm_cmd_name(unsigned cmd)
 	case ND_CMD_VENDOR_EFFECT_LOG:		return "effect_log";
 	case ND_CMD_VENDOR:			return "vendor";
 	case ND_CMD_CALL:			return "cmd_call";
+	case ND_CMD_TRACE: 			return "cmd_trace";
 	default:				return "unknown";
 	}
 }
@@ -183,6 +185,9 @@ static inline const char *nvdimm_cmd_name(unsigned cmd)
 
 #define ND_IOCTL_CLEAR_ERROR		_IOWR(ND_IOCTL, ND_CMD_CLEAR_ERROR,\
 					struct nd_cmd_clear_error)
+
+#define ND_IOCTL_TRACE		_IOWR(ND_IOCTL, ND_CMD_TRACE,\
+					void)
 
 #define ND_DEVICE_DIMM 1            /* nd_dimm: container for "config data" */
 #define ND_DEVICE_REGION_PMEM 2     /* nd_region: (parent of PMEM namespaces) */
