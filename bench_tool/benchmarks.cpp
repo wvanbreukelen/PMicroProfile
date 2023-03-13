@@ -2,8 +2,6 @@
 
 #include "include/pm_util.hpp"
 
-#define STRIDE_SIZE 64
-
 void Benchmarks::run_bench_file_seq(std::ostream& os, std::filesystem::path path, IOOperation op, const size_t io_size)
 {
     float imc_read, imc_write, media_read, media_write;
@@ -16,12 +14,12 @@ void Benchmarks::run_bench_file_seq(std::ostream& os, std::filesystem::path path
         return;
 
     // unsigned char *dummy_data = malloc(io_size);
-    unsigned char *dummy_data = (unsigned char*) malloc(STRIDE_SIZE);
+    unsigned char *dummy_data = (unsigned char*) malloc(this->stride_size);
 
     if (!dummy_data)
         return;
 
-    for (size_t i = 0; i < STRIDE_SIZE; i++) {
+    for (size_t i = 0; i < this->stride_size; i++) {
         dummy_data[i] = rand();
     }
     
@@ -32,8 +30,11 @@ void Benchmarks::run_bench_file_seq(std::ostream& os, std::filesystem::path path
             util::PmmDataCollector measure("PM data", &imc_read, &imc_write, &media_read, &media_write); 
 
             while (bytes_op < io_size) {
-                fwrite(dummy_data, STRIDE_SIZE, 1, fp);
-                bytes_op += STRIDE_SIZE;
+                if (fwrite(dummy_data, this->stride_size, sizeof(char), fp) < 0) {
+                    std::cerr << "Read failed!" << std::endl;
+                    goto out;
+                }
+                bytes_op += this->stride_size;
             }
         }
         break;
@@ -52,8 +53,13 @@ void Benchmarks::run_bench_file_seq(std::ostream& os, std::filesystem::path path
             util::PmmDataCollector measure("PM data", &imc_read, &imc_write, &media_read, &media_write); 
 
             while (bytes_op < io_size) {
-                fwrite(dummy_data, STRIDE_SIZE, 1, fp);
-                bytes_op += STRIDE_SIZE;
+                if (fwrite(dummy_data, this->stride_size, sizeof(char), fp) < 0) {
+                    std::cerr << "Write failed!" << std::endl;
+                    
+                    goto out;
+                }
+
+                bytes_op += this->stride_size;
             }
         }
         break;

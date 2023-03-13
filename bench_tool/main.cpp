@@ -12,14 +12,18 @@ int main(int argc, char** argv)
     std::string pmem_path;
     size_t file_size = 0;
     size_t number_of_files = 0;
+    size_t stride_size = 0;
     bool is_verbose = false;
 
     app.add_option("-f,--path", pmem_path, "Path to PMEM (e.g. /mnt/pmem/bench)")->required();
     app.add_option("-s,--file-size", file_size, "File size")->default_val(4096 * 8);
     app.add_option("-n,--nr-files", number_of_files, "Number of files")->default_val(1);
+    app.add_option("--stride-size", number_of_files, "Stride size")->default_val(64);
     app.add_flag("-v,--verbose", is_verbose, "Enable verbose output")->default_val(false);
 
     CLI11_PARSE(app, argc, argv);
+
+    bm.set_stride_size(stride_size);
 
     if (pmem_path.rfind("/mnt", 0) != 0 && pmem_path.rfind("/tmp", 0) != 0) {
         std::cerr << "Path " << pmem_path << " is not a mount path, exiting..." << std::endl;
