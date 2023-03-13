@@ -29,7 +29,7 @@ void Benchmarks::run_bench_file_seq(std::ostream& os, std::filesystem::path path
     {
     case IOOperation::READ:
         {
-            //util::PmmDataCollector measure("PM data", &imc_rd, &imc_wr, &media_rd, &media_wr); 
+            util::PmmDataCollector measure("PM data", &imc_read, &imc_write, &media_read, &media_write); 
 
             while (bytes_op < io_size) {
                 fwrite(dummy_data, STRIDE_SIZE, 1, fp);
@@ -49,7 +49,7 @@ void Benchmarks::run_bench_file_seq(std::ostream& os, std::filesystem::path path
                 goto out;
             }
 
-            //util::PmmDataCollector measure("PM data", &imc_rd, &imc_wr, &media_rd, &media_wr); 
+            util::PmmDataCollector measure("PM data", &imc_read, &imc_write, &media_read, &media_write); 
 
             while (bytes_op < io_size) {
                 fwrite(dummy_data, STRIDE_SIZE, 1, fp);

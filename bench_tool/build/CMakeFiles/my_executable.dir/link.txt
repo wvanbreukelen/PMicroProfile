@@ -1,1 +1,0 @@
-/usr/bin/c++ -rdynamic CMakeFiles/my_executable.dir/main.cpp.o CMakeFiles/my_executable.dir/include/utils.cpp.o CMakeFiles/my_executable.dir/benchmarks.cpp.o -o my_executable 

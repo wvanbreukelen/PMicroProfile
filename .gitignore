@@ -12,3 +12,5 @@ ubuntu_splitfs/*
 !/debian_small/image/*.sh
 !/ubuntu_ctfs/*.sh
 !/ubuntu_splitfs/*.sh
+
+bench_tool/build
