@@ -30,10 +30,11 @@ void Benchmarks::run_bench_file_seq(std::ostream& os, std::filesystem::path path
             util::PmmDataCollector measure("PM data", &imc_read, &imc_write, &media_read, &media_write); 
 
             while (bytes_op < io_size) {
-                if (fwrite(dummy_data, this->stride_size, sizeof(char), fp) < 0) {
+                if (fread(dummy_data, this->stride_size, sizeof(char), fp) < 0) {
                     std::cerr << "Read failed!" << std::endl;
                     goto out;
                 }
+
                 bytes_op += this->stride_size;
             }
         }
@@ -58,6 +59,8 @@ void Benchmarks::run_bench_file_seq(std::ostream& os, std::filesystem::path path
                     
                     goto out;
                 }
+
+                fflush(fp);
 
                 bytes_op += this->stride_size;
             }
