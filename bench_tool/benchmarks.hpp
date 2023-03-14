@@ -16,8 +16,7 @@ public:
         num_runs(_num_runs)
     {};
 
-    void run_bench_file_seq(std::ostream& os, std::filesystem::path path, IOOperation op, const size_t io_size);
-    void run_bench_file_strided(std::ostream& os, std::filesystem::path path, IOOperation op, const size_t io_size);
+    void run_bench_file_seq(std::ostream& os, std::filesystem::path path, IOOperation op, const size_t io_size, const bool use_pmem_calls = false);
 
     void set_num_cores(const unsigned int _num_cores) {
         this->num_cores = _num_cores;

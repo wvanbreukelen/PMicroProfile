@@ -35,16 +35,16 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    for (size_t i = 0; i < number_of_files; ++i) {
-        std::filesystem::path file_path{pmem_path + "/" + std::to_string(i)};
+    // for (size_t i = 0; i < number_of_files; ++i) {
+    //     std::filesystem::path file_path{pmem_path + "/" + std::to_string(i)};
 
-        if (is_verbose)
-            std::cout << "Pre-propulating file: " << file_path << " of size " << std::to_string(file_size) << std::endl;
+    //     if (is_verbose)
+    //         std::cout << "Pre-propulating file: " << file_path << " of size " << std::to_string(file_size) << std::endl;
 
-        //std::ofstream ofs(file_path);
-        //std::filesystem::resize_file(file_path, file_size);
-        //ofs.close();
-    }
+    //     //std::ofstream ofs(file_path);
+    //     //std::filesystem::resize_file(file_path, file_size);
+    //     //ofs.close();
+    // }
 
     for (size_t i = 0; i < number_of_files; ++i) {
         std::filesystem::path file_path{pmem_path + "/" + std::to_string(i)};
@@ -52,6 +52,7 @@ int main(int argc, char** argv)
 	if (is_verbose)
 		std::cout << "File: " << file_path << std::endl;
 
+        bm.run_bench_file_seq(std::cout, file_path, IOOperation::WRITE, file_size);
         bm.run_bench_file_seq(std::cout, file_path, IOOperation::READ, file_size);
     }
 

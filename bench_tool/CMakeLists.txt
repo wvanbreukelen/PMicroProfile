@@ -15,10 +15,10 @@ set(CMAKE_CXX_STANDARD 17)
 # Find the pthread library
 #find_package(Threads REQUIRED)
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/../pm_util/ build)
+add_subdirectory(${PROJECT_SOURCE_DIR}/pm_util/ build)
 
 include_directories(
-    ${PROJECT_SOURCE_DIR}/../pm_util/include
+    ${PROJECT_SOURCE_DIR}/pm_util/include
 )
 
 set(CMAKE_CXX_FLAGS "-march=native")
@@ -28,5 +28,5 @@ add_definitions(-w)
 add_executable(my_executable main.cpp benchmarks.cpp)
 
 # Link against pthread
-target_link_libraries(my_executable pm_util pthread gflags numa)
+target_link_libraries(my_executable pm_util pthread numa)
 
