@@ -20,15 +20,15 @@ public:
     void run_bench_file_strided(std::ostream& os, std::filesystem::path path, IOOperation op, const size_t io_size);
 
     void set_num_cores(const unsigned int _num_cores) {
-        num_cores = _num_cores;
+        this->num_cores = _num_cores;
     }
 
     void set_stride_size(const size_t _stride_size) {
-        stride_size = _stride_size;
+        this->stride_size = _stride_size;
     }
 
     void set_num_runs(const unsigned int _num_runs) {
-        num_runs = _num_runs;
+        this->num_runs = _num_runs;
     }
 
 private:
