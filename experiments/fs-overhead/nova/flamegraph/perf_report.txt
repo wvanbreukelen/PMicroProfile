@@ -1,0 +1,72 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 37K of event 'cycles'
+# Event count (approx.): 113398868092
+#
+# Children      Self
+# ........  ........
+#
+   100.00%   100.00%
+            |          
+            |--85.07%--0
+            |          |          
+            |          |--72.73%--__GI___libc_write
+            |          |          |          
+            |          |           --72.73%--entry_SYSCALL_64_after_hwframe
+            |          |                     |          
+            |          |                      --72.73%--do_syscall_64
+            |          |                                __x64_sys_write
+            |          |                                ksys_write
+            |          |                                vfs_write
+            |          |                                |          
+            |          |                                 --72.72%--__vfs_write
+            |          |                                           nova_dax_file_write
+            |          |                                           nova_inplace_file_write
+            |          |                                           |          
+            |          |                                           |--71.10%--__copy_user_nocache
+            |          |                                           |          
+            |          |                                            --1.61%--do_nova_inplace_file_write
+            |          |                                                      |          
+            |          |                                                       --0.86%--nova_reassign_file_tree
+            |          |                                                                 |          
+            |          |                                                                  --0.75%--nova_assign_write_entry
+            |          |          
+            |           --12.27%--read
+            |                     entry_SYSCALL_64_after_hwframe
+            |                     do_syscall_64
+            |                     __x64_sys_read
+            |                     ksys_read
+            |                     |          
+            |                      --12.26%--vfs_read
+            |                                |          
+            |                                 --12.26%--__vfs_read
+            |                                           nova_dax_file_read
+            |                                           |          
+            |                                           |--11.57%--copy_user_enhanced_fast_string
+            |                                           |          
+            |                                            --0.61%--apic_timer_interrupt
+            |          
+             --13.42%--secondary_startup_64
+                       |          
+                        --13.22%--start_secondary
+                                  |          
+                                   --13.22%--cpu_startup_entry
+                                             |          
+                                              --13.21%--do_idle
+                                                        |          
+                                                         --13.14%--call_cpuidle
+                                                                   |          
+                                                                    --13.14%--cpuidle_enter
+                                                                              |          
+                                                                               --13.13%--cpuidle_enter_state
+                                                                                         |          
+                                                                                          --12.93%--intel_idle
+
+
+
+#
+# (Tip: To see list of saved events and attributes: perf evlist -v)
+#

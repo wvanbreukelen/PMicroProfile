@@ -1,0 +1,215 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 149K of event 'cycles'
+# Event count (approx.): 452962587814
+#
+# Children      Self
+# ........  ........
+#
+   100.00%   100.00%
+            |          
+            |--50.33%--0
+            |          |          
+            |          |--43.19%--memmove_nodrain_movnt_granularity
+            |          |          |          
+            |          |           --12.25%--page_fault
+            |          |                     |          
+            |          |                      --12.24%--do_page_fault
+            |          |                                __do_page_fault
+            |          |                                |          
+            |          |                                 --12.24%--do_user_addr_fault
+            |          |                                           |          
+            |          |                                            --12.24%--handle_mm_fault
+            |          |                                                      __handle_mm_fault
+            |          |                                                      ext4_dax_huge_fault
+            |          |                                                      |          
+            |          |                                                       --12.23%--dax_iomap_fault
+            |          |                                                                 dax_iomap_pmd_fault.isra.0
+            |          |                                                                 |          
+            |          |                                                                  --12.09%--ext4_iomap_begin
+            |          |                                                                            |          
+            |          |                                                                             --12.09%--ext4_map_blocks
+            |          |                                                                                       |          
+            |          |                                                                                        --12.08%--ext4_issue_zeroout
+            |          |                                                                                                  |          
+            |          |                                                                                                   --12.08%--blkdev_issue_zeroout
+            |          |                                                                                                             |          
+            |          |                                                                                                             |--6.14%--__blkdev_issue_zero_pages
+            |          |                                                                                                             |          |          
+            |          |                                                                                                             |           --6.11%--blk_next_bio
+            |          |                                                                                                             |                     |          
+            |          |                                                                                                             |                      --6.10%--submit_bio
+            |          |                                                                                                             |                                generic_make_request
+            |          |                                                                                                             |                                |          
+            |          |                                                                                                             |                                 --6.10%--pmem_make_request
+            |          |                                                                                                             |                                           |          
+            |          |                                                                                                             |                                            --6.06%--pmem_do_bvec
+            |          |                                                                                                             |                                                      |          
+            |          |                                                                                                             |                                                       --5.97%--write_pmem
+            |          |                                                                                                             |                                                                 |          
+            |          |                                                                                                             |                                                                  --5.78%--__memcpy_flushcache
+            |          |                                                                                                             |          
+            |          |                                                                                                              --5.95%--submit_bio_wait
+            |          |                                                                                                                        submit_bio
+            |          |                                                                                                                        generic_make_request
+            |          |                                                                                                                        |          
+            |          |                                                                                                                         --5.94%--pmem_make_request
+            |          |                                                                                                                                   |          
+            |          |                                                                                                                                    --5.90%--pmem_do_bvec
+            |          |                                                                                                                                              |          
+            |          |                                                                                                                                               --5.79%--write_pmem
+            |          |                                                                                                                                                         |          
+            |          |                                                                                                                                                          --5.61%--__memcpy_flushcache
+            |          |          
+            |          |--5.12%--__memmove_evex_unaligned_erms
+            |          |          
+            |           --1.85%--__libc_pread
+            |                     entry_SYSCALL_64_after_hwframe
+            |                     do_syscall_64
+            |                     __x64_sys_pread64
+            |                     ksys_pread64
+            |                     |          
+            |                      --1.85%--vfs_read
+            |                                __vfs_read
+            |                                new_sync_read
+            |                                |          
+            |                                 --1.85%--ext4_file_read_iter
+            |                                           |          
+            |                                            --1.85%--dax_iomap_rw
+            |                                                      |          
+            |                                                       --1.85%--iomap_apply
+            |                                                                 |          
+            |                                                                  --1.84%--dax_iomap_actor
+            |                                                                            dax_copy_to_iter
+            |                                                                            pmem_copy_to_iter
+            |                                                                            |          
+            |                                                                             --1.84%--_copy_to_iter_mcsafe
+            |                                                                                       |          
+            |                                                                                        --1.84%--__memcpy_mcsafe
+            |          
+            |--39.51%--0x3030303030303030
+            |          |          
+            |           --39.51%--memmove_nodrain_movnt_granularity
+            |                     |          
+            |                      --19.95%--page_fault
+            |                                |          
+            |                                 --19.93%--do_page_fault
+            |                                           __do_page_fault
+            |                                           do_user_addr_fault
+            |                                           |          
+            |                                            --19.93%--handle_mm_fault
+            |                                                      |          
+            |                                                       --19.93%--__handle_mm_fault
+            |                                                                 |          
+            |                                                                  --19.93%--ext4_dax_huge_fault
+            |                                                                            |          
+            |                                                                             --19.91%--dax_iomap_fault
+            |                                                                                       dax_iomap_pmd_fault.isra.0
+            |                                                                                       |          
+            |                                                                                        --19.68%--ext4_iomap_begin
+            |                                                                                                  |          
+            |                                                                                                   --19.68%--ext4_map_blocks
+            |                                                                                                             |          
+            |                                                                                                              --19.67%--ext4_issue_zeroout
+            |                                                                                                                        |          
+            |                                                                                                                         --19.67%--blkdev_issue_zeroout
+            |                                                                                                                                   |          
+            |                                                                                                                                   |--9.92%--__blkdev_issue_zero_pages
+            |                                                                                                                                   |          |          
+            |                                                                                                                                   |           --9.89%--blk_next_bio
+            |                                                                                                                                   |                     |          
+            |                                                                                                                                   |                      --9.88%--submit_bio
+            |                                                                                                                                   |                                generic_make_request
+            |                                                                                                                                   |                                |          
+            |                                                                                                                                   |                                 --9.88%--pmem_make_request
+            |                                                                                                                                   |                                           |          
+            |                                                                                                                                   |                                            --9.83%--pmem_do_bvec
+            |                                                                                                                                   |                                                      |          
+            |                                                                                                                                   |                                                       --9.66%--write_pmem
+            |                                                                                                                                   |                                                                 |          
+            |                                                                                                                                   |                                                                  --9.39%--__memcpy_flushcache
+            |                                                                                                                                   |          
+            |                                                                                                                                    --9.74%--submit_bio_wait
+            |                                                                                                                                              submit_bio
+            |                                                                                                                                              generic_make_request
+            |                                                                                                                                              |          
+            |                                                                                                                                               --9.74%--pmem_make_request
+            |                                                                                                                                                         |          
+            |                                                                                                                                                          --9.69%--pmem_do_bvec
+            |                                                                                                                                                                    |          
+            |                                                                                                                                                                     --9.52%--write_pmem
+            |                                                                                                                                                                               |          
+            |                                                                                                                                                                                --9.23%--__memcpy_flushcache
+            |          
+            |--3.52%--ret_from_fork
+            |          kthread
+            |          |          
+            |           --3.13%--ext4_lazyinit_thread
+            |                     |          
+            |                      --3.13%--ext4_init_inode_table
+            |                                |          
+            |                                 --3.12%--blkdev_issue_zeroout
+            |                                           |          
+            |                                           |--1.60%--submit_bio_wait
+            |                                           |          submit_bio
+            |                                           |          generic_make_request
+            |                                           |          |          
+            |                                           |           --1.60%--pmem_make_request
+            |                                           |                     |          
+            |                                           |                      --1.59%--pmem_do_bvec
+            |                                           |                                |          
+            |                                           |                                 --1.57%--write_pmem
+            |                                           |                                           |          
+            |                                           |                                            --1.53%--__memcpy_flushcache
+            |                                           |          
+            |                                            --1.52%--__blkdev_issue_zero_pages
+            |                                                      |          
+            |                                                       --1.52%--blk_next_bio
+            |                                                                 |          
+            |                                                                  --1.52%--submit_bio
+            |                                                                            generic_make_request
+            |                                                                            |          
+            |                                                                             --1.52%--pmem_make_request
+            |                                                                                       |          
+            |                                                                                        --1.50%--pmem_do_bvec
+            |                                                                                                  |          
+            |                                                                                                   --1.48%--write_pmem
+            |                                                                                                             |          
+            |                                                                                                              --1.43%--__memcpy_flushcache
+            |          
+            |--2.40%--secondary_startup_64
+            |          |          
+            |           --2.16%--start_secondary
+            |                     |          
+            |                      --2.16%--cpu_startup_entry
+            |                                |          
+            |                                 --2.16%--do_idle
+            |                                           |          
+            |                                            --2.09%--call_cpuidle
+            |                                                      |          
+            |                                                       --2.09%--cpuidle_enter
+            |                                                                 |          
+            |                                                                  --2.09%--cpuidle_enter_state
+            |                                                                            |          
+            |                                                                             --2.00%--intel_idle
+            |          
+             --1.54%--__memset_evex_unaligned_erms
+                       |          
+                        --1.23%--page_fault
+                                  |          
+                                   --0.65%--do_page_fault
+                                             |          
+                                              --0.65%--__do_page_fault
+                                                        |          
+                                                         --0.64%--do_user_addr_fault
+                                                                   |          
+                                                                    --0.60%--handle_mm_fault
+
+
+
+#
+# (Tip: Treat branches as callchains: perf report --branch-history)
+#
