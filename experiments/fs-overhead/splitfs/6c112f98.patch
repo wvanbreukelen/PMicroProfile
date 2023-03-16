@@ -1,0 +1,214 @@
+diff --git a/main.sh b/main.sh
+index 4bc16e781297..758235e6f8d3 100755
+--- a/main.sh
++++ b/main.sh
+@@ -21,7 +21,8 @@ nix_sudo() {
+ 
+ allworkloads="LoadA RunA RunB RunC RunF RunD LoadE RunE"
+ splitfsroot=./splitfs
+-rootdir=/local/home/fderidder/iop/ffs
++rootdir=/local/home/wvanbreukele/ffs
++#rootdir=/local/home/fderidder/iop/ffs
+ # rootdir=/home/finn/iop/ffs
+ datarootdir=../data/ycsb
+ kernelroot=./kernel
+@@ -103,8 +104,8 @@ setup_dev() {
+ 
+ 	if (( ffs )); then
+ 		newmode=devdax
+-	elif (( ctfs )); then
+-		newmode=devdax
++	#elif (( ctfs )); then
++	#	newmode=devdax
+ 	fi
+ 
+ 	if [[ $oldmode != $newmode ]]; then
+@@ -175,9 +176,9 @@ is_right_kernel_installed() {
+ 		exit 1
+ 	elif (( ffs )); then
+ 		expected_kernel="5.1.0-mono"
+-	elif (( ctfs )); then
++	#elif (( ctfs )); then
+ 		# TODO: not used! And get rid of + by commiting ctFS kernel
+-		expected_kernel="5.7.0-rc7-ctfs+"
++	#	expected_kernel="5.7.0-rc7-ctfs+"
+ 	else
+ 		expected_kernel="5.1.0-splitfs51-rohan"
+ 	fi
+@@ -253,7 +254,7 @@ prune_datarootdir() {
+ 
+ collect_results() {
+ 	local datadir=$1
+-	sudo chown -R fderidder $splitfsroot/results
++	sudo chown -R wvanbreukele $splitfsroot/results
+ 	mv $splitfsroot/results $datadir
+ 
+ 	if [[ $benchmark == ycsb ]]; then
+@@ -339,14 +340,15 @@ flamegraph_collect() {
+ 		return
+ 	fi
+ 
+-	local flamegraphdir=/local/home/fderidder/FlameGraph
++	local flamegraphdir=/local/home/wvanbreukele/FlameGraph
+ 	local subdatadir=$datadir/flamegraph
+ 
+-	sudo chown fderidder $perfdatadir/perf.data
++	sudo chown wvanbreukele $perfdatadir/perf.data
+ 	doat $perfdatadir "perf script > $name.perf"
+ 	mkdir $subdatadir
+ 	mv $perfdatadir/$name.perf $subdatadir
+-	rm $perfdatadir/perf.data
++	#rm $perfdatadir/perf.data
++	mv $perfdatadir/perf.data $subdatadir
+ 	doat $subdatadir "$flamegraphdir/stackcollapse-perf.pl $name.perf > $name.folded"
+ 	doat $subdatadir "$flamegraphdir/flamegraph.pl $name.folded > $name.svg"
+ }
+@@ -517,7 +519,7 @@ main() {
+ 	# TODO: fix Makefiles so that we don't have to clean?!
+ 	if (( ffs )); then
+ 		# Kernel module
+-		doat ./mod/mod "${makeclean}make"
++		doat ./mod/mod "${makeclean} nix_sudo make"
+ 		doat ./mod/mod "nix_sudo make install 2>/dev/null"
+ 
+ 		# Shared library
+diff --git a/splitfs/scripts/configs/ext4_config.sh b/splitfs/scripts/configs/ext4_config.sh
+index ec5d61108aa6..b64b8f2be8e8 100755
+--- a/splitfs/scripts/configs/ext4_config.sh
++++ b/splitfs/scripts/configs/ext4_config.sh
+@@ -1,8 +1,8 @@
+ mountpoint=/mnt/pmem_emul
+-device=/dev/pmem0
++device=/dev/pmem1
+ 
+ . $(dirname $(realpath $0))/common.sh
+ 
+ sudo mkfs.ext4 -F -b 4096 $device
+ sudo mount -o dax $device $mountpoint
+-sudo chown "fderidder:domain users" $mountpoint
++sudo chown "wvanbreukele:domain users" $mountpoint
+diff --git a/splitfs/scripts/configs/nova_config.sh b/splitfs/scripts/configs/nova_config.sh
+index d54cc13b3fbc..75ffba097748 100755
+--- a/splitfs/scripts/configs/nova_config.sh
++++ b/splitfs/scripts/configs/nova_config.sh
+@@ -6,4 +6,4 @@ sudo modprobe nova
+ # sudo modprobe nova inplace_data_updates=1
+ sudo mount -t NOVA -o init /dev/pmem1 /mnt/pmem_emul
+ # We need this because the mount command make root the owner of /mnt/pmem_emul
+-sudo chown "fderidder:domain users" /mnt/pmem_emul/
++sudo chown "wvanbreukele:domain users" /mnt/pmem_emul/
+diff --git a/splitfs/scripts/configs/nova_relaxed_config.sh b/splitfs/scripts/configs/nova_relaxed_config.sh
+index 7a9403ad9530..5a0b52d24541 100755
+--- a/splitfs/scripts/configs/nova_relaxed_config.sh
++++ b/splitfs/scripts/configs/nova_relaxed_config.sh
+@@ -6,4 +6,4 @@ sudo modprobe nova inplace_data_updates=1
+ # sudo modprobe nova measure_timing=1 inplace_data_updates=1
+ sudo mount -t NOVA -o init /dev/pmem1 /mnt/pmem_emul
+ # We need this because the mount command make root the owner of /mnt/pmem_emul
+-sudo chown "fderidder:domain users" /mnt/pmem_emul/
++sudo chown "wvanbreukele:domain users" /mnt/pmem_emul/
+diff --git a/splitfs/scripts/filebench/compile_filebench.sh b/splitfs/scripts/filebench/compile_filebench.sh
+old mode 100644
+new mode 100755
+index 075ae3bf453f..91d26b6c27bc
+--- a/splitfs/scripts/filebench/compile_filebench.sh
++++ b/splitfs/scripts/filebench/compile_filebench.sh
+@@ -11,7 +11,7 @@ aclocal
+ autoheader
+ automake --add-missing
+ autoconf
+-./configure
++./configure CPPFLAGS="-fno-omit-frame-pointer" CFLAGS="-fno-omit-frame-pointer"
+ make
+ sudo --preserve-env=PATH env make install
+ cd $cur_dir
+diff --git a/splitfs/scripts/filebench/run_fs.sh b/splitfs/scripts/filebench/run_fs.sh
+index 0e2f736d56e4..49b84491ccff 100644
+--- a/splitfs/scripts/filebench/run_fs.sh
++++ b/splitfs/scripts/filebench/run_fs.sh
+@@ -6,17 +6,17 @@ fi
+ set -x
+ set -u
+ 
+-flamegraph=0
++flamegraph=1
+ strace=0
+ workload=filebench
+-owner="fderidder:domain users"
++owner="wvanbreukele:domain users"
+ 
+ fs=$1
+ workload=$2
+ run_id=$3
+ current_dir=$(pwd)
+ filebench_dir=`readlink -f ../../filebench`
+-workload_dir=/local/home/fderidder/iop/ffs/workloads
++workload_dir=/local/home/wvanbreukele/ffs/workloads
+ pmem_dir=/mnt/pmem_emul
+ boost_dir=`readlink -f ../../splitfs`
+ result_dir=`readlink -f ../../results`
+@@ -88,31 +88,36 @@ run_workload()
+     date
+ 
+     if (( $run_boost )); then
+-        $boost_dir/run_boost.sh -p $boost_dir -t nvp_nvp.tree $filebench_dir/filebench -f $workload_dir/$workload 2>&1 | tee $fs_results/run$run_id
++	if (( $flamegraph )); then
++        	sudo --preserve-env=PATH env perf record -a -g -F 1000 --call-graph lbr $boost_dir/run_boost.sh -p $boost_dir -t nvp_nvp.tree $filebench_dir/filebench -f $workload_dir/$workload 2>&1 | tee $fs_results/run$run_id
++	else
++		time $boost_dir/run_boost.sh -p $boost_dir -t nvp_nvp.tree $filebench_dir/filebench -f $workload_dir/$workload 2>&1 | tee $fs_results/run$run_id
++	fi
+     elif (( $run_ffs )); then
+-        local ffs_splitfs_dir=/local/home/fderidder/iop/ffs/user/quill-ufs
+-        local ffs_libffs_dir=/local/home/fderidder/iop/ffs/mod/lib
++        local ffs_splitfs_dir=/local/home/wvanbreukele/ffs/user/quill-ufs
++        local ffs_libffs_dir=/local/home/wvanbreukele/ffs/mod/lib
+ 
+         export LD_LIBRARY_PATH=$ffs_splitfs_dir:$ffs_libffs_dir
+         export NVP_TREE_FILE=$ffs_splitfs_dir/bin/nvp_ufs.tree
+ 
+         if (( $flamegraph )); then
+-            LD_PRELOAD=libnvp.so $filebench_dir/filebench -f $workload_dir/$workload 2>&1 | tee $fs_results/run$run_id &
++            LD_PRELOAD=libnvp.so time $filebench_dir/filebench -f $workload_dir/$workload 2>&1 | tee $fs_results/run$run_id &
+             # We use tail to make sure we wait for the other process to complete
+-            sudo --preserve-env=PATH env perf record -a -F 1000 --call-graph lbr -- tail --pid=$! -f /dev/null
++            sudo --preserve-env=PATH env perf record -a -g -F 1000 -- tail --pid=$! -f /dev/null
+         elif (( $strace )); then
+             __ffs_run_strace
+         else
+-            LD_PRELOAD=libnvp.so $filebench_dir/filebench -f $workload_dir/$workload 2>&1 | tee $fs_results/run$run_id
++            LD_PRELOAD=libnvp.so time $filebench_dir/filebench -f $workload_dir/$workload 2>&1 | tee $fs_results/run$run_id
+             # sudo --preserve-env=SHELL,PATH,PWD env gdb -x /local/home/fderidder/iop/ffs/env.gdb --args $filebench_dir/filebench -f $workload_dir/$workload
+             # gdb -x /local/home/fderidder/iop/ffs/env/env.gdb --args $filebench_dir/filebench -f $workload_dir/$workload
+         fi
+     else
+         if (( $flamegraph )); then
+-            $filebench_dir/filebench -f $workload_dir/$workload 2>&1 | tee $fs_results/run$run_id &
+-            sudo --preserve-env=PATH,PWD env perf record -a -F 1000 --call-graph lbr -- tail --pid=$! -f /dev/null
+-        else
+-            $filebench_dir/filebench -f $workload_dir/$workload 2>&1 | tee $fs_results/run$run_id
++            time $filebench_dir/filebench -f $workload_dir/$workload 2>&1 | tee $fs_results/run$run_id &
++            sudo --preserve-env=PATH,PWD env perf record -a -g -F 1000 -- tail --pid=$! -f /dev/null
++	    #sudo --preserve-env=PATH,PWD env perf record -F 1000 -a -g --pid=$!        
++	else
++            time $filebench_dir/filebench -f $workload_dir/$workload 2>&1 | tee $fs_results/run$run_id
+         fi
+     fi
+ 
+diff --git a/test/setup.sh b/test/setup.sh
+index 85db8645f7e4..c04a0e26146d 100644
+--- a/test/setup.sh
++++ b/test/setup.sh
+@@ -1,8 +1,10 @@
+ set -u
+ 
+-ufs_config_dir=/local/home/fderidder/iop/ffs/splitfs/scripts/configs
+-ufs_splitfs_dir=/local/home/fderidder/iop/ffs/user/quill-ufs
+-ufs_libufs_dir=/local/home/fderidder/iop/ffs/mod/lib
++root_dir=/local/home/wvanbreukele/ffs
++
++ufs_config_dir=$root_dir/splitfs/scripts/configs
++ufs_splitfs_dir=$root_dir/user/quill-ufs
++ufs_libufs_dir=$root_dir/mod/lib
+ 
+ $ufs_config_dir/ffs_config.sh
+ 
