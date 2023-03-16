@@ -4,8 +4,11 @@ cmake_minimum_required(VERSION 3.1)
 
 project(my_project)
 
+set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -fno-omit-frame-pointer")
 
 set(pm_util_dir ${PROJECT_SOURCE_DIR}/../pm_util)
 

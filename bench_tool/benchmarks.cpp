@@ -85,6 +85,8 @@ void Benchmarks::run_bench_file_seq(std::ostream& os, std::filesystem::path path
                 ssize_t written;
                 util::PmmDataCollector measure("PM data", &imc_read, &imc_write, &media_read, &media_write); 
                 
+		if (use_pmem_calls)
+			std::cout << "Using pwrite calls..." << std::endl;
 
                 while (bytes_op < io_size) {
                     written = (use_pmem_calls) ? pwrite(fp, dummy_data, this->stride_size, bytes_op) : write(fp, dummy_data, this->stride_size);
