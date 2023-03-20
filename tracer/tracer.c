@@ -13,8 +13,8 @@
 #include <errno.h>
 #include <inttypes.h>
 
-#define DEBUG
-#define ND_CMD_TRACE 11
+//#define DEBUG
+#define ND_CMD_TRACE_ENABLE 11
 #define ND_CMD_TRACE_DISABLE 12
 
 #define CURRENT_TRACER "/sys/kernel/debug/tracing/current_tracer"
@@ -23,8 +23,8 @@
 #define TRACER_BUF_SIZE_PATH "/sys/kernel/debug/tracing/buffer_size_kb"
 
 
-//#define ENABLE_SAMPLING
-const int SAMPLE_RATE = 10; // 5 hz
+#define ENABLE_SAMPLING
+const int SAMPLE_RATE = 5; // 5 hz
 
 volatile bool is_tracing = true;
 pid_t exec_pid;
@@ -55,15 +55,15 @@ bool is_mmiotrace_enabled() {
 	return (strcmp(tracer, "mmiotrace") == 0);
 }
 
-void enable_pmemtrace()
+void enable_pmemtrace(int fd)
 {
 	#ifndef DEBUG
-	ioctl(fd, ND_CMD_TRACE);
+	ioctl(fd, ND_CMD_TRACE_ENABLE);
 	#endif
-	sleep(1);
+	//sleep(1);
 }
 
-void disable_pmemtrace() {
+void disable_pmemtrace(int fd) {
 	// printf("Disabling pmemtrace...\n");
 	#ifndef DEBUG
 	ioctl(fd, ND_CMD_TRACE_DISABLE);
@@ -115,9 +115,14 @@ void* pmem_sampler(void *arg)
 {
 	const struct sample_thread_args* thread_args = (const struct sample_thread_args* ) arg;
 
+	if (thread_args->sample_rate == 0) {
+		// Wait insanely long...
+	}
+
 	const int period = 1000000 / thread_args->sample_rate;
 	bool is_enabled = true;
 
+	printf("Thread running...\n");
 
 	while (is_tracing) {
 		usleep(period);
@@ -139,7 +144,7 @@ void* pmem_sampler(void *arg)
 	}
 
 	#ifndef DEBUG
-	ioctl(fd, ND_CMD_TRACE_DISABLE);
+	ioctl(thread_args->fd, ND_CMD_TRACE_DISABLE);
 	#endif
 
 	pthread_exit(NULL);
@@ -162,7 +167,9 @@ void signal_handler(int sig)
 
 int main(int argc, char** argv)
 {
+	// sudo ./tracer /dev/ndctl0 sudo bash -c "head -c 1M </dev/urandom >/mnt/pmem_emul/some_rand2.txt"
 
+	printf("Welcome!\n");
 
 	if (geteuid() != 0) {
 		fprintf(stderr, "This program must be run as root.\n");
@@ -211,7 +218,9 @@ int main(int argc, char** argv)
     sigaddset(&sa.sa_mask, SIGINT);
     sigaction(SIGINT, &sa, NULL);
 
-	enable_pmemtrace();
+	enable_pmemtrace(fd);
+
+	//sleep(5);
 
 	pthread_t tid;
 
@@ -249,7 +258,9 @@ int main(int argc, char** argv)
 	pthread_cancel(tid);
 	#endif
 
-	disable_pmemtrace();
+	disable_pmemtrace(fd);
+
+	sleep(5);
 
 	return ret_code;
 }
