@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -pthread
-SRC = tracer.c
-OUT = tracer
+SRC = pmemtrace.c
+OUT = pmemtrace
 
 all: $(OUT)
 
