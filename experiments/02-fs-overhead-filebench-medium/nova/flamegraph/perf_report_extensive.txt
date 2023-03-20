@@ -1,0 +1,2692 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 37K of event 'cycles'
+# Event count (approx.): 113398868092
+#
+# Children      Self  Symbol                                                                                                                                   
+# ........  ........  .........................................................................................................................................
+#
+    85.69%     0.00%  [k] entry_SYSCALL_64_after_hwframe
+            |
+            ---entry_SYSCALL_64_after_hwframe
+               |          
+                --85.68%--do_syscall_64
+                          |          
+                          |--72.77%--__x64_sys_write
+                          |          ksys_write
+                          |          |          
+                          |           --72.77%--vfs_write
+                          |                     |          
+                          |                      --72.76%--__vfs_write
+                          |                                |          
+                          |                                 --72.72%--nova_dax_file_write
+                          |                                           nova_inplace_file_write
+                          |                                           |          
+                          |                                           |--71.10%--__copy_user_nocache
+                          |                                           |          
+                          |                                            --1.61%--do_nova_inplace_file_write
+                          |                                                      |          
+                          |                                                       --0.86%--nova_reassign_file_tree
+                          |                                                                 |          
+                          |                                                                  --0.75%--nova_assign_write_entry
+                          |          
+                           --12.28%--__x64_sys_read
+                                     ksys_read
+                                     |          
+                                      --12.27%--vfs_read
+                                                |          
+                                                 --12.27%--__vfs_read
+                                                           |          
+                                                            --12.26%--nova_dax_file_read
+                                                                      |          
+                                                                      |--11.57%--copy_user_enhanced_fast_string
+                                                                      |          
+                                                                       --0.61%--apic_timer_interrupt
+
+    85.68%     0.00%  [k] do_syscall_64
+            |          
+             --85.68%--do_syscall_64
+                       |          
+                       |--72.77%--__x64_sys_write
+                       |          ksys_write
+                       |          |          
+                       |           --72.77%--vfs_write
+                       |                     |          
+                       |                      --72.76%--__vfs_write
+                       |                                |          
+                       |                                 --72.72%--nova_dax_file_write
+                       |                                           nova_inplace_file_write
+                       |                                           |          
+                       |                                           |--71.10%--__copy_user_nocache
+                       |                                           |          
+                       |                                            --1.61%--do_nova_inplace_file_write
+                       |                                                      |          
+                       |                                                       --0.86%--nova_reassign_file_tree
+                       |                                                                 |          
+                       |                                                                  --0.75%--nova_assign_write_entry
+                       |          
+                        --12.28%--__x64_sys_read
+                                  ksys_read
+                                  |          
+                                   --12.27%--vfs_read
+                                             |          
+                                              --12.27%--__vfs_read
+                                                        |          
+                                                         --12.26%--nova_dax_file_read
+                                                                   |          
+                                                                   |--11.57%--copy_user_enhanced_fast_string
+                                                                   |          
+                                                                    --0.61%--apic_timer_interrupt
+
+    85.22%     0.12%  [k] 0000000000000000
+            |          
+             --85.11%--0
+                       |          
+                       |--72.73%--__GI___libc_write
+                       |          |          
+                       |           --72.73%--entry_SYSCALL_64_after_hwframe
+                       |                     |          
+                       |                      --72.73%--do_syscall_64
+                       |                                __x64_sys_write
+                       |                                ksys_write
+                       |                                vfs_write
+                       |                                |          
+                       |                                 --72.72%--__vfs_write
+                       |                                           nova_dax_file_write
+                       |                                           nova_inplace_file_write
+                       |                                           |          
+                       |                                           |--71.10%--__copy_user_nocache
+                       |                                           |          
+                       |                                            --1.61%--do_nova_inplace_file_write
+                       |                                                      |          
+                       |                                                       --0.86%--nova_reassign_file_tree
+                       |                                                                 |          
+                       |                                                                  --0.75%--nova_assign_write_entry
+                       |          
+                        --12.27%--read
+                                  entry_SYSCALL_64_after_hwframe
+                                  do_syscall_64
+                                  __x64_sys_read
+                                  ksys_read
+                                  |          
+                                   --12.26%--vfs_read
+                                             |          
+                                              --12.26%--__vfs_read
+                                                        nova_dax_file_read
+                                                        |          
+                                                        |--11.57%--copy_user_enhanced_fast_string
+                                                        |          
+                                                         --0.61%--apic_timer_interrupt
+
+    72.77%     0.00%  [k] __x64_sys_write
+            |          
+             --72.77%--__x64_sys_write
+                       ksys_write
+                       |          
+                        --72.77%--vfs_write
+                                  |          
+                                   --72.76%--__vfs_write
+                                             |          
+                                              --72.72%--nova_dax_file_write
+                                                        nova_inplace_file_write
+                                                        |          
+                                                        |--71.10%--__copy_user_nocache
+                                                        |          
+                                                         --1.61%--do_nova_inplace_file_write
+                                                                   |          
+                                                                    --0.86%--nova_reassign_file_tree
+                                                                              |          
+                                                                               --0.75%--nova_assign_write_entry
+
+    72.77%     0.00%  [k] ksys_write
+            |
+            ---ksys_write
+               |          
+                --72.77%--vfs_write
+                          |          
+                           --72.76%--__vfs_write
+                                     |          
+                                      --72.72%--nova_dax_file_write
+                                                nova_inplace_file_write
+                                                |          
+                                                |--71.10%--__copy_user_nocache
+                                                |          
+                                                 --1.61%--do_nova_inplace_file_write
+                                                           |          
+                                                            --0.86%--nova_reassign_file_tree
+                                                                      |          
+                                                                       --0.75%--nova_assign_write_entry
+
+    72.77%     0.00%  [k] vfs_write
+            |
+            ---vfs_write
+               |          
+                --72.76%--__vfs_write
+                          |          
+                           --72.72%--nova_dax_file_write
+                                     nova_inplace_file_write
+                                     |          
+                                     |--71.10%--__copy_user_nocache
+                                     |          
+                                      --1.61%--do_nova_inplace_file_write
+                                                |          
+                                                 --0.86%--nova_reassign_file_tree
+                                                           |          
+                                                            --0.75%--nova_assign_write_entry
+
+    72.76%     0.00%  [k] __vfs_write
+            |
+            ---__vfs_write
+               |          
+                --72.72%--nova_dax_file_write
+                          nova_inplace_file_write
+                          |          
+                          |--71.10%--__copy_user_nocache
+                          |          
+                           --1.61%--do_nova_inplace_file_write
+                                     |          
+                                      --0.86%--nova_reassign_file_tree
+                                                |          
+                                                 --0.75%--nova_assign_write_entry
+
+    72.73%     0.00%  [.] __GI___libc_write
+            |
+            ---__GI___libc_write
+               |          
+                --72.73%--entry_SYSCALL_64_after_hwframe
+                          |          
+                           --72.73%--do_syscall_64
+                                     __x64_sys_write
+                                     ksys_write
+                                     vfs_write
+                                     |          
+                                      --72.72%--__vfs_write
+                                                |          
+                                                 --72.72%--nova_dax_file_write
+                                                           nova_inplace_file_write
+                                                           |          
+                                                           |--71.10%--__copy_user_nocache
+                                                           |          
+                                                            --1.61%--do_nova_inplace_file_write
+                                                                      |          
+                                                                       --0.86%--nova_reassign_file_tree
+                                                                                 |          
+                                                                                  --0.75%--nova_assign_write_entry
+
+    72.72%     0.00%  [k] nova_dax_file_write
+            |
+            ---nova_dax_file_write
+               nova_inplace_file_write
+               |          
+               |--71.10%--__copy_user_nocache
+               |          
+                --1.61%--do_nova_inplace_file_write
+                          |          
+                           --0.86%--nova_reassign_file_tree
+                                     |          
+                                      --0.75%--nova_assign_write_entry
+
+    72.72%     0.00%  [k] nova_inplace_file_write
+            |
+            ---nova_inplace_file_write
+               |          
+               |--71.10%--__copy_user_nocache
+               |          
+                --1.61%--do_nova_inplace_file_write
+                          |          
+                           --0.86%--nova_reassign_file_tree
+                                     |          
+                                      --0.75%--nova_assign_write_entry
+
+    71.12%    71.08%  [k] __copy_user_nocache
+            |          
+             --71.08%--0
+                       __GI___libc_write
+                       entry_SYSCALL_64_after_hwframe
+                       do_syscall_64
+                       __x64_sys_write
+                       ksys_write
+                       vfs_write
+                       __vfs_write
+                       nova_dax_file_write
+                       nova_inplace_file_write
+                       |          
+                        --71.06%--__copy_user_nocache
+
+    13.42%     0.00%  [k] secondary_startup_64
+            |
+            ---secondary_startup_64
+               |          
+                --13.22%--start_secondary
+                          |          
+                           --13.22%--cpu_startup_entry
+                                     |          
+                                      --13.21%--do_idle
+                                                |          
+                                                 --13.14%--call_cpuidle
+                                                           |          
+                                                            --13.14%--cpuidle_enter
+                                                                      |          
+                                                                       --13.13%--cpuidle_enter_state
+                                                                                 |          
+                                                                                  --12.93%--intel_idle
+
+    13.42%     0.00%  [k] cpu_startup_entry
+            |          
+             --13.42%--cpu_startup_entry
+                       |          
+                        --13.41%--do_idle
+                                  |          
+                                   --13.33%--call_cpuidle
+                                             |          
+                                              --13.33%--cpuidle_enter
+                                                        |          
+                                                         --13.32%--cpuidle_enter_state
+                                                                   |          
+                                                                    --13.07%--intel_idle
+
+    13.41%     0.00%  [k] do_idle
+            |          
+             --13.41%--do_idle
+                       |          
+                        --13.33%--call_cpuidle
+                                  |          
+                                   --13.33%--cpuidle_enter
+                                             |          
+                                              --13.32%--cpuidle_enter_state
+                                                        |          
+                                                         --13.07%--intel_idle
+
+    13.33%     0.00%  [k] call_cpuidle
+            |          
+             --13.33%--call_cpuidle
+                       cpuidle_enter
+                       |          
+                        --13.32%--cpuidle_enter_state
+                                  |          
+                                   --13.07%--intel_idle
+
+    13.33%     0.00%  [k] cpuidle_enter
+            |
+            ---cpuidle_enter
+               |          
+                --13.32%--cpuidle_enter_state
+                          |          
+                           --13.07%--intel_idle
+
+    13.32%     0.01%  [k] cpuidle_enter_state
+            |          
+             --13.31%--cpuidle_enter_state
+                       |          
+                        --13.07%--intel_idle
+
+    13.22%     0.00%  [k] start_secondary
+            |
+            ---start_secondary
+               |          
+                --13.22%--cpu_startup_entry
+                          |          
+                           --13.21%--do_idle
+                                     |          
+                                      --13.14%--call_cpuidle
+                                                |          
+                                                 --13.14%--cpuidle_enter
+                                                           |          
+                                                            --13.13%--cpuidle_enter_state
+                                                                      |          
+                                                                       --12.93%--intel_idle
+
+    13.07%    12.99%  [k] intel_idle
+            |          
+             --12.99%--secondary_startup_64
+                       |          
+                        --12.85%--start_secondary
+                                  cpu_startup_entry
+                                  do_idle
+                                  call_cpuidle
+                                  cpuidle_enter
+                                  |          
+                                   --12.85%--cpuidle_enter_state
+                                             |          
+                                              --12.85%--intel_idle
+
+    12.28%     0.00%  [k] __x64_sys_read
+            |
+            ---__x64_sys_read
+               ksys_read
+               |          
+                --12.27%--vfs_read
+                          |          
+                           --12.27%--__vfs_read
+                                     |          
+                                      --12.26%--nova_dax_file_read
+                                                |          
+                                                |--11.57%--copy_user_enhanced_fast_string
+                                                |          
+                                                 --0.61%--apic_timer_interrupt
+
+    12.28%     0.00%  [k] ksys_read
+            |          
+             --12.28%--ksys_read
+                       |          
+                        --12.27%--vfs_read
+                                  |          
+                                   --12.27%--__vfs_read
+                                             |          
+                                              --12.26%--nova_dax_file_read
+                                                        |          
+                                                        |--11.57%--copy_user_enhanced_fast_string
+                                                        |          
+                                                         --0.61%--apic_timer_interrupt
+
+    12.27%     0.00%  [k] vfs_read
+            |
+            ---vfs_read
+               |          
+                --12.27%--__vfs_read
+                          |          
+                           --12.26%--nova_dax_file_read
+                                     |          
+                                     |--11.57%--copy_user_enhanced_fast_string
+                                     |          
+                                      --0.61%--apic_timer_interrupt
+
+    12.27%     0.00%  [.] read
+            |          
+             --12.27%--read
+                       entry_SYSCALL_64_after_hwframe
+                       do_syscall_64
+                       __x64_sys_read
+                       ksys_read
+                       |          
+                        --12.26%--vfs_read
+                                  |          
+                                   --12.26%--__vfs_read
+                                             nova_dax_file_read
+                                             |          
+                                             |--11.57%--copy_user_enhanced_fast_string
+                                             |          
+                                              --0.61%--apic_timer_interrupt
+
+    12.27%     0.00%  [k] __vfs_read
+            |
+            ---__vfs_read
+               |          
+                --12.26%--nova_dax_file_read
+                          |          
+                          |--11.57%--copy_user_enhanced_fast_string
+                          |          
+                           --0.61%--apic_timer_interrupt
+
+    12.26%     0.00%  [k] nova_dax_file_read
+            |
+            ---nova_dax_file_read
+               |          
+               |--11.57%--copy_user_enhanced_fast_string
+               |          
+                --0.61%--apic_timer_interrupt
+
+    12.18%    12.16%  [k] copy_user_enhanced_fast_string
+            |          
+             --12.16%--0
+                       read
+                       entry_SYSCALL_64_after_hwframe
+                       do_syscall_64
+                       __x64_sys_read
+                       ksys_read
+                       vfs_read
+                       __vfs_read
+                       nova_dax_file_read
+                       |          
+                       |--11.54%--copy_user_enhanced_fast_string
+                       |          
+                        --0.61%--apic_timer_interrupt
+
+     1.61%     0.10%  [k] do_nova_inplace_file_write
+            |          
+             --1.51%--do_nova_inplace_file_write
+                       |          
+                        --0.86%--nova_reassign_file_tree
+                                  |          
+                                   --0.75%--nova_assign_write_entry
+
+     0.87%     0.00%  [k] apic_timer_interrupt
+            |          
+             --0.87%--apic_timer_interrupt
+
+     0.86%     0.05%  [k] nova_reassign_file_tree
+            |          
+             --0.81%--nova_reassign_file_tree
+                       |          
+                        --0.75%--nova_assign_write_entry
+
+     0.76%     0.06%  [k] nova_assign_write_entry
+            |          
+             --0.70%--nova_assign_write_entry
+
+     0.48%     0.40%  [k] radix_tree_insert
+     0.44%     0.00%  [.] __GI___libc_open
+     0.43%     0.00%  [k] __x64_sys_openat
+     0.43%     0.00%  [k] do_sys_open
+     0.41%     0.00%  [k] ret_from_fork
+     0.41%     0.00%  [k] kthread
+     0.41%     0.00%  [k] do_filp_open
+     0.40%     0.00%  [k] path_openat
+     0.39%     0.00%  [k] 0x622f6c756d655f6d
+     0.39%     0.00%  [k] nova_new_data_blocks
+     0.32%     0.32%  [k] rb_next
+     0.27%     0.26%  [k] __radix_tree_lookup
+     0.25%     0.04%  [k] radix_tree_lookup_slot
+     0.24%     0.05%  [k] ksm_scan_thread
+     0.23%     0.00%  [.] start_thread
+     0.23%     0.00%  [k] smp_apic_timer_interrupt
+     0.22%     0.00%  [.] flowop_start
+     0.20%     0.00%  [k] x86_64_start_kernel
+     0.20%     0.00%  [k] x86_64_start_reservations
+     0.20%     0.00%  [k] start_kernel
+     0.20%     0.00%  [k] arch_call_rest_init
+     0.20%     0.00%  [k] rest_init
+     0.16%     0.13%  [k] nova_append_log_entry
+     0.15%     0.01%  [k] nova_create
+     0.15%     0.00%  [k] nova_append_file_write_entry
+     0.15%     0.15%  [k] __memcpy_mcsafe
+     0.14%     0.00%  [k] irq_exit
+     0.14%     0.00%  [k] __softirqentry_text_start
+     0.12%     0.00%  [k] worker_thread
+     0.11%     0.00%  [k] process_one_work
+     0.11%     0.04%  [k] kmem_cache_alloc
+     0.11%     0.01%  [k] hrtimer_interrupt
+     0.09%     0.00%  [.] 0x0000000000488c41
+     0.09%     0.01%  [k] __hrtimer_run_queues
+     0.08%     0.00%  [k] follow_page
+     0.08%     0.02%  [k] link_path_walk.part.0
+     0.08%     0.08%  [k] nova_new_blocks
+     0.08%     0.01%  [k] follow_page_mask
+     0.07%     0.01%  [k] __schedule
+     0.07%     0.00%  [.] flowoplib_openfile_common
+     0.07%     0.00%  [k] exit_to_usermode_loop
+     0.07%     0.00%  [.] __close
+     0.07%     0.00%  [k] radix_tree_node_alloc.constprop.0
+     0.07%     0.00%  [k] schedule
+     0.06%     0.00%  [k] run_rebalance_domains
+     0.06%     0.00%  [k] ___slab_alloc
+     0.06%     0.00%  [k] __slab_alloc
+     0.06%     0.00%  [.] __libc_start_call_main
+     0.06%     0.01%  [k] lookup_fast
+     0.06%     0.03%  [k] do_dax_mapping_read
+     0.06%     0.00%  [.] 0x6e6176772f656d6f
+     0.06%     0.00%  [.] 0x00007ffc23f86be6
+     0.06%     0.00%  [.] main
+     0.06%     0.00%  [.] yyparse
+     0.06%     0.00%  [.] parser_run
+     0.06%     0.00%  [k] tick_sched_timer
+     0.05%     0.00%  [.] fileset_createsets
+     0.05%     0.00%  [.] fileset_create
+     0.05%     0.01%  [k] try_to_wake_up
+     0.05%     0.01%  [k] ____fput
+     0.05%     0.00%  [k] wb_workfn
+     0.05%     0.00%  [k] wb_writeback
+     0.05%     0.00%  [k] __writeback_inodes_wb
+     0.05%     0.00%  [k] writeback_sb_inodes
+     0.05%     0.00%  [k] __writeback_single_inode
+     0.05%     0.00%  [k] do_writepages
+     0.05%     0.00%  [k] ext4_writepages
+     0.05%     0.05%  [k] follow_page_pte
+     0.05%     0.00%  [k] 0x642f6c756d655f6d
+     0.05%     0.05%  [k] up_write
+     0.05%     0.00%  [k] walk_component
+     0.05%     0.04%  [k] _raw_spin_lock
+     0.05%     0.00%  [k] task_work_run
+     0.05%     0.00%  [k] tick_sched_handle
+     0.05%     0.00%  [k] wake_up_process
+     0.05%     0.00%  [k] 0x000055fd3e62ae60
+     0.05%     0.00%  [k] nova_add_dentry
+     0.04%     0.01%  [k] nova_create_inode_transaction
+     0.04%     0.00%  [k] nova_lite_transaction_for_new_inode
+     0.04%     0.04%  [k] __d_lookup_rcu
+     0.04%     0.00%  [.] fileset_openfile
+     0.04%     0.03%  [k] update_blocked_averages
+     0.04%     0.00%  [.] __libc_write
+     0.04%     0.00%  [k] __fput
+     0.04%     0.00%  [k] rcu_gp_kthread
+     0.04%     0.00%  [k] pick_next_task_fair
+     0.04%     0.00%  [k] _nohz_idle_balance
+     0.04%     0.00%  [k] nova_append_inode_journal
+     0.04%     0.02%  [k] nova_insert_dir_tree
+     0.04%     0.00%  [.] fileset_pick
+     0.04%     0.04%  [.] fb_strlcat
+     0.04%     0.00%  [k] mpage_map_and_submit_buffers
+     0.04%     0.00%  [.] ppoll
+     0.04%     0.00%  [k] acpi_os_execute_deferred
+     0.04%     0.00%  [k] update_process_times
+     0.04%     0.00%  [k] __alloc_file
+     0.04%     0.00%  [k] alloc_empty_file
+     0.04%     0.00%  [k] new_sync_write
+     0.04%     0.00%  [k] acpi_ev_asynch_execute_gpe_method
+     0.04%     0.00%  [k] acpi_ns_evaluate
+     0.04%     0.00%  [k] acpi_ps_execute_method
+     0.04%     0.04%  [.] fileset_entry_compare
+     0.04%     0.00%  [k] acpi_ps_parse_aml
+     0.04%     0.00%  [k] ttwu_do_activate
+     0.03%     0.00%  [k] do_sys_poll
+     0.03%     0.00%  [k] acpi_ps_parse_loop
+     0.03%     0.01%  [k] load_balance
+     0.03%     0.03%  [k] xxh64
+     0.03%     0.00%  [k] ret_from_intr
+     0.03%     0.00%  [k] __x64_sys_ppoll
+     0.03%     0.00%  [k] calc_checksum
+     0.03%     0.00%  [k] schedule_timeout
+     0.03%     0.00%  [k] run_timer_softirq
+     0.03%     0.00%  [k] do_IRQ
+     0.03%     0.02%  [k] __stable_node_chain
+     0.03%     0.00%  [.] flowoplib_createfile
+     0.03%     0.00%  [k] mpage_submit_page
+     0.03%     0.00%  [.] __GI___ioctl
+     0.03%     0.00%  [.] fileset_find_entry
+     0.03%     0.00%  [k] rebalance_domains
+     0.03%     0.02%  [k] inode_permission
+     0.03%     0.03%  [k] radix_tree_node_ctor
+     0.03%     0.00%  [.] flowoplib_readwholefile
+     0.03%     0.00%  [.] g_free
+     0.03%     0.03%  [k] memcmp
+     0.03%     0.00%  [k] 0x007570632d34365f
+     0.03%     0.00%  [k] 0x0000000000000230
+     0.03%     0.00%  [k] activate_task
+     0.03%     0.00%  [k] call_timer_fn
+     0.03%     0.00%  [k] nova_new_vfs_inode
+     0.03%     0.00%  [k] reschedule_interrupt
+     0.03%     0.00%  [k] __x64_sys_ioctl
+     0.03%     0.00%  [k] ksys_ioctl
+     0.03%     0.00%  [k] radix_tree_extend
+     0.03%     0.00%  [k] do_vfs_ioctl
+     0.03%     0.00%  [k] smp_reschedule_interrupt
+     0.03%     0.00%  [k] scheduler_ipi
+     0.03%     0.00%  [k] sock_sendmsg
+     0.03%     0.00%  [.] 0x0000000000486a89
+     0.03%     0.00%  [k] find_busiest_group
+     0.03%     0.00%  [k] cpuidle_select
+     0.02%     0.00%  [k] kvm_vcpu_ioctl
+     0.02%     0.00%  [k] update_nohz_stats
+     0.02%     0.01%  [k] nova_insert_range_node
+     0.02%     0.00%  [k] page_fault
+     0.02%     0.00%  [k] kvm_arch_vcpu_ioctl_run
+     0.02%     0.00%  [k] sock_write_iter
+     0.02%     0.01%  [k] menu_select
+     0.02%     0.01%  [k] update_sd_lb_stats
+     0.02%     0.00%  [k] do_group_exit
+     0.02%     0.00%  [k] do_exit
+     0.02%     0.02%  [k] down_read
+     0.02%     0.00%  [k] radix_tree_lookup
+     0.02%     0.01%  [k] may_open.isra.0
+     0.02%     0.00%  [k] blk_done_softirq
+     0.02%     0.00%  [k] scsi_softirq_done
+     0.02%     0.00%  [k] scsi_finish_command
+     0.02%     0.00%  [k] scsi_io_completion
+     0.02%     0.00%  [k] scsi_end_request
+     0.02%     0.00%  [k] unix_stream_sendmsg
+     0.02%     0.00%  [.] flowoplib_pickfile
+     0.02%     0.01%  [.] flowoplib_closefile
+     0.02%     0.00%  [k] schedule_hrtimeout_range
+     0.02%     0.00%  [k] schedule_hrtimeout_range_clock
+     0.02%     0.01%  [k] ext4_finish_bio
+     0.02%     0.00%  [k] blk_update_request
+     0.02%     0.00%  [k] bio_endio
+     0.02%     0.00%  [k] ext4_end_bio
+     0.02%     0.00%  [k] do_page_fault
+     0.02%     0.00%  [k] __do_page_fault
+     0.02%     0.00%  [k] do_user_addr_fault
+     0.02%     0.00%  [.] __libc_start_main
+     0.02%     0.00%  [.] main
+     0.02%     0.00%  [.] run_builtin
+     0.02%     0.00%  [.] cmd_record
+     0.02%     0.00%  [k] enqueue_task_fair
+     0.02%     0.00%  [k] irq_enter
+     0.02%     0.00%  [k] scheduler_tick
+     0.02%     0.00%  [k] handle_mm_fault
+     0.02%     0.00%  [k] dput
+     0.02%     0.00%  [k] poll_schedule_timeout.constprop.0
+     0.02%     0.02%  [k] _raw_spin_lock_irqsave
+     0.02%     0.00%  [.] 0x000000000097ecc6
+     0.02%     0.00%  [k] do_signal
+     0.02%     0.00%  [k] get_signal
+     0.02%     0.00%  [.] fileset_alloc_file
+     0.02%     0.00%  [k] process_timeout
+     0.02%     0.00%  [k] nova_lookup
+     0.02%     0.00%  [k] rcu_core
+     0.02%     0.00%  [k] tick_program_event
+     0.02%     0.01%  [k] new_slab
+     0.02%     0.00%  [k] deactivate_task
+     0.02%     0.00%  [k] acpi_ds_exec_end_op
+     0.02%     0.00%  [k] nova_get_append_head
+     0.02%     0.00%  [k] enqueue_entity
+     0.02%     0.00%  [k] ext4_bio_write_page
+     0.02%     0.00%  [k] __handle_mm_fault
+     0.02%     0.00%  [k] schedule_idle
+     0.02%     0.01%  [k] update_load_avg
+     0.02%     0.01%  [k] __wake_up_common
+     0.02%     0.00%  [.] 0x0000000000486a03
+     0.02%     0.00%  [.] 0x00000000005e3702
+     0.02%     0.00%  [.] 0x0000072000000720
+     0.02%     0.00%  [k] new_inode_pseudo
+     0.02%     0.02%  [k] entry_SYSCALL_64
+     0.02%     0.00%  [.] 0x0000000000460e1e
+     0.02%     0.00%  [.] 0x000000000097eb65
+     0.02%     0.00%  [.] 0x000000000097e0e6
+     0.02%     0.00%  [.] 0x000000000046134d
+     0.02%     0.00%  [.] 0x000000000097db6b
+     0.02%     0.00%  [.] 0x0000000000983c96
+     0.02%     0.00%  [k] user_path_at_empty
+     0.02%     0.00%  [k] vfs_statx
+     0.01%     0.00%  [k] filename_lookup
+     0.01%     0.00%  [k] nova_inode_by_name.isra.0
+     0.01%     0.00%  [k] path_lookupat.isra.0
+     0.01%     0.00%  [k] vfs_open
+     0.01%     0.00%  [k] nova_allocate_inode_log_pages
+     0.01%     0.00%  [k] nova_initialize_inode_log
+     0.01%     0.00%  [.] gethrtime
+     0.01%     0.00%  [.] llseek@GLIBC_2.2.5
+     0.01%     0.01%  [k] nova_check_existing_entry
+     0.01%     0.01%  [.] fb_strlcpy
+     0.01%     0.00%  [.] fileset_unbusy
+     0.01%     0.00%  [.] __GI___fstatat64
+     0.01%     0.00%  [k] __x64_sys_newfstatat
+     0.01%     0.00%  [k] __do_sys_newfstatat
+     0.01%     0.00%  [k] __wake_up_common_lock
+     0.01%     0.01%  [k] get_ksm_page
+     0.01%     0.00%  [k] dentry_kill
+     0.01%     0.00%  [k] __dentry_kill
+     0.01%     0.00%  [k] dentry_unlink_inode
+     0.01%     0.00%  [k] iput
+     0.01%     0.00%  [k] evict
+     0.01%     0.00%  [k] ext4_evict_inode
+     0.01%     0.00%  [k] truncate_inode_pages_final
+     0.01%     0.00%  [k] truncate_inode_pages_range
+     0.01%     0.00%  [k] __remove_hrtimer
+     0.01%     0.00%  [k] memcg_kmem_get_cache
+     0.01%     0.01%  [k] psi_task_change
+     0.01%     0.01%  [.] g_type_check_instance_cast
+     0.01%     0.00%  [k] clockevents_program_event
+     0.01%     0.00%  [k] __mark_inode_dirty
+     0.01%     0.00%  [k] dequeue_task_fair
+     0.01%     0.00%  [.] __vdso_gettimeofday
+     0.01%     0.00%  [k] tick_irq_enter
+     0.01%     0.01%  [k] rb_insert_color
+     0.01%     0.00%  [k] alloc_inode
+     0.01%     0.00%  [k] tick_nohz_idle_stop_tick
+     0.01%     0.00%  [k] release_pages
+     0.01%     0.01%  [k] __fget
+     0.01%     0.00%  [.] 0x000000000043e445
+     0.01%     0.00%  [k] hrtimer_start_range_ns
+     0.01%     0.00%  [k] new_inode
+     0.01%     0.00%  [k] tick_nohz_idle_exit
+     0.01%     0.00%  [.] 0x0000000000441d54
+     0.01%     0.00%  [k] tick_do_update_jiffies64.part.0
+     0.01%     0.01%  [k] kmem_cache_free
+     0.01%     0.01%  [k] nova_find_range_node
+     0.01%     0.00%  [k] nova_find_dentry
+     0.01%     0.00%  [k] __fdget_pos
+     0.01%     0.00%  [k] nova_new_log_blocks
+     0.01%     0.01%  [.] flowop_endop
+     0.01%     0.00%  [k] security_file_permission
+     0.01%     0.00%  [k] rw_verify_area
+     0.01%     0.01%  [k] nova_set_inode_flags
+     0.01%     0.00%  [k] __alloc_pages_nodemask
+     0.01%     0.00%  [k] __x64_sys_lseek
+     0.01%     0.00%  [k] generic_update_time
+     0.01%     0.00%  [k] __wake_up_sync_key
+     0.01%     0.00%  [k] dequeue_entity
+     0.01%     0.00%  [k] hrtimer_wakeup
+     0.01%     0.00%  [k] __tick_nohz_idle_restart_tick
+     0.01%     0.00%  [.] 0x000055fd3d7dfe2a
+     0.01%     0.00%  [.] record__mmap_read_evlist.constprop.0
+     0.01%     0.00%  [.] perf_mmap__push
+     0.01%     0.00%  [.] record__pushfn
+     0.01%     0.00%  [k] ext4_file_write_iter
+     0.01%     0.00%  [k] __generic_file_write_iter
+     0.01%     0.00%  [k] sock_def_readable
+     0.01%     0.00%  [.] __memset_evex_unaligned_erms
+     0.01%     0.00%  [k] generic_perform_write
+     0.01%     0.00%  [k] __pagevec_release
+     0.01%     0.01%  [k] get_page_from_freelist
+     0.01%     0.00%  [.] 0x0000000000424c6e
+     0.01%     0.00%  [.] 0x00000000005e3b8e
+     0.01%     0.00%  [k] __fget_light
+     0.01%     0.01%  [k] native_write_msr
+     0.01%     0.00%  [k] getname_flags
+     0.01%     0.00%  [.] 0x000000000046f072
+     0.01%     0.01%  [.] 0x00000000000006a2
+     0.01%     0.00%  [k] getname
+     0.01%     0.00%  [k] mpage_prepare_extent_to_map
+     0.01%     0.00%  [k] _cond_resched
+     0.01%     0.00%  [k] swake_up_locked.part.0
+     0.01%     0.00%  [k] swake_up_one
+     0.01%     0.00%  [.] 0x000000000090d925
+     0.01%     0.00%  [.] 0x000000000095b365
+     0.01%     0.00%  [k] do_wp_page
+     0.01%     0.00%  [k] nova_alloc_inode
+     0.01%     0.00%  [k] tick_nohz_get_sleep_length
+     0.01%     0.01%  [k] get_mem_cgroup_from_mm
+     0.01%     0.00%  [k] clear_page_dirty_for_io
+     0.01%     0.01%  [k] select_task_rq_fair
+     0.01%     0.00%  [k] tick_sched_do_timer
+     0.01%     0.01%  [k] apparmor_file_alloc_security
+     0.01%     0.00%  [k] do_dentry_open
+     0.01%     0.00%  [.] 0x00000000004d3868
+     0.01%     0.00%  [.] flowop_beginop
+     0.01%     0.00%  [.] 0x00007fc7b565b6a5
+     0.01%     0.01%  [.] __GI___pthread_mutex_unlock_usercnt
+     0.01%     0.01%  [.] __GI___pthread_disable_asynccancel
+     0.01%     0.00%  [.] flowoplib_writewholefile
+     0.01%     0.00%  [k] ksys_lseek
+     0.01%     0.00%  [k] get_unused_fd_flags
+     0.01%     0.00%  [k] do_page_mkwrite
+     0.01%     0.01%  [k] perf_event_task_tick
+     0.01%     0.00%  [k] radix_tree_gang_lookup
+     0.01%     0.00%  [.] avl_add
+     0.01%     0.01%  [k] follow_trans_huge_pmd
+     0.01%     0.00%  [k] __queue_work
+     0.01%     0.01%  [k] unmap_page_range
+     0.01%     0.00%  [k] mmput
+     0.01%     0.00%  [k] exit_mmap
+     0.01%     0.00%  [k] unmap_vmas
+     0.01%     0.00%  [k] unmap_single_vma
+     0.01%     0.00%  [k] update_wall_time
+     0.01%     0.01%  [k] security_inode_permission
+     0.01%     0.00%  [k] default_wake_function
+     0.01%     0.00%  [k] timekeeping_advance
+     0.01%     0.00%  [k] pollwake
+     0.01%     0.00%  [k] insert_work
+     0.01%     0.01%  [k] common_file_perm
+     0.01%     0.00%  [k] apparmor_file_permission
+     0.01%     0.00%  [.] 0x000055fd3d50ea9d
+     0.01%     0.00%  [k] sock_alloc_send_pskb
+     0.01%     0.01%  [k] rcu_sched_clock_irq
+     0.01%     0.00%  [.] 0x0000000000959af0
+     0.01%     0.00%  [.] 0x0000000000986fc6
+     0.01%     0.00%  [k] __test_set_page_writeback
+     0.01%     0.01%  [k] cpu_load_update
+     0.01%     0.00%  [k] test_clear_page_writeback
+     0.01%     0.00%  [k] end_page_writeback
+     0.01%     0.00%  [k] update_curr
+     0.01%     0.00%  [.] 0x00000000005e0726
+     0.01%     0.01%  [k] __update_load_avg_cfs_rq
+     0.01%     0.00%  [k] kvm_vcpu_block
+     0.01%     0.01%  [.] 0x0000000000457a99
+     0.01%     0.00%  [k] syscall_trace_enter
+     0.01%     0.00%  [k] proc_reg_read
+     0.01%     0.00%  [k] handle_irq
+     0.01%     0.00%  [k] handle_irq_event
+     0.01%     0.00%  [k] handle_irq_event_percpu
+     0.01%     0.00%  [k] __handle_irq_event_percpu
+     0.01%     0.00%  [k] __secure_computing
+     0.01%     0.00%  [k] acpi_ps_complete_op
+     0.01%     0.01%  [k] read_tsc
+     0.01%     0.00%  [.] __poll
+     0.01%     0.00%  [k] ext4_dirty_inode
+     0.01%     0.00%  [k] ext4_mark_inode_dirty
+     0.01%     0.00%  [k] seq_read
+     0.01%     0.01%  [k] account_process_tick
+     0.01%     0.01%  [k] __check_object_size
+     0.01%     0.00%  [k] i40e_service_task
+     0.01%     0.01%  [k] _raw_spin_unlock_irqrestore
+     0.01%     0.00%  [.] 0x0000000000516758
+     0.01%     0.01%  [k] __switch_to_asm
+     0.01%     0.00%  [k] __x64_sys_execve
+     0.01%     0.00%  [k] __do_execve_file.isra.0
+     0.01%     0.00%  [k] __x64_sys_poll
+     0.01%     0.00%  [k] __close_fd
+     0.01%     0.00%  [k] __x64_sys_close
+     0.01%     0.01%  [.] 0x0000000000457a52
+     0.01%     0.00%  [.] 0x000055fd3d50ea57
+     0.01%     0.01%  [k] i40e_update_stats
+     0.01%     0.00%  [.] 0x00000000004f7f3e
+     0.01%     0.00%  [.] 0x00000000004ecfa5
+     0.01%     0.00%  [.] 0x00000000004d1625
+     0.01%     0.00%  [k] touch_atime
+     0.01%     0.00%  [.] 0x000000000095af0b
+     0.01%     0.00%  [.] 0x0000000000469f9c
+     0.01%     0.00%  [.] __pthread_mutex_lock
+     0.01%     0.01%  [k] native_irq_return_iret
+     0.01%     0.00%  [.] 0x00000000009597b5
+     0.01%     0.00%  [.] 0x0000000000958ef7
+     0.01%     0.00%  [.] 0x0000000000958de5
+     0.01%     0.00%  [.] 0x00000000006f068f
+     0.01%     0.01%  [k] __fsnotify_parent
+     0.01%     0.00%  [k] show_stat
+     0.01%     0.01%  [k] update_rq_clock
+     0.01%     0.01%  [k] rcu_cblist_dequeue
+     0.01%     0.00%  [k] block_invalidatepage
+     0.01%     0.00%  [k] truncate_cleanup_page
+     0.01%     0.00%  [k] ext4_da_invalidatepage
+     0.01%     0.00%  [k] ext4_invalidatepage
+     0.01%     0.00%  [k] alloc_pages_current
+     0.01%     0.00%  [k] update_cfs_group
+     0.01%     0.00%  [k] file_free_rcu
+     0.01%     0.00%  [k] filp_close
+     0.01%     0.00%  [k] memcmp_pages
+     0.01%     0.01%  [k] inode_init_once
+     0.01%     0.00%  [k] init_once
+     0.01%     0.00%  [k] free_unref_page_list
+     0.01%     0.01%  [k] cpuacct_charge
+     0.01%     0.01%  [k] ktime_get
+     0.01%     0.01%  [k] get_random_u32
+     0.01%     0.00%  [k] security_file_alloc
+     0.01%     0.00%  [k] lockref_put_return
+     0.01%     0.00%  [k] current_time
+     0.01%     0.01%  [.] malloc
+     0.01%     0.00%  [k] __alloc_skb
+     0.01%     0.00%  [k] alloc_skb_with_frags
+     0.01%     0.01%  [k] mem_cgroup_handle_over_high
+     0.01%     0.01%  [.] fileset_resolvepath
+     0.01%     0.00%  [k] force_qs_rnp
+     0.01%     0.01%  [k] __mnt_want_write
+     0.01%     0.00%  [k] mnt_want_write
+     0.01%     0.00%  [k] complete_walk
+     0.01%     0.00%  [k] unlazy_walk
+     0.01%     0.01%  [k] file_ra_state_init
+     0.01%     0.01%  [k] errseq_sample
+     0.01%     0.01%  [.] avd_get_int
+     0.01%     0.00%  [k] nova_alloc_range_node
+     0.01%     0.00%  [k] set_next_entity
+     0.01%     0.01%  [k] radix_tree_next_chunk
+     0.01%     0.00%  [k] nova_find_next_entry
+     0.01%     0.01%  [k] d_alloc_parallel
+     0.01%     0.00%  [k] hrtimer_active
+     0.01%     0.01%  [.] pthread_mutex_lock@@GLIBC_2.2.5
+     0.01%     0.01%  [k] memcg_kmem_put_cache
+     0.01%     0.00%  [k] __alloc_fd
+     0.01%     0.00%  [k] ext4_page_mkwrite
+     0.01%     0.00%  [k] file_update_time
+     0.01%     0.00%  [.] 0x00000000005e3d7d
+     0.01%     0.00%  [k] delayed_work_timer_fn
+     0.01%     0.00%  [k] ext4_da_write_end
+     0.01%     0.00%  [k] nova_dirty_inode
+     0.01%     0.00%  [k] __x64_sys_futex
+     0.01%     0.00%  [k] update_ts_time_stats
+     0.01%     0.01%  [k] __follow_mount_rcu.isra.0
+     0.01%     0.00%  [k] do_futex
+     0.01%     0.00%  [.] 0x000000000042f7e8
+     0.01%     0.00%  [k] alloc_pages_vma
+     0.01%     0.00%  [k] eventfd_poll
+     0.01%     0.00%  [k] sched_clock_cpu
+     0.01%     0.01%  [k] idle_cpu
+     0.01%     0.00%  [k] acpi_ds_evaluate_name_path
+     0.01%     0.00%  [.] procflow_createnwait
+     0.01%     0.00%  [k] quiet_vmstat
+     0.01%     0.00%  [k] cpu_load_update_active
+     0.01%     0.00%  [.] 0x000000000043be86
+     0.01%     0.00%  [.] 0x0000000000447245
+     0.00%     0.00%  [k] __queue_delayed_work
+     0.00%     0.00%  [k] queue_delayed_work_on
+     0.00%     0.00%  [.] g_main_context_check
+     0.00%     0.00%  [.] 0x00000000009595eb
+     0.00%     0.00%  [k] __hrtimer_get_next_event
+     0.00%     0.00%  [k] ahci_single_level_irq_intr
+     0.00%     0.00%  [k] handle_edge_irq
+     0.00%     0.00%  [.] 0x000000000043e40d
+     0.00%     0.00%  [k] __hrtimer_next_event_base
+     0.00%     0.00%  [k] hrtimer_force_reprogram
+     0.00%     0.00%  [.] 0x0000000000948370
+     0.00%     0.00%  [k] mpage_process_page_bufs
+     0.00%     0.00%  [k] find_mergeable_vma
+     0.00%     0.00%  [k] find_get_pages_range_tag
+     0.00%     0.00%  [k] pagevec_lookup_range_tag
+     0.00%     0.00%  [k] reweight_entity
+     0.00%     0.00%  [k] percpu_counter_add_batch
+     0.00%     0.00%  [k] sock_poll
+     0.00%     0.00%  [k] acpi_ut_track_stack_ptr
+     0.00%     0.00%  [k] free_pcppages_bulk
+     0.00%     0.00%  [k] free_unref_page_commit
+     0.00%     0.00%  [k] acpi_ex_resolve_to_value
+     0.00%     0.00%  [k] acpi_ex_resolve_node_to_value
+     0.00%     0.00%  [.] 0x000000000048ab03
+     0.00%     0.00%  [.] 0x000000000042fd07
+     0.00%     0.00%  [k] hrtimer_next_event_without
+     0.00%     0.00%  [k] __seccomp_filter
+     0.00%     0.00%  [k] try_to_release_page
+     0.00%     0.00%  [k] ext4_releasepage
+     0.00%     0.00%  [k] jbd2_journal_try_to_free_buffers
+     0.00%     0.00%  [k] try_to_free_buffers
+     0.00%     0.00%  [k] kstat_irqs
+     0.00%     0.00%  [k] kstat_irqs_usr
+     0.00%     0.00%  [.] 0x0000000000488904
+     0.00%     0.00%  [k] find_get_pages_range
+     0.00%     0.00%  [k] pagevec_lookup_range
+     0.00%     0.00%  [.] 0x000000000042f185
+     0.00%     0.00%  [k] acpi_ex_read_data_from_field
+     0.00%     0.00%  [k] fsnotify
+     0.00%     0.00%  [.] 0x000000000098679c
+     0.00%     0.00%  [k] submit_bio
+     0.00%     0.00%  [k] ext4_io_submit
+     0.00%     0.00%  [.] 0x485635522d756d65
+     0.00%     0.00%  [k] find_vma
+     0.00%     0.00%  [k] apparmor_cred_prepare
+     0.00%     0.00%  [.] perf_evlist__prepare_workload
+     0.00%     0.00%  [.] __GI___execve
+     0.00%     0.00%  [k] prepare_exec_creds
+     0.00%     0.00%  [k] prepare_creds
+     0.00%     0.00%  [k] security_prepare_creds
+     0.00%     0.00%  [k] ahci_handle_port_intr
+     0.00%     0.00%  [k] kvm_write_guest_cached
+     0.00%     0.00%  [k] kvm_write_guest_offset_cached
+     0.00%     0.00%  [k] ext4_mark_iloc_dirty
+     0.00%     0.00%  [k] ext4_inode_csum_set
+     0.00%     0.00%  [k] arch_cpu_idle_enter
+     0.00%     0.00%  [k] acpi_ut_trace_ptr
+     0.00%     0.00%  [.] 0x00000000000055fd
+     0.00%     0.00%  [.] 0x000000000045fca5
+     0.00%     0.00%  [.] 0x00000000005def8d
+     0.00%     0.00%  [.] 0x00000000005de416
+     0.00%     0.00%  [k] syscall_return_via_sysret
+     0.00%     0.00%  [k] vmx_handle_exit
+     0.00%     0.00%  [.] 0x00000000004392d2
+     0.00%     0.00%  [.] 0x00000000005e3c74
+     0.00%     0.00%  [.] 0x000000000059e235
+     0.00%     0.00%  [.] 0x000000000059dfd3
+     0.00%     0.00%  [k] __update_load_avg_se
+     0.00%     0.00%  [k] acpi_ex_field_datum_io
+     0.00%     0.00%  [k] _raw_spin_lock_irq
+     0.00%     0.00%  [.] __pthread_mutex_unlock
+     0.00%     0.00%  [.] 0x00000000004f8f45
+     0.00%     0.00%  [.] 0x0000000000439c06
+     0.00%     0.00%  [.] 0x00000000006f05a8
+     0.00%     0.00%  [.] 0x0000000000986a18
+     0.00%     0.00%  [.] 0x000000000045f8f9
+     0.00%     0.00%  [k] tsc_verify_tsc_adjust
+     0.00%     0.00%  [k] run_posix_cpu_timers
+     0.00%     0.00%  [k] tick_nohz_next_event
+     0.00%     0.00%  [k] rcu_all_qs
+     0.00%     0.00%  [k] rcu_report_qs_rnp
+     0.00%     0.00%  [k] page_mkclean
+     0.00%     0.00%  [k] rmap_walk
+     0.00%     0.00%  [k] rmap_walk_file
+     0.00%     0.00%  [.] 0x0000000000441f1f
+     0.00%     0.00%  [k] generic_make_request
+     0.00%     0.00%  [k] blk_mq_make_request
+     0.00%     0.00%  [.] start_thread
+     0.00%     0.00%  [k] __slab_free
+     0.00%     0.00%  [k] do_epoll_wait
+     0.00%     0.00%  [k] calc_global_load
+     0.00%     0.00%  [k] acpi_ut_remove_reference
+     0.00%     0.00%  [k] hrtimer_cancel
+     0.00%     0.00%  [k] __wake_up
+     0.00%     0.00%  [.] 0x0000000000442532
+     0.00%     0.00%  [k] __internal_add_timer
+     0.00%     0.00%  [k] ahci_handle_port_interrupt
+     0.00%     0.00%  [k] acpi_ev_address_space_dispatch
+     0.00%     0.00%  [k] acpi_ex_access_region
+     0.00%     0.00%  [k] kmem_cache_alloc_node
+     0.00%     0.00%  [k] kvm_vcpu_check_block
+     0.00%     0.00%  [.] 0x0000000000486b6b
+     0.00%     0.00%  [.] 0x0000000000471617
+     0.00%     0.00%  [.] 0x0000000000471095
+     0.00%     0.00%  [k] apic_timer_fn
+     0.00%     0.00%  [.] 0x000055fd3d90091d
+     0.00%     0.00%  [k] __x64_sys_exit_group
+     0.00%     0.00%  [k] apic_timer_expired
+     0.00%     0.00%  [.] 0x00000000009471b2
+     0.00%     0.00%  [.] 0x00000000005b89e8
+     0.00%     0.00%  [.] 0x000000000042f43f
+     0.00%     0.00%  [.] 0x0000000000440a85
+     0.00%     0.00%  [.] 0x0000000000440bce
+     0.00%     0.00%  [.] 0x0000000000442132
+     0.00%     0.00%  [.] 0x00000000005e4445
+     0.00%     0.00%  [.] 0x000000000004744a
+     0.00%     0.00%  [.] 0x000000000044744d
+     0.00%     0.00%  [k] rcu_gp_kthread_wake
+     0.00%     0.00%  [k] update_dl_rq_load_avg
+     0.00%     0.00%  [.] 0x000000000048ad20
+     0.00%     0.00%  [k] kthread_data
+     0.00%     0.00%  [k] unlock_page
+     0.00%     0.00%  [.] 0x00000000005994ce
+     0.00%     0.00%  [k] __fprop_inc_percpu_max
+     0.00%     0.00%  [k] vmstat_update
+     0.00%     0.00%  [k] acpi_ex_system_memory_space_handler
+     0.00%     0.00%  [k] add_timer_on
+     0.00%     0.00%  [k] fb_flashcursor
+     0.00%     0.00%  [.] __GI___pthread_enable_asynccancel
+     0.00%     0.00%  [.] proc_create
+     0.00%     0.00%  [k] make_kuid
+     0.00%     0.00%  [k] inode_init_always
+     0.00%     0.00%  [k] memset_erms
+     0.00%     0.00%  [k] d_lru_add
+     0.00%     0.00%  [k] get_partial_node.isra.0.part.0
+     0.00%     0.00%  [k] terminate_walk
+     0.00%     0.00%  [k] ima_file_free
+     0.00%     0.00%  [k] d_splice_alias
+     0.00%     0.00%  [k] __d_lookup_done
+     0.00%     0.00%  [k] switch_mm_irqs_off
+     0.00%     0.00%  [k] pm_qos_request
+     0.00%     0.00%  [.] lseek64@plt
+     0.00%     0.00%  [k] nova_check_inode_integrity
+     0.00%     0.00%  [.] qemu_spice_display_update
+     0.00%     0.00%  [.] open64@plt
+     0.00%     0.00%  [k] __mnt_drop_write
+     0.00%     0.00%  [.] avl_find
+     0.00%     0.00%  [k] pick_next_task_idle
+     0.00%     0.00%  [k] rcu_segcblist_insert_count
+     0.00%     0.00%  [.] fb_random64
+     0.00%     0.00%  [.] flowoplib_iobufsetup
+     0.00%     0.00%  [.] filebench_log
+     0.00%     0.00%  [k] __ext4_get_inode_loc
+     0.00%     0.00%  [k] ext4_reserve_inode_write
+     0.00%     0.00%  [k] nova_append_dentry
+     0.00%     0.00%  [k] __mod_zone_page_state
+     0.00%     0.00%  [k] lockref_get_not_dead
+     0.00%     0.00%  [k] legitimize_path.isra.0
+     0.00%     0.00%  [k] acpi_ps_get_next_namepath
+     0.00%     0.00%  [k] dnotify_flush
+     0.00%     0.00%  [k] apparmor_file_open
+     0.00%     0.00%  [k] security_file_open
+     0.00%     0.00%  [k] locks_remove_posix
+     0.00%     0.00%  [.] __strlen_evex
+     0.00%     0.00%  [k] acpi_ex_extract_from_field
+     0.00%     0.00%  [k] security_file_free
+     0.00%     0.00%  [k] security_inode_create
+     0.00%     0.00%  [k] ktime_get_coarse_real_ts64
+     0.00%     0.00%  [k] rcu_segcblist_enqueue
+     0.00%     0.00%  [k] call_rcu
+     0.00%     0.00%  [k] __call_rcu.constprop.0
+     0.00%     0.00%  [.] ipc_mutex_unlock
+     0.00%     0.00%  [k] apparmor_file_free_security
+     0.00%     0.00%  [k] 0x000000010000001d
+     0.00%     0.00%  [k] handle_wrmsr
+     0.00%     0.00%  [k] expand_files
+     0.00%     0.00%  [k] native_apic_msr_eoi_write
+     0.00%     0.00%  [k] task_tick_fair
+     0.00%     0.00%  [k] kvm_arch_vcpu_runnable
+     0.00%     0.00%  [k] kvm_cpu_has_interrupt
+     0.00%     0.00%  [k] ext4_nonda_switch
+     0.00%     0.00%  [k] acpi_ns_lookup
+     0.00%     0.00%  [k] acpi_ns_search_and_enter
+     0.00%     0.00%  [k] atime_needs_update
+     0.00%     0.00%  [k] nova_llseek
+     0.00%     0.00%  [.] fb_lfs_close
+     0.00%     0.00%  [.] g_private_get
+     0.00%     0.00%  [.] 0x000000000097ea65
+     0.00%     0.00%  [.] 0x0000000000428bd8
+     0.00%     0.00%  [.] 0x00000000004290db
+     0.00%     0.00%  [k] nova_new_nova_inode
+     0.00%     0.00%  [k] set_root
+     0.00%     0.00%  [k] path_init
+     0.00%     0.00%  [k] find_next_and_bit
+     0.00%     0.00%  [k] __switch_to
+     0.00%     0.00%  [k] enqueue_hrtimer
+     0.00%     0.00%  [.] avd_get_str
+     0.00%     0.00%  [.] flowoplib_filesetup
+     0.00%     0.00%  [k] __x64_sys_epoll_pwait
+     0.00%     0.00%  [k] timerqueue_add
+     0.00%     0.00%  [k] leave_mm
+     0.00%     0.00%  [.] 0x0000000000489979
+     0.00%     0.00%  [k] ext4_inode_csum.isra.0
+     0.00%     0.00%  [.] avl_remove
+     0.00%     0.00%  [.] avl_rotation
+     0.00%     0.00%  [k] kvm_irq_delivery_to_apic_fast
+     0.00%     0.00%  [k] __apic_accept_irq
+     0.00%     0.00%  [k] vmx_deliver_posted_interrupt
+     0.00%     0.00%  [k] kvm_vcpu_kick
+     0.00%     0.00%  [k] acpi_ut_update_ref_count.part.0
+     0.00%     0.00%  [.] 0x00000000005aebef
+     0.00%     0.00%  [.] 0x00000000005aef38
+     0.00%     0.00%  [.] 0x00000000005abaac
+     0.00%     0.00%  [k] fput_many
+     0.00%     0.00%  [.] 0x0000000000486985
+     0.00%     0.00%  [.] 0x000000000045d319
+     0.00%     0.00%  [.] 0x000000000045d3d3
+     0.00%     0.00%  [.] 0x00000000004603e5
+     0.00%     0.00%  [.] do_lookup_x
+     0.00%     0.00%  [.] 0x00000000004fa990
+     0.00%     0.00%  [.] 0x000000000059dd19
+     0.00%     0.00%  [.] 0x000000000098504b
+     0.00%     0.00%  [k] finish_task_switch
+     0.00%     0.00%  [.] 0x0000000000000010
+     0.00%     0.00%  [.] g_main_context_dispatch
+     0.00%     0.00%  [.] syscall
+     0.00%     0.00%  [k] acpi_ns_search_one_scope
+     0.00%     0.00%  [.] 0x0000000000042a09
+     0.00%     0.00%  [.] 0x0000000000442a0e
+     0.00%     0.00%  [k] ep_poll
+     0.00%     0.00%  [.] 0x00000000041002c1
+     0.00%     0.00%  [.] 0x00000000006f058f
+     0.00%     0.00%  [.] zbx_get_agent_item_nextcheck
+     0.00%     0.00%  [.] _PyEval_EvalFrameDefault
+     0.00%     0.00%  [k] ttwu_do_wakeup
+     0.00%     0.00%  [.] 0x00000000004610ec
+     0.00%     0.00%  [k] new_sync_read
+     0.00%     0.00%  [k] kvm_set_msr
+     0.00%     0.00%  [k] blk_queue_split
+     0.00%     0.00%  [k] acpi_ps_complete_this_op
+     0.00%     0.00%  [.] 0x0000000000000006
+     0.00%     0.00%  [.] 0x00000000005dec66
+     0.00%     0.00%  [k] account_entity_enqueue
+     0.00%     0.00%  [k] futex_wait
+     0.00%     0.00%  [k] net_rx_action
+     0.00%     0.00%  [k] acpi_ps_create_op
+     0.00%     0.00%  [.] 0x0042072000420720
+     0.00%     0.00%  [k] vmx_vcpu_run
+     0.00%     0.00%  [k] vmx_set_msr
+     0.00%     0.00%  [k] kvm_set_msr_common
+     0.00%     0.00%  [k] mem_cgroup_uncharge_list
+     0.00%     0.00%  [.] 0x0000000100000000
+     0.00%     0.00%  [.] 0x000055fd3e71b240
+     0.00%     0.00%  [k] acpi_ex_resolve_operands
+     0.00%     0.00%  [.] 0x000000000045ffe8
+     0.00%     0.00%  [.] 0x00000000003b7574
+     0.00%     0.00%  [k] inet_sendmsg
+     0.00%     0.00%  [.] 0x0000000000439dbb
+     0.00%     0.00%  [.] 0x000000000044a1e5
+     0.00%     0.00%  [.] 0x00000000004fa7b5
+     0.00%     0.00%  [.] 0x00000000006f00d0
+     0.00%     0.00%  [.] __GI___execve
+     0.00%     0.00%  [k] aa_file_perm
+     0.00%     0.00%  [k] hrtimer_reprogram
+     0.00%     0.00%  [k] acpi_ut_update_object_reference
+     0.00%     0.00%  [k] acpi_ps_push_scope
+     0.00%     0.00%  [.] timerlist_run_timers
+     0.00%     0.00%  [k] __netif_receive_skb
+     0.00%     0.00%  [k] __netif_receive_skb_one_core
+     0.00%     0.00%  [k] acpi_os_read_port
+     0.00%     0.00%  [k] handle_fasteoi_irq
+     0.00%     0.00%  [k] acpi_irq
+     0.00%     0.00%  [k] acpi_ev_sci_xrupt_handler
+     0.00%     0.00%  [k] acpi_ev_gpe_detect
+     0.00%     0.00%  [k] acpi_ev_detect_gpe
+     0.00%     0.00%  [k] acpi_hw_read
+     0.00%     0.00%  [k] acpi_hw_read_port
+     0.00%     0.00%  [.] 0x000000000045e94c
+     0.00%     0.00%  [.] 0x000000000003692b
+     0.00%     0.00%  [.] 0x0000000000442510
+     0.00%     0.00%  [.] 0x0000000000436933
+     0.00%     0.00%  [.] 0x00000000000424db
+     0.00%     0.00%  [.] 0x00000000004424de
+     0.00%     0.00%  [k] get_next_timer_interrupt
+     0.00%     0.00%  [.] 0x000000000002de37
+     0.00%     0.00%  [.] 0x000000000043b9b5
+     0.00%     0.00%  [.] 0x000000000044bc1e
+     0.00%     0.00%  [.] 0x000000000042de39
+     0.00%     0.00%  [.] 0x000000000003fdd6
+     0.00%     0.00%  [.] 0x000000000043fddc
+     0.00%     0.00%  [k] free_buffer_head
+     0.00%     0.00%  [k] native_sched_clock
+     0.00%     0.00%  [k] generic_write_end
+     0.00%     0.00%  [.] _dl_map_object
+     0.00%     0.00%  [k] timekeeping_update
+     0.00%     0.00%  [.] __GI___libc_open
+     0.00%     0.00%  [.] aio_pending
+     0.00%     0.00%  [k] ip_rcv
+     0.00%     0.00%  [k] nr_iowait_cpu
+     0.00%     0.00%  [k] calc_global_load_tick
+     0.00%     0.00%  [k] ksize
+     0.00%     0.00%  [k] vhost_worker
+     0.00%     0.00%  [k] handle_rx_net
+     0.00%     0.00%  [k] handle_rx
+     0.00%     0.00%  [k] vhost_add_used_and_signal_n
+     0.00%     0.00%  [k] vhost_signal
+     0.00%     0.00%  [k] eventfd_signal
+     0.00%     0.00%  [k] __wake_up_locked_key
+     0.00%     0.00%  [k] irqfd_wakeup
+     0.00%     0.00%  [k] acpi_ds_get_predicate_value
+     0.00%     0.00%  [k] cpus_share_cache
+     0.00%     0.00%  [k] select_estimate_accuracy
+     0.00%     0.00%  [k] ahci_scr_read
+     0.00%     0.00%  [k] sata_async_notification
+     0.00%     0.00%  [k] sata_scr_read
+     0.00%     0.00%  [k] kvm_arch_set_irq_inatomic
+     0.00%     0.00%  [.] 0x00000000000424d1
+     0.00%     0.00%  [.] 0x00000000004785fa
+     0.00%     0.00%  [.] __libc_read
+     0.00%     0.00%  [.] 0x00000000014dc610
+     0.00%     0.00%  [.] 0x00000000014db930
+     0.00%     0.00%  [.] 0x0000000001445730
+     0.00%     0.00%  [k] __mod_node_page_state
+     0.00%     0.00%  [k] __srcu_read_unlock
+     0.00%     0.00%  [k] cursor_timer_handler
+     0.00%     0.00%  [k] rcu_irq_enter
+     0.00%     0.00%  [k] acpi_ut_create_generic_state
+     0.00%     0.00%  [.] graphic_hw_update
+     0.00%     0.00%  [k] __x64_sys_sendto
+     0.00%     0.00%  [k] __sys_sendto
+     0.00%     0.00%  [k] netlink_sendmsg
+     0.00%     0.00%  [k] netlink_unicast
+     0.00%     0.00%  [k] rtnetlink_rcv
+     0.00%     0.00%  [k] netlink_rcv_skb
+     0.00%     0.00%  [k] rtnetlink_rcv_msg
+     0.00%     0.00%  [k] __netlink_dump_start
+     0.00%     0.00%  [k] netlink_dump
+     0.00%     0.00%  [.] __GI___open64_nocancel
+     0.00%     0.00%  [.] 0x000000000042e1c7
+     0.00%     0.00%  [k] futex_wait_queue_me
+     0.00%     0.00%  [k] __aa_label_next_not_in_set
+     0.00%     0.00%  [k] notifier_call_chain
+     0.00%     0.00%  [k] aa_label_is_subset
+     0.00%     0.00%  [k] raw_notifier_call_chain
+     0.00%     0.00%  [k] try_charge
+     0.00%     0.00%  [k] mem_cgroup_try_charge_delay
+     0.00%     0.00%  [.] 0x00000000004787b9
+     0.00%     0.00%  [k] dec_zone_page_state
+     0.00%     0.00%  [k] ext4_da_write_begin
+     0.00%     0.00%  [k] grab_cache_page_write_begin
+     0.00%     0.00%  [k] pagecache_get_page
+     0.00%     0.00%  [k] __blk_mq_run_hw_queue
+     0.00%     0.00%  [k] blk_mq_sched_dispatch_requests
+     0.00%     0.00%  [k] blk_mq_do_dispatch_sched
+     0.00%     0.00%  [k] blk_mq_dispatch_rq_list
+     0.00%     0.00%  [k] tlb_flush_mmu_free
+     0.00%     0.00%  [k] free_pages_and_swap_cache
+     0.00%     0.00%  [.] qemu_spice_display_refresh
+     0.00%     0.00%  [k] unix_poll
+     0.00%     0.00%  [k] 0xffffffffc0996bac
+     0.00%     0.00%  [k] 0xffffffffc0996bad
+     0.00%     0.00%  [k] drop_buffers
+     0.00%     0.00%  [k] update_rt_rq_load_avg
+     0.00%     0.00%  [k] __pollwait
+     0.00%     0.00%  [k] search_binary_handler
+     0.00%     0.00%  [k] load_elf_binary
+     0.00%     0.00%  [k] apic_has_interrupt_for_ppr
+     0.00%     0.00%  [k] kvm_apic_has_interrupt
+     0.00%     0.00%  [k] queue_work_on
+     0.00%     0.00%  [.] do_lookup_x
+     0.00%     0.00%  [k] wq_worker_sleeping
+     0.00%     0.00%  [k] kvm_set_lapic_tscdeadline_msr
+     0.00%     0.00%  [.] 0x0000000000453657
+     0.00%     0.00%  [.] qemu_event_reset
+     0.00%     0.00%  [.] 0x0000000000457a62
+     0.00%     0.00%  [.] 0x000055fd3d50ea6d
+     0.00%     0.00%  [k] smp_call_function_single
+     0.00%     0.00%  [k] perf_ioctl
+     0.00%     0.00%  [k] _perf_ioctl
+     0.00%     0.00%  [k] perf_event_for_each_child
+     0.00%     0.00%  [k] event_function_call
+     0.00%     0.00%  [k] mem_cgroup_try_charge
+     0.00%     0.00%  [k] x86_pmu_disable
+     0.00%     0.00%  [k] ip_local_out
+     0.00%     0.00%  [k] ip_output
+     0.00%     0.00%  [k] ip_finish_output
+     0.00%     0.00%  [k] ip_finish_output2
+     0.00%     0.00%  [.] 0x000000000002f714
+     0.00%     0.00%  [.] 0x000000000042f719
+     0.00%     0.00%  [.] _dl_map_object
+     0.00%     0.00%  [.] open_path
+     0.00%     0.00%  [.] 0x0000000000040c80
+     0.00%     0.00%  [.] 0x00007f08d3a74c84
+     0.00%     0.00%  [k] switch_mm
+     0.00%     0.00%  [k] intel_pmu_enable_all
+     0.00%     0.00%  [k] perf_pmu_enable.part.0
+     0.00%     0.00%  [.] 0x0000000000551759
+     0.00%     0.00%  [.] 0x000055fd3d608760
+     0.00%     0.00%  [.] malloc
+     0.00%     0.00%  [.] __resolv_conf_get
+     0.00%     0.00%  [k] vmx_vmexit
+     0.00%     0.00%  [k] memchr_inv
+     0.00%     0.00%  [.] ipc_attach
+     0.00%     0.00%  [.] 0x696600612d007265
+     0.00%     0.00%  [.] 0x00007fff4e27bbe1
+     0.00%     0.00%  [k] 0x0000000c00382d46
+     0.00%     0.00%  [k] 0x0000000000be97f0
+     0.00%     0.00%  [.] setlocale
+     0.00%     0.00%  [.] _nl_find_locale
+     0.00%     0.00%  [.] __open64_nocancel
+     0.00%     0.00%  [.] _dl_lookup_symbol_x
+     0.00%     0.00%  [.] 0x00000000000746bc
+     0.00%     0.00%  [.] 0x00007f0e57fb0b18
+     0.00%     0.00%  [k] rb_erase_cached
+     0.00%     0.00%  [.] 0x385a8b48d68949ff
+     0.00%     0.00%  [.] 0x000000000043e0e5
+     0.00%     0.00%  [.] 0x000000000004c11d
+     0.00%     0.00%  [.] 0x0000000000447494
+     0.00%     0.00%  [.] 0x0000000000447bb6
+     0.00%     0.00%  [.] 0x000000000044c122
+     0.00%     0.00%  [.] spice_qxl_wakeup
+     0.00%     0.00%  [k] put_prev_task_fair
+     0.00%     0.00%  [k] i40e_napi_poll
+     0.00%     0.00%  [k] x86_pmu_enable
+     0.00%     0.00%  [.] 0x000000000059961d
+     0.00%     0.00%  [k] page_mapping
+     0.00%     0.00%  [k] interrupt_entry
+     0.00%     0.00%  [k] note_gp_changes
+     0.00%     0.00%  [.] __strlen_avx2
+     0.00%     0.00%  [.] 0x2f642e6d61702f63
+     0.00%     0.00%  [.] 0x00007ffcbd997bc5
+     0.00%     0.00%  [.] sem_trywait@@GLIBC_2.2.5
+     0.00%     0.00%  [.] 0x000000000045ebe8
+     0.00%     0.00%  [.] 0x000000000042e0c9
+     0.00%     0.00%  [k] 0x000000000090c400
+     0.00%     0.00%  [k] 0x0000000000000004
+     0.00%     0.00%  [k] timerqueue_del
+     0.00%     0.00%  [k] tick_check_oneshot_broadcast_this_cpu
+     0.00%     0.00%  [.] 0x000000000004f88e
+     0.00%     0.00%  [.] 0x000000000090da89
+     0.00%     0.00%  [.] 0x0000000000512abf
+     0.00%     0.00%  [.] 0x000000000044a639
+     0.00%     0.00%  [.] 0x000000000044f890
+     0.00%     0.00%  [.] qemu_lockcnt_inc
+     0.00%     0.00%  [.] 0x0000000000597e2a
+     0.00%     0.00%  [.] 0x0000000000555d05
+     0.00%     0.00%  [.] 0x00000000005433a9
+     0.00%     0.00%  [.] 0x00000000004ecf7a
+     0.00%     0.00%  [.] 0x00000000004ebc12
+     0.00%     0.00%  [.] 0x0000000000483529
+     0.00%     0.00%  [k] napi_gro_receive
+     0.00%     0.00%  [k] netif_receive_skb_internal
+     0.00%     0.00%  [k] ksoftirqd_running
+     0.00%     0.00%  [k] acpi_ds_create_operands
+     0.00%     0.00%  [k] bvec_split_segs.isra.0
+     0.00%     0.00%  [.] qemu_mutex_lock_impl
+     0.00%     0.00%  [.] 0xdfdfdfdfdfdfdfdf
+     0.00%     0.00%  [k] inet_dump_ifaddr
+     0.00%     0.00%  [.] __libc_sendto
+     0.00%     0.00%  [k] rtnl_dump_all
+     0.00%     0.00%  [.] 0x0000000000849919
+     0.00%     0.00%  [k] sock_read_iter
+     0.00%     0.00%  [k] sock_recvmsg
+     0.00%     0.00%  [.] 0x00000000002f342c
+     0.00%     0.00%  [.] 0x00000000009597d4
+     0.00%     0.00%  [.] 0x00000000009590b7
+     0.00%     0.00%  [.] 0x00000000006f0456
+     0.00%     0.00%  [.] 0x00000000006ef54a
+     0.00%     0.00%  [.] 0x00000000006ee47c
+     0.00%     0.00%  [.] 0x00000000006f2b58
+     0.00%     0.00%  [.] 0x00000000006f342f
+     0.00%     0.00%  [k] mem_cgroup_from_task
+     0.00%     0.00%  [.] __memset_avx2_unaligned_erms
+     0.00%     0.00%  [k] xas_load
+     0.00%     0.00%  [.] 0x00000000009594e7
+     0.00%     0.00%  [k] unix_stream_read_generic
+     0.00%     0.00%  [.] _IO_putc
+     0.00%     0.00%  [.] 0x000055e008cc79a0
+     0.00%     0.00%  [k] nf_hook_slow
+     0.00%     0.00%  [k] blk_mq_get_tag
+     0.00%     0.00%  [k] blk_mq_run_work_fn
+     0.00%     0.00%  [k] blk_mq_get_driver_tag
+     0.00%     0.00%  [k] should_failslab
+     0.00%     0.00%  [k] add_to_page_cache_lru
+     0.00%     0.00%  [k] __add_to_page_cache_locked
+     0.00%     0.00%  [k] xas_store
+     0.00%     0.00%  [k] xas_create
+     0.00%     0.00%  [k] xas_alloc
+     0.00%     0.00%  [k] kjournald2
+     0.00%     0.00%  [k] jbd2_journal_commit_transaction
+     0.00%     0.00%  [k] put_prev_entity
+     0.00%     0.00%  [k] run_local_timers
+     0.00%     0.00%  [k] inotify_poll
+     0.00%     0.00%  [k] 0x0000000100000007
+     0.00%     0.00%  [.] 0x0000000000059d13
+     0.00%     0.00%  [.] 0x7c76fe826c0c3800
+     0.00%     0.00%  [.] 0x00007f7b43132d16
+     0.00%     0.00%  [.] __GI_____strtoull_l_internal
+     0.00%     0.00%  [.] 0x000000000007b211
+     0.00%     0.00%  [.] 0x000000000047b216
+     0.00%     0.00%  [.] 0x000000000090da26
+     0.00%     0.00%  [.] 0x000000000043dfd1
+     0.00%     0.00%  [k] futex_wake
+     0.00%     0.00%  [k] wake_up_q
+     0.00%     0.00%  [k] vma_compute_subtree_gap
+     0.00%     0.00%  [k] elf_map
+     0.00%     0.00%  [k] vm_mmap
+     0.00%     0.00%  [k] vm_mmap_pgoff
+     0.00%     0.00%  [k] do_mmap
+     0.00%     0.00%  [k] mmap_region
+     0.00%     0.00%  [k] vma_link
+     0.00%     0.00%  [k] __vma_link_rb
+     0.00%     0.00%  [k] __rb_insert_augmented
+     0.00%     0.00%  [k] vma_gap_callbacks_rotate
+     0.00%     0.00%  [.] 0x000000000047bb0d
+     0.00%     0.00%  [.] 0x000055fd3eba4230
+     0.00%     0.00%  [k] up_read
+     0.00%     0.00%  [.] aio_compute_timeout
+     0.00%     0.00%  [k] _raw_spin_trylock
+     0.00%     0.00%  [.] 0x0000000000041f02
+     0.00%     0.00%  [.] 0x0000000000441f07
+     0.00%     0.00%  [k] iov_iter_fault_in_readable
+     0.00%     0.00%  [k] __next_timer_interrupt
+     0.00%     0.00%  [.] 0x0000000000516705
+     0.00%     0.00%  [.] 0x00000000005162ef
+     0.00%     0.00%  [k] up
+     0.00%     0.00%  [k] cpuidle_reflect
+     0.00%     0.00%  [k] irq_work_tick
+     0.00%     0.00%  [.] re_compile_internal
+     0.00%     0.00%  [.] 0x0000000000060108
+     0.00%     0.00%  [.] 0x0000000000460110
+     0.00%     0.00%  [k] crypto_shash_update
+     0.00%     0.00%  [.] 0x000000000095b63b
+     0.00%     0.00%  [.] 0x000000000095a89e
+     0.00%     0.00%  [.] 0x000000000044255e
+     0.00%     0.00%  [.] 0x0000000000116769
+     0.00%     0.00%  [.] 0x000000000051676e
+     0.00%     0.00%  [.] __vfprintf_internal
+     0.00%     0.00%  [.] 0x2020312f73747020
+     0.00%     0.00%  [.] __vsnprintf_internal
+     0.00%     0.00%  [.] _IO_default_xsputn
+     0.00%     0.00%  [.] 0x000000000000a1d6
+     0.00%     0.00%  [.] 0xe9097400287f8348
+     0.00%     0.00%  [.] _ZN35QNetworkConfigurationManagerPrivate11qt_metacastEPKc
+     0.00%     0.00%  [.] 0x0000561b1c273500
+     0.00%     0.00%  [.] _ZN35QNetworkConfigurationManagerPrivate11pollEnginesEv
+     0.00%     0.00%  [.] _ZN11QMetaObject12invokeMethodEP7QObjectPKcN2Qt14ConnectionTypeE22QGenericReturnArgument16QGenericArgumentS7_S7_S7_S7_S7_S7_S7_S7_S7_
+     0.00%     0.00%  [.] 0x00007f5eec4127d0
+     0.00%     0.00%  [.] 0x0000000000538633
+     0.00%     0.00%  [.] 0x00000000005386f2
+     0.00%     0.00%  [.] 0x0000000000538b72
+     0.00%     0.00%  [.] 0x00000000005391b4
+     0.00%     0.00%  [.] 0x000000000055e4a9
+     0.00%     0.00%  [.] 0x000000000055e5c5
+     0.00%     0.00%  [k] acpi_os_write_port
+     0.00%     0.00%  [k] acpi_ev_asynch_enable_gpe
+     0.00%     0.00%  [k] acpi_ev_finish_gpe
+     0.00%     0.00%  [k] acpi_hw_write
+     0.00%     0.00%  [k] acpi_hw_write_port
+     0.00%     0.00%  [k] set_page_dirty
+     0.00%     0.00%  [k] page_vma_mapped_walk
+     0.00%     0.00%  [k] page_mkclean_one
+     0.00%     0.00%  [.] __libc_sendmsg
+     0.00%     0.00%  [.] 0x00000000003b70b4
+     0.00%     0.00%  [k] skb_queue_tail
+     0.00%     0.00%  [.] yyparse
+     0.00%     0.00%  [k] __accumulate_pelt_segments
+     0.00%     0.00%  [.] 0x0000000000537728
+     0.00%     0.00%  [.] 0x00000000005365fb
+     0.00%     0.00%  [k] menu_reflect
+     0.00%     0.00%  [.] 0x0000000000094d37
+     0.00%     0.00%  [.] 0x000000000090dd45
+     0.00%     0.00%  [.] 0x0000000000494d39
+     0.00%     0.00%  [.] 0x0000000000457350
+     0.00%     0.00%  [.] g_slice_alloc0
+     0.00%     0.00%  [.] 0x003db9002401eb05
+     0.00%     0.00%  [.] 0x000055fd3d50e354
+     0.00%     0.00%  [k] task_work_add
+     0.00%     0.00%  [k] fput
+     0.00%     0.00%  [k] lock_timer_base
+     0.00%     0.00%  [.] __libc_recvmsg
+     0.00%     0.00%  [k] xas_start
+     0.00%     0.00%  [.] 0x000000000046f62c
+     0.00%     0.00%  [k] del_timer_sync
+     0.00%     0.00%  [.] 0x00000000000042f4
+     0.00%     0.00%  [.] 0x00000000801f0fc3
+     0.00%     0.00%  [.] 0x000055bd712cf2f6
+     0.00%     0.00%  [k] console_unlock
+     0.00%     0.00%  [k] __up_console_sem.isra.0
+     0.00%     0.00%  [k] __generic_write_end
+     0.00%     0.00%  [k] watchdog_timer_fn
+     0.00%     0.00%  [k] xas_set_mark
+     0.00%     0.00%  [k] gc_worker
+     0.00%     0.00%  [.] 0x000000000048a51d
+     0.00%     0.00%  [.] 0x000055fd3e64e490
+     0.00%     0.00%  [.] 0x0000000000000003
+     0.00%     0.00%  [.] 0x000000000048a4b4
+     0.00%     0.00%  [.] memset
+     0.00%     0.00%  [k] __x64_sys_sendmsg
+     0.00%     0.00%  [k] __sys_sendmsg
+     0.00%     0.00%  [k] ___sys_sendmsg
+     0.00%     0.00%  [k] udp_sendmsg
+     0.00%     0.00%  [k] dev_queue_xmit
+     0.00%     0.00%  [k] __dev_queue_xmit
+     0.00%     0.00%  [k] rcu_idle_enter
+     0.00%     0.00%  [k] ipt_do_table
+     0.00%     0.00%  [k] iptable_mangle_hook
+     0.00%     0.00%  [k] add_timer
+     0.00%     0.00%  [.] 0x000000000001dc34
+     0.00%     0.00%  [.] 0x00007f7ad0003700
+     0.00%     0.00%  [.] OPENSSL_sk_value
+     0.00%     0.00%  [k] ext4_mb_good_group
+     0.00%     0.00%  [k] ext4_map_blocks
+     0.00%     0.00%  [k] ext4_ext_map_blocks
+     0.00%     0.00%  [k] ext4_mb_new_blocks
+     0.00%     0.00%  [k] ext4_mb_regular_allocator
+     0.00%     0.00%  [.] PyList_New
+     0.00%     0.00%  [.] 0x0000000000444e92
+     0.00%     0.00%  [.] 0x0000000000445325
+     0.00%     0.00%  [.] 0x0000000000460cdf
+     0.00%     0.00%  [.] 0x000000000002cb60
+     0.00%     0.00%  [.] 0x0000000000959acf
+     0.00%     0.00%  [.] 0x000000000042d7d6
+     0.00%     0.00%  [.] 0x000000000042cb63
+     0.00%     0.00%  [.] 0x000000000004255e
+     0.00%     0.00%  [.] 0x00000000006efbb1
+     0.00%     0.00%  [.] 0x0000000000442560
+     0.00%     0.00%  [.] 0x00000000000424de
+     0.00%     0.00%  [.] 0x00000000004424e0
+     0.00%     0.00%  [.] __vdso_clock_gettime
+     0.00%     0.00%  [k] lapic_next_deadline
+     0.00%     0.00%  [.] 0x0000000000089a5f
+     0.00%     0.00%  [.] 0x0000000000439e6b
+     0.00%     0.00%  [.] 0x0000000000489a64
+     0.00%     0.00%  [.] 0x0000000000457a6d
+     0.00%     0.00%  [.] 0x000055fd3d50ea71
+     0.00%     0.00%  [k] acpi_ps_get_next_arg
+     0.00%     0.00%  [.] 0x00007f6200dabbd0
+     0.00%     0.00%  [k] put_unused_fd
+     0.00%     0.00%  [k] perf_pmu_disable.part.0
+     0.00%     0.00%  [.] internal_malloc.constprop.0
+     0.00%     0.00%  [k] pm_qos_read_value
+     0.00%     0.00%  [.] 0x0000000000598bc5
+     0.00%     0.00%  [.] 0x0000000000597c76
+     0.00%     0.00%  [.] 0x0000000000555ee5
+     0.00%     0.00%  [.] 0x0000000000543c29
+     0.00%     0.00%  [.] 0x00000000004eefce
+     0.00%     0.00%  [.] 0x00000000004d1905
+     0.00%     0.00%  [k] tcp_sendmsg
+     0.00%     0.00%  [k] tcp_sendmsg_locked
+     0.00%     0.00%  [k] tcp_push
+     0.00%     0.00%  [k] __tcp_push_pending_frames
+     0.00%     0.00%  [k] tcp_write_xmit
+     0.00%     0.00%  [k] __tcp_transmit_skb
+     0.00%     0.00%  [k] ip_queue_xmit
+     0.00%     0.00%  [k] __ip_queue_xmit
+     0.00%     0.00%  [k] dyntick_save_progress_counter
+     0.00%     0.00%  [k] __x64_sys_nanosleep
+     0.00%     0.00%  [.] 0x00000000004f95e5
+     0.00%     0.00%  [.] 0x00000000004faa8d
+     0.00%     0.00%  [.] 0x00000000004ecacf
+     0.00%     0.00%  [.] 0x00000000004eb893
+     0.00%     0.00%  [.] tee_files
+     0.00%     0.00%  [k] cpuidle_not_available
+     0.00%     0.00%  [.] g_slice_free1
+     0.00%     0.00%  [.] 0x000055fd3e728470
+     0.00%     0.00%  [k] 0x6f6e6e6143007461
+     0.00%     0.00%  [.] 0x0000000000516956
+     0.00%     0.00%  [k] unix_stream_recvmsg
+     0.00%     0.00%  [.] 0x00080720001c0720
+     0.00%     0.00%  [k] remote_function
+     0.00%     0.00%  [k] event_function
+     0.00%     0.00%  [k] __perf_event_enable
+     0.00%     0.00%  [k] ctx_resched
+     0.00%     0.00%  [.] g_main_context_query
+     0.00%     0.00%  [k] tcp_poll
+     0.00%     0.00%  [.] 0x0000000000959c91
+     0.00%     0.00%  [.] 0x000000000059901e
+     0.00%     0.00%  [k] ep_scan_ready_list.constprop.0
+     0.00%     0.00%  [k] ep_send_events_proc
+     0.00%     0.00%  [k] ep_item_poll.isra.0
+     0.00%     0.00%  [.] perf_evlist__disable
+     0.00%     0.00%  [k] _perf_event_disable
+     0.00%     0.00%  [k] 0x706d732f33372f71
+     0.00%     0.00%  [.] reset_or_restore_signal_handlers
+     0.00%     0.00%  [k] rb_erase
+     0.00%     0.00%  [k] i40e_stat_update48
+     0.00%     0.00%  [k] iov_iter_copy_from_user_atomic
+     0.00%     0.00%  [k] call_function_single_interrupt
+     0.00%     0.00%  [k] smp_call_function_single_interrupt
+     0.00%     0.00%  [k] generic_smp_call_function_single_interrupt
+     0.00%     0.00%  [k] flush_smp_call_function_queue
+     0.00%     0.00%  [.] 0x00000000006e2014
+     0.00%     0.00%  [.] 0x00000000001a2f63
+     0.00%     0.00%  [.] 0x00000000005a2f6f
+     0.00%     0.00%  [.] 0x000000000042f96d
+     0.00%     0.00%  [.] dns_label_unescape
+     0.00%     0.00%  [k] sched_clock
+     0.00%     0.00%  [.] epoll_wait
+     0.00%     0.00%  [k] __x64_sys_epoll_wait
+     0.00%     0.00%  [.] 0x000000000001dfdb
+     0.00%     0.00%  [.] 0x0000557adc8c7fe4
+     0.00%     0.00%  [k] tick_check_broadcast_expired
+     0.00%     0.00%  [.] __GI___tunables_init
+     0.00%     0.00%  [.] __strncmp_avx2
+     0.00%     0.00%  [.] qemu_clock_get_ns
+     0.00%     0.00%  [.] __socket
+     0.00%     0.00%  [k] __sock_create
+     0.00%     0.00%  [k] __x64_sys_socket
+     0.00%     0.00%  [k] __sys_socket
+     0.00%     0.00%  [.] _dl_load_cache_lookup
+     0.00%     0.00%  [.] 0x00000000004eca31
+     0.00%     0.00%  [.] 0x00000000004d0faa
+     0.00%     0.00%  [k] rcu_dynticks_eqs_exit
+     0.00%     0.00%  [k] clear_page_erms
+     0.00%     0.00%  [.] 0x0000000000000020
+     0.00%     0.00%  [k] consume_skb
+     0.00%     0.00%  [k] ata_qc_complete_multiple
+     0.00%     0.00%  [k] ata_qc_complete
+     0.00%     0.00%  [k] __ata_qc_complete
+     0.00%     0.00%  [k] __block_commit_write.isra.0
+     0.00%     0.00%  [k] block_write_end
+     0.00%     0.00%  [k] acpi_ds_call_control_method
+     0.00%     0.00%  [k] calc_load_nohz_stop
+     0.00%     0.00%  [.] 0x00000000004fa8bb
+     0.00%     0.00%  [.] 0x00000000004d0894
+     0.00%     0.00%  [.] 0x000000000045ffdb
+     0.00%     0.00%  [.] 0x0000000000453e58
+     0.00%     0.00%  [.] 0x000000000048a495
+     0.00%     0.00%  [.] 0x0000000000048767
+     0.00%     0.00%  [.] 0x000000000042f89e
+     0.00%     0.00%  [.] 0x000000000044876c
+     0.00%     0.00%  [.] 0x00000000009472bd
+     0.00%     0.00%  [k] ip6_dst_lookup_tail
+     0.00%     0.00%  [.] 0x00000000005676b6
+     0.00%     0.00%  [.] 0x000000000056727b
+     0.00%     0.00%  [.] 0x0000000000566a13
+     0.00%     0.00%  [.] 0x00000000005671bf
+     0.00%     0.00%  [.] 0x0000000000565476
+     0.00%     0.00%  [.] _cgo_2ac87069779a_C2func_getaddrinfo
+     0.00%     0.00%  [.] __libc_connect
+     0.00%     0.00%  [k] __x64_sys_connect
+     0.00%     0.00%  [k] __sys_connect
+     0.00%     0.00%  [k] inet_dgram_connect
+     0.00%     0.00%  [k] ip6_datagram_connect
+     0.00%     0.00%  [k] __ip6_datagram_connect
+     0.00%     0.00%  [k] ip6_datagram_dst_update
+     0.00%     0.00%  [k] ip6_dst_lookup_flow
+     0.00%     0.00%  [k] __get_user_pages
+     0.00%     0.00%  [k] find_next_bit
+     0.00%     0.00%  [k] cpuidle_get_cpu_driver
+     0.00%     0.00%  [.] 0x00007ffc573a56a5
+     0.00%     0.00%  [k] intel_pmu_disable_all
+     0.00%     0.00%  [.] 0x00000000004659e9
+     0.00%     0.00%  [.] 0x000000000042e454
+     0.00%     0.00%  [.] 0x000000000042e305
+     0.00%     0.00%  [k] timerqueue_iterate_next
+     0.00%     0.00%  [k] acpi_ut_create_internal_object_dbg
+     0.00%     0.00%  [k] acpi_ut_allocate_object_desc_dbg
+     0.00%     0.00%  [.] 0x00000000004658c5
+     0.00%     0.00%  [.] 0x000000000045f678
+     0.00%     0.00%  [k] smpboot_thread_fn
+     0.00%     0.00%  [k] tick_nohz_idle_enter
+     0.00%     0.00%  [k] native_queued_spin_lock_slowpath
+     0.00%     0.00%  [k] bio_to_wbt_flags.isra.0.part.0
+     0.00%     0.00%  [k] __rq_qos_throttle
+     0.00%     0.00%  [k] wbt_wait
+     0.00%     0.00%  [.] __select
+     0.00%     0.00%  [k] __x64_sys_select
+     0.00%     0.00%  [k] bit_cursor
+     0.00%     0.00%  [k] soft_cursor
+     0.00%     0.00%  [k] ast_imageblit
+     0.00%     0.00%  [k] record_times
+     0.00%     0.00%  [k] 0x000055fd3f611b88
+     0.00%     0.00%  [k] psi_update_work
+     0.00%     0.00%  [.] g_mutex_lock
+     0.00%     0.00%  [k] acpi_ds_create_walk_state
+     0.00%     0.00%  [k] rcu_implicit_dynticks_qs
+     0.00%     0.00%  [k] kvm_apic_accept_pic_intr
+     0.00%     0.00%  [.] 0x0000000000457a22
+     0.00%     0.00%  [.] 0x000055fd3d50ea26
+     0.00%     0.00%  [.] g_main_context_default
+     0.00%     0.00%  [.] 0x000000000045f870
+     0.00%     0.00%  [.] 0x00000000000424a7
+     0.00%     0.00%  [.] 0x00000000004424b0
+     0.00%     0.00%  [.] 0x000055fd3d50eeaf
+     0.00%     0.00%  [k] acpi_ut_create_integer_object
+     0.00%     0.00%  [k] skb_copy_datagram_from_iter
+     0.00%     0.00%  [k] scsi_mq_done
+     0.00%     0.00%  [.] 0x000000000090dc16
+     0.00%     0.00%  [.] 0x000000000090df86
+     0.00%     0.00%  [.] 0x0764001900050264
+     0.00%     0.00%  [k] kvm_cpu_has_extint
+     0.00%     0.00%  [k] pipe_read
+     0.00%     0.00%  [k] vmacache_find
+     0.00%     0.00%  [k] 0x000055fd3f781810
+     0.00%     0.00%  [k] available_idle_cpu
+     0.00%     0.00%  [k] hrtimer_try_to_cancel
+     0.00%     0.00%  [.] 0x00000000000424b7
+     0.00%     0.00%  [.] 0x00000000004424ba
+     0.00%     0.00%  [k] update_group_capacity
+     0.00%     0.00%  [k] __update_idle_core
+     0.00%     0.00%  [.] read
+     0.00%     0.00%  [k] show_interrupts
+     0.00%     0.00%  [k] seq_printf
+     0.00%     0.00%  [k] seq_vprintf
+     0.00%     0.00%  [k] add_wait_queue
+     0.00%     0.00%  [k] acpi_ds_delete_result_if_not_used
+     0.00%     0.00%  [k] acpi_ds_is_result_used
+     0.00%     0.00%  [k] acpi_ds_do_implicit_return
+     0.00%     0.00%  [k] acpi_ds_clear_implicit_return
+     0.00%     0.00%  [k] trigger_load_balance
+     0.00%     0.00%  [.] perf_evlist__enable
+     0.00%     0.00%  [k] _perf_event_enable
+     0.00%     0.00%  [.] 0x00000000004424d7
+     0.00%     0.00%  [k] need_update
+     0.00%     0.00%  [.] 0x00000000004d38fe
+     0.00%     0.00%  [k] get_cpu_device
+     0.00%     0.00%  [k] __wait_on_buffer
+     0.00%     0.00%  [k] out_of_line_wait_on_bit
+     0.00%     0.00%  [k] __wait_on_bit
+     0.00%     0.00%  [k] bit_wait_io
+     0.00%     0.00%  [k] io_schedule
+     0.00%     0.00%  [k] check_preempt_curr
+     0.00%     0.00%  [.] 0x000000000003bb72
+     0.00%     0.00%  [.] 0x000000000044a7d4
+     0.00%     0.00%  [.] 0x000000000044a525
+     0.00%     0.00%  [.] 0x000000000043bb75
+     0.00%     0.00%  [.] 0x00000000005e445e
+     0.00%     0.00%  [.] perf_evlist__poll_thread
+     0.00%     0.00%  [k] calc_wheel_index
+     0.00%     0.00%  [.] 0x00000000000241bc
+     0.00%     0.00%  [.] 0x000000000054ee35
+     0.00%     0.00%  [.] 0x000000000054dd9d
+     0.00%     0.00%  [.] 0x00000000004241bf
+     0.00%     0.00%  [.] 0x00000000003b69b4
+     0.00%     0.00%  [k] acpi_hw_clear_gpe
+     0.00%     0.00%  [k] ep_poll_callback
+     0.00%     0.00%  [k] pipe_write
+     0.00%     0.00%  [k] console_trylock.part.0
+     0.00%     0.00%  [k] __bitmap_and
+     0.00%     0.00%  [k] udp_send_skb.isra.0
+     0.00%     0.00%  [k] ip_send_skb
+     0.00%     0.00%  [k] __local_bh_enable_ip
+     0.00%     0.00%  [k] do_softirq.part.0
+     0.00%     0.00%  [k] do_softirq_own_stack
+     0.00%     0.00%  [k] process_backlog
+     0.00%     0.00%  [k] ip_rcv_finish
+     0.00%     0.00%  [k] ip_local_deliver
+     0.00%     0.00%  [k] ip_local_deliver_finish
+     0.00%     0.00%  [k] ip_protocol_deliver_rcu
+     0.00%     0.00%  [k] udp_rcv
+     0.00%     0.00%  [k] __udp4_lib_rcv
+     0.00%     0.00%  [k] udp_unicast_rcv_skb.isra.0
+     0.00%     0.00%  [k] udp_queue_rcv_skb
+     0.00%     0.00%  [k] udp_queue_rcv_one_skb
+     0.00%     0.00%  [k] __udp_enqueue_schedule_skb
+     0.00%     0.00%  [k] prepare_to_swait_event
+     0.00%     0.00%  [k] acpi_ut_release_mutex
+     0.00%     0.00%  [k] acpi_os_signal_semaphore
+     0.00%     0.00%  [k] acpi_ps_delete_parse_tree
+     0.00%     0.00%  [k] hrtimer_get_next_event
+     0.00%     0.00%  [.] __memcmp_avx2_movbe
+     0.00%     0.00%  [k] rcu_idle_exit
+     0.00%     0.00%  [k] jbd2_journal_stop
+     0.00%     0.00%  [k] __ext4_journal_stop
+     0.00%     0.00%  [k] strncpy_from_user
+     0.00%     0.00%  [.] __xstat64
+     0.00%     0.00%  [k] __x64_sys_newstat
+     0.00%     0.00%  [k] __do_sys_newstat
+     0.00%     0.00%  [.] 0x00000000005a8609
+     0.00%     0.00%  [k] cpuidle_governor_latency_req
+     0.00%     0.00%  [.] 0x0000000000470833
+     0.00%     0.00%  [.] 0x0000000000472225
+     0.00%     0.00%  [.] 0x00000000004769d0
+     0.00%     0.00%  [k] acpi_hw_low_set_gpe
+     0.00%     0.00%  [k] update_stats
+     0.00%     0.00%  [k] memcpy_erms
+     0.00%     0.00%  [k] cpu_load_update_nohz_stop
+     0.00%     0.00%  [k] vmstat_shepherd
+     0.00%     0.00%  [.] 0x000000000054ec5a
+     0.00%     0.00%  [k] nmi_restore
+     0.00%     0.00%  [.] clock_gettime@GLIBC_2.2.5
+     0.00%     0.00%  [.] 0x000000000006e664
+     0.00%     0.00%  [.] 0x0000000000440076
+     0.00%     0.00%  [.] 0x00000000004402a5
+     0.00%     0.00%  [.] __restore_rt
+     0.00%     0.00%  [.] 0x000000000048a866
+     0.00%     0.00%  [.] 0x000000000046cae7
+     0.00%     0.00%  [.] 0x000000000046e667
+     0.00%     0.00%  [k] __hrtimer_init
+     0.00%     0.00%  [k] skb_release_all
+     0.00%     0.00%  [.] 0x000000000046f66a
+     0.00%     0.00%  [.] execlp
+     0.00%     0.00%  [k] rcu_irq_exit
+     0.00%     0.00%  [.] 0x000000000045f03a
+     0.00%     0.00%  [k] raise_softirq
+     0.00%     0.00%  [k] cpumask_next_and
+     0.00%     0.00%  [.] 0x00000000001afbeb
+     0.00%     0.00%  [.] 0x00000000005defc8
+     0.00%     0.00%  [.] 0x00000000005dddbe
+     0.00%     0.00%  [.] 0x00000000005afbf0
+     0.00%     0.00%  [.] __libc_enable_asynccancel
+     0.00%     0.00%  [k] sys_imageblit
+     0.00%     0.00%  [k] drm_fb_helper_sys_imageblit
+     0.00%     0.00%  [k] generic_permission
+     0.00%     0.00%  [.] 0x00000000003b7194
+     0.00%     0.00%  [k] 0x0000000600000002
+     0.00%     0.00%  [k] 0x00007f5ee80059e0
+     0.00%     0.00%  [k] sched_clock_idle_wakeup_event
+     0.00%     0.00%  [.] 0x0000000000475f09
+     0.00%     0.00%  [k] acpi_ds_terminate_control_method
+     0.00%     0.00%  [k] acpi_ut_release_owner_id
+     0.00%     0.00%  [k] khugepaged
+     0.00%     0.00%  [k] __mmu_notifier_test_young
+     0.00%     0.00%  [.] __tzfile_compute
+     0.00%     0.00%  [.] 0x6c0c380000000000
+     0.00%     0.00%  [k] acpi_ut_trace
+     0.00%     0.00%  [.] 0x0000000000051e70
+     0.00%     0.00%  [.] 0x00007f08d3a85e74
+     0.00%     0.00%  [k] _copy_from_iter
+     0.00%     0.00%  [.] 0x00000000000006b9
+     0.00%     0.00%  [.] 0x00000000000380a8
+     0.00%     0.00%  [.] 0x000000000002cb94
+     0.00%     0.00%  [.] 0x0000000000457a77
+     0.00%     0.00%  [k] kvm_x2apic_msr_write
+     0.00%     0.00%  [k] kvm_lapic_reg_write
+     0.00%     0.00%  [k] kvm_irq_delivery_to_apic
+     0.00%     0.00%  [.] 0x000000000095afc5
+     0.00%     0.00%  [.] 0x00000000004fe76c
+     0.00%     0.00%  [.] 0x0000000000507448
+     0.00%     0.00%  [.] 0x00000000005513c5
+     0.00%     0.00%  [.] 0x000000000050495b
+     0.00%     0.00%  [.] 0x0000000000520405
+     0.00%     0.00%  [.] 0x0000000000503b5d
+     0.00%     0.00%  [.] 0x000000000042da74
+     0.00%     0.00%  [.] 0x000000000042cb99
+     0.00%     0.00%  [.] 0x00000000004380ab
+     0.00%     0.00%  [.] 0x000055fd3d50ea7a
+     0.00%     0.00%  [.] 0x00007ffc573a56be
+     0.00%     0.00%  [k] skb_release_data
+     0.00%     0.00%  [k] skb_free_head
+     0.00%     0.00%  [.] 0x0000000000488c46
+     0.00%     0.00%  [.] 0x0000000000461ddc
+     0.00%     0.00%  [.] 0x0000000000038089
+     0.00%     0.00%  [.] 0x0000000000985194
+     0.00%     0.00%  [.] 0x00000000005be465
+     0.00%     0.00%  [.] 0x00000000005be95e
+     0.00%     0.00%  [.] 0x00000000005bf045
+     0.00%     0.00%  [.] 0x00000000005c0e25
+     0.00%     0.00%  [.] 0x00000000005bf07e
+     0.00%     0.00%  [.] 0x00000000005bfe3b
+     0.00%     0.00%  [.] 0x00000000005c0149
+     0.00%     0.00%  [.] 0x00000000005bf5ab
+     0.00%     0.00%  [.] 0x00000000004bb79d
+     0.00%     0.00%  [.] 0x0000000000482607
+     0.00%     0.00%  [.] 0x000000000043808f
+     0.00%     0.00%  [k] handle_ept_violation
+     0.00%     0.00%  [k] kvm_mmu_page_fault
+     0.00%     0.00%  [k] tdp_page_fault
+     0.00%     0.00%  [k] try_async_pf
+     0.00%     0.00%  [k] __gfn_to_pfn_memslot
+     0.00%     0.00%  [k] get_user_pages_unlocked
+     0.00%     0.00%  [k] wp_page_copy
+     0.00%     0.00%  [k] ptep_clear_flush
+     0.00%     0.00%  [k] flush_tlb_mm_range
+     0.00%     0.00%  [k] native_flush_tlb_others
+     0.00%     0.00%  [k] on_each_cpu_cond_mask
+     0.00%     0.00%  [.] 0x0000000000027ecd
+     0.00%     0.00%  [.] 0x000000000094baa5
+     0.00%     0.00%  [.] 0x00000000004dd152
+     0.00%     0.00%  [.] 0x00000000004295c5
+     0.00%     0.00%  [.] 0x0000000000427ed1
+     0.00%     0.00%  [.] timerlist_deadline_ns
+     0.00%     0.00%  [k] fib_get_table
+     0.00%     0.00%  [k] ip_route_output_flow
+     0.00%     0.00%  [k] ip_route_output_key_hash
+     0.00%     0.00%  [k] ip_route_output_key_hash_rcu
+     0.00%     0.00%  [k] __ip_dev_find
+     0.00%     0.00%  [.] 0x00000000656c6f73
+     0.00%     0.00%  [.] 0x0000000000000060
+     0.00%     0.00%  [.] 0x0000000000598b85
+     0.00%     0.00%  [k] acpi_ds_create_operand
+     0.00%     0.00%  [k] __enqueue_entity
+     0.00%     0.00%  [.] 0x000000000090d8a5
+     0.00%     0.00%  [k] get_nohz_timer_target
+     0.00%     0.00%  [k] ktime_get_update_offsets_now
+     0.00%     0.00%  [k] acpi_ds_resolve_operands
+     0.00%     0.00%  [.] 0xe9b5dba5b5c0fbcf
+     0.00%     0.00%  [.] 0x00000000000424f0
+     0.00%     0.00%  [.] 0x00000000004424f5
+     0.00%     0.00%  [.] __do_global_dtors_aux
+     0.00%     0.00%  [.] __run_exit_handlers
+     0.00%     0.00%  [.] 0x00000000005a568f
+     0.00%     0.00%  [k] acpi_ut_copy_iobject_to_iobject
+     0.00%     0.00%  [k] flush_old_exec
+     0.00%     0.00%  [k] select_idle_sibling
+     0.00%     0.00%  [.] 0x0000000000076b7c
+     0.00%     0.00%  [.] 0x000000000059dbcb
+     0.00%     0.00%  [.] 0x0000000000473150
+     0.00%     0.00%  [.] 0x0000000000476b7f
+     0.00%     0.00%  [.] __libc_send
+     0.00%     0.00%  [k] rtnl_dump_ifinfo
+     0.00%     0.00%  [.] 0x0000000000075c28
+     0.00%     0.00%  [.] 0x000000000047b678
+     0.00%     0.00%  [.] 0x0000000000475c2a
+     0.00%     0.00%  [k] seq_put_decimal_ull
+     0.00%     0.00%  [k] strncpy
+     0.00%     0.00%  [k] acpi_ps_init_op
+     0.00%     0.00%  [k] sock_alloc
+     0.00%     0.00%  [k] sock_alloc_inode
+     0.00%     0.00%  [k] signalfd_poll
+     0.00%     0.00%  [.] 0x000000000043fe45
+     0.00%     0.00%  [.] 0x00000000004401a5
+     0.00%     0.00%  [.] 0x000000000044137a
+     0.00%     0.00%  [.] 0x0000000000441905
+     0.00%     0.00%  [.] 0x00000000004419be
+     0.00%     0.00%  [.] __close_nocancel
+     0.00%     0.00%  [k] kmem_cache_alloc_trace
+     0.00%     0.00%  [k] __fdget
+     0.00%     0.00%  [k] ahci_qc_issue
+     0.00%     0.00%  [k] blk_finish_plug
+     0.00%     0.00%  [k] blk_flush_plug_list
+     0.00%     0.00%  [k] blk_mq_flush_plug_list
+     0.00%     0.00%  [k] blk_mq_sched_insert_requests
+     0.00%     0.00%  [k] blk_mq_run_hw_queue
+     0.00%     0.00%  [k] __blk_mq_delay_run_hw_queue
+     0.00%     0.00%  [k] scsi_queue_rq
+     0.00%     0.00%  [k] ata_scsi_queuecmd
+     0.00%     0.00%  [k] ata_scsi_translate
+     0.00%     0.00%  [.] 0x000000000006035f
+     0.00%     0.00%  [.] 0x0000000000460366
+     0.00%     0.00%  [k] 0x000055d278364a20
+     0.00%     0.00%  [k] account_entity_dequeue
+     0.00%     0.00%  [k] acpi_ex_opcode_1A_1T_1R
+     0.00%     0.00%  [k] acpi_ex_store
+     0.00%     0.00%  [k] acpi_ex_store_object_to_node
+     0.00%     0.00%  [k] acpi_ex_write_data_to_field
+     0.00%     0.00%  [k] acpi_ex_insert_into_field
+     0.00%     0.00%  [k] acpi_ex_write_with_update_rule
+     0.00%     0.00%  [.] 0x0000000000042a60
+     0.00%     0.00%  [.] 0x0000000000442a69
+     0.00%     0.00%  [k] pick_next_entity
+     0.00%     0.00%  [k] kern_select
+     0.00%     0.00%  [k] core_sys_select
+     0.00%     0.00%  [k] do_select
+     0.00%     0.00%  [.] 0x000000000008ad24
+     0.00%     0.00%  [.] 0x0000000000453fbc
+     0.00%     0.00%  [k] get_futex_value_locked
+     0.00%     0.00%  [k] kvm_get_linear_rip
+     0.00%     0.00%  [k] handle_io
+     0.00%     0.00%  [k] kvm_fast_pio
+     0.00%     0.00%  [k] format_decode
+     0.00%     0.00%  [k] vsnprintf
+     0.00%     0.00%  [k] in_group_p
+     0.00%     0.00%  [k] hrtimer_nanosleep
+     0.00%     0.00%  [k] do_nanosleep
+     0.00%     0.00%  [.] 0x0000000000427e7d
+     0.00%     0.00%  [.] 0x0000000000428445
+     0.00%     0.00%  [.] malloc@plt
+     0.00%     0.00%  [.] 0x00000000005aeb2a
+     0.00%     0.00%  [.] 0x00000000005aaa45
+     0.00%     0.00%  [.] 0x00000000005abc09
+     0.00%     0.00%  [k] acpi_os_release_lock
+     0.00%     0.00%  [k] acpi_ps_get_next_simple_arg
+     0.00%     0.00%  [k] acpi_ds_result_push
+     0.00%     0.00%  [k] acpi_ex_truncate_for32bit_table
+     0.00%     0.00%  [k] acpi_ex_opcode_2A_0T_1R
+     0.00%     0.00%  [k] acpi_ex_do_logical_op
+     0.00%     0.00%  [k] acpi_ex_convert_to_integer
+     0.00%     0.00%  [k] __vm_enough_memory
+     0.00%     0.00%  [k] copy_strings.isra.0
+     0.00%     0.00%  [k] get_user_pages_remote
+     0.00%     0.00%  [k] find_extend_vma
+     0.00%     0.00%  [k] expand_downwards
+     0.00%     0.00%  [k] security_vm_enough_memory_mm
+     0.00%     0.00%  [k] calc_load_nohz_start
+     0.00%     0.00%  [k] seq_put_decimal_ull_width
+     0.00%     0.00%  [k] kfree_skbmem
+     0.00%     0.00%  [k] 0x49544100007d6305
+     0.00%     0.00%  [.] 0x0000000000417d70
+     0.00%     0.00%  [.] 0x000055fd3d4ced74
+     0.00%     0.00%  [.] 0x8280010000000000
+     0.00%     0.00%  [.] 0x0000000000460e45
+     0.00%     0.00%  [.] 0x0000000000460a05
+     0.00%     0.00%  [.] 0x00000000000dedef
+     0.00%     0.00%  [.] 0x00000000004dedf4
+     0.00%     0.00%  [k] detach_if_pending
+     0.00%     0.00%  [k] acpi_ds_method_data_init
+     0.00%     0.00%  [.] 0x0000000000273ea8
+     0.00%     0.00%  [.] 0x0000000000673eae
+     0.00%     0.00%  [k] copy_user_generic_unrolled
+     0.00%     0.00%  [.] 0x000000000054f958
+     0.00%     0.00%  [.] 0x000000000055ab32
+     0.00%     0.00%  [.] 0x000000000055b045
+     0.00%     0.00%  [.] 0x00000000004cf10a
+     0.00%     0.00%  [.] 0x00000000004d319a
+     0.00%     0.00%  [.] 0x00000000004d37fb
+     0.00%     0.00%  [k] __x64_sys_getsockname
+     0.00%     0.00%  [k] __sys_getsockname
+     0.00%     0.00%  [k] move_addr_to_user
+     0.00%     0.00%  [.] 0x000000000046101e
+     0.00%     0.00%  [k] __page_cache_alloc
+     0.00%     0.00%  [k] acpi_ps_peek_opcode
+     0.00%     0.00%  [.] 0x00000000002e263d
+     0.00%     0.00%  [.] 0x00000000006e1d3f
+     0.00%     0.00%  [.] 0x00000000006e2643
+     0.00%     0.00%  [k] get_cpu_idle_time_us
+     0.00%     0.00%  [k] get_idle_time.isra.0
+     0.00%     0.00%  [k] resched_curr
+     0.00%     0.00%  [.] 0x057d205d0044027c
+     0.00%     0.00%  [k] 0x4700656d69746c61
+     0.00%     0.00%  [.] 0x0000000000020a20
+     0.00%     0.00%  [.] 0x3f77d5d0000055fd
+     0.00%     0.00%  [.] 0x00007f08d3a54a24
+     0.00%     0.00%  [.] timer_mod_ns
+     0.00%     0.00%  [.] 0x000055fd3e71b1d0
+     0.00%     0.00%  [.] 0x000055fd3d901a50
+     0.00%     0.00%  [.] 0x000000000014a24d
+     0.00%     0.00%  [.] 0x00007f7b42f4c251
+     0.00%     0.00%  [.] 0x0000000000052846
+     0.00%     0.00%  [.] 0x000000000043921f
+     0.00%     0.00%  [.] 0x0000000000439ced
+     0.00%     0.00%  [.] 0x000000000045284a
+     0.00%     0.00%  [.] 0x0000000000000001
+     0.00%     0.00%  [.] 0x00007f75fd89e770
+     0.00%     0.00%  [.] 0x000056218e21f1e0
+     0.00%     0.00%  [k] tick_nohz_irq_exit
+     0.00%     0.00%  [.] resolv_conf_matches
+     0.00%     0.00%  [k] account_idle_ticks
+     0.00%     0.00%  [.] aio_notify
+     0.00%     0.00%  [k] check_tsc_unstable
+     0.00%     0.00%  [k] sched_clock_idle_sleep_event
+     0.00%     0.00%  [.] __strcmp_avx2
+     0.00%     0.00%  [.] 0x0000000000088864
+     0.00%     0.00%  [.] 0x000000000045fa6e
+     0.00%     0.00%  [.] 0x0000000000488866
+     0.00%     0.00%  [.] 0x000000000090c860
+     0.00%     0.00%  [k] poll_select_copy_remaining
+     0.00%     0.00%  [.] 0x000000000000c250
+     0.00%     0.00%  [.] 0x0000557adc8b6254
+     0.00%     0.00%  [.] __tz_convert
+     0.00%     0.00%  [.] 0x0000000000060fd8
+     0.00%     0.00%  [.] 0x0000000000460fda
+     0.00%     0.00%  [.] 0x000000000001eed3
+     0.00%     0.00%  [.] 0x0000000000457a8b
+     0.00%     0.00%  [.] 0x0002072000020720
+     0.00%     0.00%  [.] 0x000055fd3d50ea8f
+     0.00%     0.00%  [.] 0x00007f08d3a52ed8
+     0.00%     0.00%  [.] tevent_timeval_compare
+     0.00%     0.00%  [.] 0x00000000000863e1
+     0.00%     0.00%  [.] clock_nanosleep@GLIBC_2.2.5
+     0.00%     0.00%  [k] common_nsleep
+     0.00%     0.00%  [.] 0x00000000003b9314
+     0.00%     0.00%  [.] pixman_image_get_height
+     0.00%     0.00%  [k] ttwu_stat
+     0.00%     0.00%  [k] first_online_pgdat
+     0.00%     0.00%  [.] 0x000000000008ab07
+     0.00%     0.00%  [.] 0x00000000004542ef
+     0.00%     0.00%  [.] 0x000000000097da48
+     0.00%     0.00%  [.] 0x00000000005c52c5
+     0.00%     0.00%  [.] 0x00000000005c5ada
+     0.00%     0.00%  [.] 0x00000000005c5f58
+     0.00%     0.00%  [.] 0x00000000005d24e5
+     0.00%     0.00%  [.] 0x00000000005ca37e
+     0.00%     0.00%  [.] 0x00000000005d1f49
+     0.00%     0.00%  [.] 0x00000000005c8534
+     0.00%     0.00%  [.] 0x00000000005d2365
+     0.00%     0.00%  [.] 0x00000000005c9ac7
+     0.00%     0.00%  [.] 0x00000000005d2425
+     0.00%     0.00%  [.] 0x00000000005c9fb5
+     0.00%     0.00%  [k] lock_hrtimer_base.isra.0
+     0.00%     0.00%  [.] 0x000000000000de60
+     0.00%     0.00%  [.] 0x00007f08d3a41e64
+     0.00%     0.00%  [.] 0x00000000000705fd
+     0.00%     0.00%  [.] 0x000000000059f1d8
+     0.00%     0.00%  [.] 0x0000000000470889
+     0.00%     0.00%  [.] 0x0000000000470602
+     0.00%     0.00%  [k] check_cfs_rq_runtime
+     0.00%     0.00%  [k] _copy_from_user
+     0.00%     0.00%  [.] 0x0000000000065902
+     0.00%     0.00%  [.] 0x0000000000465908
+     0.00%     0.00%  [.] 0x00000000009472e4
+     0.00%     0.00%  [.] 0x000000000094744b
+     0.00%     0.00%  [.] 0x000000000000d334
+     0.00%     0.00%  [.] 0x0000000000061000
+     0.00%     0.00%  [.] 0x0000000000461009
+     0.00%     0.00%  [k] kvm_load_guest_xcr0
+     0.00%     0.00%  [.] qemu_bh_schedule
+     0.00%     0.00%  [.] 0x00000000000dd6a0
+     0.00%     0.00%  [.] 0x00000000004dd6a3
+     0.00%     0.00%  [.] 0x00000000005df0f3
+     0.00%     0.00%  [.] 0x00000000005dddef
+     0.00%     0.00%  [.] 0x000000000059dc3c
+     0.00%     0.00%  [k] vmx_read_guest_seg_ar
+     0.00%     0.00%  [k] vmx_get_cs_db_l_bits
+     0.00%     0.00%  [k] nf_conntrack_in
+     0.00%     0.00%  [k] ipv4_conntrack_in
+     0.00%     0.00%  [k] vmx_pre_block
+     0.00%     0.00%  [k] __msecs_to_jiffies
+     0.00%     0.00%  [k] kvm_load_guest_fpu.isra.0
+     0.00%     0.00%  [.] 0x0000000000984bfc
+     0.00%     0.00%  [.] 0x0000000000987194
+     0.00%     0.00%  [k] 0xffffffffc081c8ad
+     0.00%     0.00%  [k] 0xffffffffc081c8ae
+     0.00%     0.00%  [.] 0x00000000004604b2
+     0.00%     0.00%  [.] 0x000000000046783d
+     0.00%     0.00%  [.] 0x00000000004676e5
+     0.00%     0.00%  [.] single_binary_main_tail
+     0.00%     0.00%  [.] 0x0000000000236fe9
+     0.00%     0.00%  [.] 0x0000000000636fee
+     0.00%     0.00%  [k] sched_ttwu_pending
+     0.00%     0.00%  [k] cpumask_next
+     0.00%     0.00%  [k] poll_freewait
+     0.00%     0.00%  [k] kvm_mmu_notifier_test_young
+     0.00%     0.00%  [k] tick_nohz_tick_stopped
+     0.00%     0.00%  [k] __x86_indirect_thunk_rax
+     0.00%     0.00%  [k] load_new_mm_cr3
+     0.00%     0.00%  [.] 0x0000000000020720
+     0.00%     0.00%  [.] 0x00007f08d3f7f721
+     0.00%     0.00%  [.] 0x0000000000089912
+     0.00%     0.00%  [.] 0x0000000000489916
+     0.00%     0.00%  [k] can_stop_idle_tick.isra.0
+     0.00%     0.00%  [.] notifier_list_notify
+     0.00%     0.00%  [k] 0x6d2f64707577662f
+     0.00%     0.00%  [k] 0x000055a9d07912b0
+     0.00%     0.00%  [.] inotify_add_watch
+     0.00%     0.00%  [k] 0x702065706f637320
+     0.00%     0.00%  [k] 0x0000557add67f0b3
+     0.00%     0.00%  [k] smp_call_function_many
+     0.00%     0.00%  [k] on_each_cpu_mask
+     0.00%     0.00%  [k] clocksource_watchdog
+     0.00%     0.00%  [.] 0x000000000047b509
+     0.00%     0.00%  [.] 0x00000000004767b4
+     0.00%     0.00%  [.] 0x00000000000674b4
+     0.00%     0.00%  [.] 0x00000000004674bd
+     0.00%     0.00%  [k] inet6_fill_ifla6_attrs
+     0.00%     0.00%  [k] rtnl_fill_ifinfo
+     0.00%     0.00%  [k] inet6_fill_link_af
+     0.00%     0.00%  [.] 0x0000000000454eca
+     0.00%     0.00%  [.] 0x000055fd3d50becc
+     0.00%     0.00%  [k] try_to_del_timer_sync
+     0.00%     0.00%  [.] 0x000000000002f719
+     0.00%     0.00%  [.] 0x000000000059de65
+     0.00%     0.00%  [.] 0x000000000042f71e
+     0.00%     0.00%  [k] flush_end_io
+     0.00%     0.00%  [k] __blk_mq_end_request
+     0.00%     0.00%  [k] copyin
+     0.00%     0.00%  [k] rcu_needs_cpu
+     0.00%     0.00%  [.] 0x0000000000083120
+     0.00%     0.00%  [.] 0x00000000004fa753
+     0.00%     0.00%  [.] 0x00000000004ec966
+     0.00%     0.00%  [.] 0x000000000048312a
+     0.00%     0.00%  [.] BN_is_bit_set
+     0.00%     0.00%  [.] 0x0000000200000001
+     0.00%     0.00%  [k] kfree
+     0.00%     0.00%  [.] g_mutex_unlock
+     0.00%     0.00%  [k] restore_user_sigmask
+     0.00%     0.00%  [.] 0x00000000000650c6
+     0.00%     0.00%  [.] 0x00007f7aec0043b0
+     0.00%     0.00%  [.] 0x00007f7b4313e0ca
+     0.00%     0.00%  [.] 0x000000000002e19a
+     0.00%     0.00%  [.] 0xc0fcdea64013e199
+     0.00%     0.00%  [.] 0x000000000042e19e
+     0.00%     0.00%  [.] 0x000000000004de84
+     0.00%     0.00%  [.] 0x00007f08d3face88
+     0.00%     0.00%  [.] 0x0000000000956dd2
+     0.00%     0.00%  [.] 0x00000000005abd65
+     0.00%     0.00%  [.] 0x00000000005ac194
+     0.00%     0.00%  [.] 0x00000000005aaccc
+     0.00%     0.00%  [.] _cgo_3abc07b8dfcd_Cfunc_execute_check
+     0.00%     0.00%  [.] 0x00000000009920f5
+     0.00%     0.00%  [.] __open64_nocancel
+     0.00%     0.00%  [k] vmx_prepare_switch_to_guest
+     0.00%     0.00%  [k] vmx_prepare_switch_to_host
+     0.00%     0.00%  [k] kvm_arch_vcpu_put
+     0.00%     0.00%  [k] vmx_vcpu_put
+     0.00%     0.00%  [.] 0x0000000000042a18
+     0.00%     0.00%  [.] 0x0000000000442a1c
+     0.00%     0.00%  [k] place_entity
+     0.00%     0.00%  [.] 0x00000000002f6c5d
+     0.00%     0.00%  [.] 0x0000000000959e76
+     0.00%     0.00%  [.] 0x000000000095a3f4
+     0.00%     0.00%  [.] 0x0000000000957f97
+     0.00%     0.00%  [.] 0x00000000006f50fe
+     0.00%     0.00%  [.] 0x00000000006f4f6e
+     0.00%     0.00%  [.] 0x00000000006f5594
+     0.00%     0.00%  [.] 0x00000000006f6c60
+     0.00%     0.00%  [k] __note_gp_changes
+     0.00%     0.00%  [k] hrtimer_forward
+     0.00%     0.00%  [k] kvm_skip_emulated_instruction
+     0.00%     0.00%  [.] 0x00000000001cb0dc
+     0.00%     0.00%  [.] 0x00000000005c7d0a
+     0.00%     0.00%  [.] 0x00000000005cb0df
+     0.00%     0.00%  [.] _PyObject_GetMethod
+     0.00%     0.00%  [k] kvmalloc_node
+     0.00%     0.00%  [k] 0x00007f7acc002700
+     0.00%     0.00%  [.] __read_nocancel
+     0.00%     0.00%  [.] 0x000000000007843e
+     0.00%     0.00%  [.] 0x0000000000478441
+     0.00%     0.00%  [.] 0x000000000008a51d
+     0.00%     0.00%  [.] 0x000000000048a522
+     0.00%     0.00%  [k] free_cpumask_var
+     0.00%     0.00%  [k] 0x000000c000020598
+     0.00%     0.00%  [.] pixman_image_get_stride
+     0.00%     0.00%  [.] 0x0000000000457ea8
+     0.00%     0.00%  [.] 0x0000000000051ae0
+     0.00%     0.00%  [.] 0x000055fd3d46c680
+     0.00%     0.00%  [.] 0x00007f08d3cb1ae4
+     0.00%     0.00%  [.] 0x00000000004dd134
+     0.00%     0.00%  [k] kvm_sched_out
+     0.00%     0.00%  [k] native_load_tls
+     0.00%     0.00%  [.] pixman_image_get_data
+     0.00%     0.00%  [k] ast_dirty_update
+     0.00%     0.00%  [.] 0x0000000000065ab7
+     0.00%     0.00%  [.] 0x0000000000465abe
+     0.00%     0.00%  [.] find_special_builtin
+     0.00%     0.00%  [.] dispose_word
+     0.00%     0.00%  [k] native_flush_tlb_one_user
+     0.00%     0.00%  [.] 0x0000000000027c98
+     0.00%     0.00%  [.] 0x00000000005e0c05
+     0.00%     0.00%  [.] 0x00000000004dcfce
+     0.00%     0.00%  [.] 0x0000000000427c9c
+     0.00%     0.00%  [.] object_dynamic_cast_assert
+     0.00%     0.00%  [.] 0x0000000000072312
+     0.00%     0.00%  [.] 0x000000000047232a
+     0.00%     0.00%  [k] __intel_pmu_disable_all
+     0.00%     0.00%  [.] 0x0000000000075eb1
+     0.00%     0.00%  [.] 0x0000000000475eb6
+     0.00%     0.00%  [.] 0x000000000001e330
+     0.00%     0.00%  [.] 0x0000000000089b20
+     0.00%     0.00%  [.] 0x00000000005e3fd0
+     0.00%     0.00%  [.] 0x000000000097edd3
+     0.00%     0.00%  [.] 0x0000000000428577
+     0.00%     0.00%  [.] 0x0000000000489c10
+     0.00%     0.00%  [k] 0x662d00646e696263
+     0.00%     0.00%  [k] 0x00007ffe21741dc9
+     0.00%     0.00%  [.] 0x000055588dce235e
+     0.00%     0.00%  [.] 0x0000557adc8c8334
+     0.00%     0.00%  [.] 0x000000000006a099
+     0.00%     0.00%  [.] 0x000000000046a0a1
+     0.00%     0.00%  [k] rb_insert_color_cached
+     0.00%     0.00%  [.] 0x0000000000062760
+     0.00%     0.00%  [.] 0x0000000000095259
+     0.00%     0.00%  [.] 0x00000000004d3912
+     0.00%     0.00%  [.] 0x000000000090dad1
+     0.00%     0.00%  [.] 0x0000000000462764
+     0.00%     0.00%  [.] 0x000000000049525d
+     0.00%     0.00%  [.] 0x0000072000440720
+     0.00%     0.00%  [k] fire_user_return_notifiers
+     0.00%     0.00%  [k] retint_kernel
+     0.00%     0.00%  [.] 0x0000000000049a64
+     0.00%     0.00%  [.] 0x2e7a6874652e6434
+     0.00%     0.00%  [.] 0x00000000000df5b7
+     0.00%     0.00%  [.] 0x00000000004df5be
+     0.00%     0.00%  [.] 0x000000000000e1a4
+     0.00%     0.00%  [.] g_io_channel_unix_get_fd
+     0.00%     0.00%  [.] 0x00000000000723ec
+     0.00%     0.00%  [.] 0x00000000004723f0
+     0.00%     0.00%  [k] acpi_ns_get_attached_object
+     0.00%     0.00%  [k] remove_wait_queue
+     0.00%     0.00%  [k] read_hpet
+     0.00%     0.00%  [k] next_zone
+     0.00%     0.00%  [k] profile_tick
+     0.00%     0.00%  [k] acpi_ut_allocate_owner_id
+     0.00%     0.00%  [k] acpi_ds_begin_method_execution
+     0.00%     0.00%  [k] __vmx_vcpu_run
+     0.00%     0.00%  [.] qemu_poll_ns
+     0.00%     0.00%  [k] rcu_advance_cbs
+     0.00%     0.00%  [k] blk_stat_timer_fn
+     0.00%     0.00%  [k] vmx_cache_reg
+     0.00%     0.00%  [k] handle_rdmsr
+     0.00%     0.00%  [.] qemu_notify_event
+     0.00%     0.00%  [k] rcu_accelerate_cbs
+     0.00%     0.00%  [k] nohz_balance_enter_idle
+     0.00%     0.00%  [k] dev_get_iflink
+     0.00%     0.00%  [.] __pthread_getspecific
+     0.00%     0.00%  [.] 0x0000000000089a2b
+     0.00%     0.00%  [.] 0x00000000005374b1
+     0.00%     0.00%  [.] 0x0000000000521592
+     0.00%     0.00%  [.] 0x00000000004dd1d6
+     0.00%     0.00%  [.] 0x0000000000489a30
+     0.00%     0.00%  [.] 0x0000000000066cc1
+     0.00%     0.00%  [.] 0x000000000043be26
+     0.00%     0.00%  [.] 0x0000000000445865
+     0.00%     0.00%  [.] 0x0000000000445273
+     0.00%     0.00%  [.] 0x000000000045facb
+     0.00%     0.00%  [.] 0x0000000000466db9
+     0.00%     0.00%  [.] 0x0000000000466cc3
+     0.00%     0.00%  [.] 0x00000000004576cf
+     0.00%     0.00%  [.] 0x000055fd3d50e6d6
+     0.00%     0.00%  [k] local_touch_nmi
+     0.00%     0.00%  [k] ktime_get_ts64
+     0.00%     0.00%  [.] address_space_read_full
+     0.00%     0.00%  [.] 0x000000000001ee87
+     0.00%     0.00%  [.] 0x00007f08d3a52e8b
+     0.00%     0.00%  [k] irq_work_needs_cpu
+     0.00%     0.00%  [.] 0x0000000000457368
+     0.00%     0.00%  [.] 0x000055fd3d50e36f
+     0.00%     0.00%  [k] tty_buffer_space_avail
+     0.00%     0.00%  [k] 0x0a733337302e3233
+     0.00%     0.00%  [k] tty_write
+     0.00%     0.00%  [k] n_tty_write
+     0.00%     0.00%  [.] sh_xmalloc
+     0.00%     0.00%  [k] tty_write_room
+     0.00%     0.00%  [.] 0x00ffc6903506b21a
+     0.00%     0.00%  [k] rcu_note_context_switch
+     0.00%     0.00%  [.] 0x00000000005e37f1
+     0.00%     0.00%  [.] 0x00000000005e0d85
+     0.00%     0.00%  [.] 0x0000000000428631
+     0.00%     0.00%  [.] 0x000000000045ac46
+     0.00%     0.00%  [.] 0x000000000045bef5
+     0.00%     0.00%  [k] __jbd2_journal_file_buffer
+     0.00%     0.00%  [k] jbd2_journal_file_buffer
+     0.00%     0.00%  [k] 0x0000000100000005
+     0.00%     0.00%  [k] sg_next
+     0.00%     0.00%  [.] 0x00000000003b6234
+     0.00%     0.00%  [.] pixman_image_get_width
+     0.00%     0.00%  [.] __GI___libc_write
+     0.00%     0.00%  [.] PyObject_GetItem
+     0.00%     0.00%  [.] 0x0003003807640019
+     0.00%     0.00%  [k] filemap_map_pages
+     0.00%     0.00%  [.] @plt
+     0.00%     0.00%  [.] qemu_mutex_unlock_iothread
+     0.00%     0.00%  [.] 0x000000000000cde0
+     0.00%     0.00%  [.] 0x00007f08d3a40de4
+     0.00%     0.00%  [.] 0x000000000006f9be
+     0.00%     0.00%  [.] 0x00000000005e3655
+     0.00%     0.00%  [.] 0x0000000000462e45
+     0.00%     0.00%  [.] 0x0000000000462f0f
+     0.00%     0.00%  [.] 0x0000000000463832
+     0.00%     0.00%  [.] 0x0000000000463928
+     0.00%     0.00%  [.] 0x0000000000470205
+     0.00%     0.00%  [.] 0x000000000046fcc5
+     0.00%     0.00%  [.] 0x000000000046f9c2
+     0.00%     0.00%  [.] 0x00000000000399b0
+     0.00%     0.00%  [.] 0x000000000094bb98
+     0.00%     0.00%  [.] 0x00000000006708f7
+     0.00%     0.00%  [.] 0x00000000004399b4
+     0.00%     0.00%  [k] __srcu_read_lock
+     0.00%     0.00%  [.] 0x0000000000455990
+     0.00%     0.00%  [.] 0x000055fd3d50c994
+     0.00%     0.00%  [k] __switch_to_xtra
+     0.00%     0.00%  [k] __kmalloc_node_track_caller
+     0.00%     0.00%  [k] __kmalloc_reserve.isra.0
+     0.00%     0.00%  [k] rcu_segcblist_ready_cbs
+     0.00%     0.00%  [k] __kmalloc
+     0.00%     0.00%  [k] acpi_ns_get_normalized_pathname
+     0.00%     0.00%  [k] acpi_os_allocate_zeroed
+     0.00%     0.00%  [.] kvm_arch_pre_run
+     0.00%     0.00%  [.] 0x0000000100000002
+     0.00%     0.00%  [.] 0x00000000005a5778
+     0.00%     0.00%  [.] 0x00000000005a0a6f
+     0.00%     0.00%  [.] 0x00000000004f6e3a
+     0.00%     0.00%  [.] 0x00000000004f7455
+     0.00%     0.00%  [.] 0x00000000004ccba5
+     0.00%     0.00%  [.] 0x00000000004ca965
+     0.00%     0.00%  [.] 0x000000000006f1ac
+     0.00%     0.00%  [.] 0x00000000004d3971
+     0.00%     0.00%  [k] __x64_sys_clone
+     0.00%     0.00%  [k] _do_fork
+     0.00%     0.00%  [k] copy_process.part.0
+     0.00%     0.00%  [.] 0x000000000059f23c
+     0.00%     0.00%  [.] 0x000000000046f1b1
+     0.00%     0.00%  [k] __do_sys_newfstat
+     0.00%     0.00%  [.] __fxstat64
+     0.00%     0.00%  [k] vmx_get_rflags
+     0.00%     0.00%  [k] acpi_ut_status_exit
+     0.00%     0.00%  [k] enter_lazy_tlb
+     0.00%     0.00%  [.] 0x000000000008ca0c
+     0.00%     0.00%  [.] 0x00007f08d3ceca0f
+     0.00%     0.00%  [k] 0xffffffffc0886a94
+     0.00%     0.00%  [k] 0xffffffffc0886a95
+     0.00%     0.00%  [k] native_load_gdt
+     0.00%     0.00%  [k] vcpu_put
+     0.00%     0.00%  [k] i40e_sync_filters_subtask
+     0.00%     0.00%  [k] put_cred_rcu
+     0.00%     0.00%  [k] 0xffffffffc098eb94
+     0.00%     0.00%  [.] 0x000000000001f59c
+     0.00%     0.00%  [.] 0x00007f08d3a535a1
+     0.00%     0.00%  [k] __cgroup_account_cputime
+     0.00%     0.00%  [.] 0x00000000000762b8
+     0.00%     0.00%  [.] 0x00000000004762bd
+     0.00%     0.00%  [.] 0x0000000000037780
+     0.00%     0.00%  [.] 0x00000000005e35aa
+     0.00%     0.00%  [.] 0x000000000042d687
+     0.00%     0.00%  [.] 0x0000000000437788
+     0.00%     0.00%  [k] acpi_ds_exec_end_control_op
+     0.00%     0.00%  [k] acpi_ut_delete_generic_state
+     0.00%     0.00%  [k] acpi_os_release_object
+     0.00%     0.00%  [.] 0x000055fd3e663490
+     0.00%     0.00%  [k] find_first_bit
+     0.00%     0.00%  [.] 0x00080720002a0720
+     0.00%     0.00%  [.] 0x00000001a63feaff
+     0.00%     0.00%  [.] 0x0000000000078441
+     0.00%     0.00%  [.] 0x00000000001b89c0
+     0.00%     0.00%  [.] 0x0000000000478444
+     0.00%     0.00%  [.] 0x00000000005b89c6
+     0.00%     0.00%  [.] 0x000402644e72037c
+     0.00%     0.00%  [.] 0x0000000000728df3
+     0.00%     0.00%  [.] 0x000055fd3d7dfdf7
+     0.00%     0.00%  [k] kvm_handle_hva_range
+     0.00%     0.00%  [k] kvm_test_age_hva
+     0.00%     0.00%  [.] 0x0000000000000709
+     0.00%     0.00%  [.] 0x000000000045ea56
+     0.00%     0.00%  [.] 0x0000000000466f19
+     0.00%     0.00%  [.] 0x000000000048a6f3
+     0.00%     0.00%  [.] 0x00007ffd56b8370b
+     0.00%     0.00%  [.] 0x00000000000dd100
+     0.00%     0.00%  [.] 0x00000000004dd106
+     0.00%     0.00%  [k] kvm_arch_sched_in
+     0.00%     0.00%  [k] 0xffffffffc07f9c77
+     0.00%     0.00%  [.] sd_event_wait
+     0.00%     0.00%  [k] 0xffffffffc07f9c78
+     0.00%     0.00%  [.] 0x000000000094ba8e
+     0.00%     0.00%  [.] tevent_common_check_signal
+     0.00%     0.00%  [k] irq_work_run_list
+     0.00%     0.00%  [k] hrtick_update
+     0.00%     0.00%  [k] 0xec8348fd894855f4
+     0.00%     0.00%  [.] 0x00005639eca21580
+     0.00%     0.00%  [.] 0x00007fceed650298
+     0.00%     0.00%  [k] 0x00005639ec8d59fc
+     0.00%     0.00%  [.] __GI___tcgetattr
+     0.00%     0.00%  [k] __x64_sys_recvmsg
+     0.00%     0.00%  [k] __sys_recvmsg
+     0.00%     0.00%  [k] sockfd_lookup_light
+     0.00%     0.00%  [.] g_thread_self
+     0.00%     0.00%  [k] generic_file_read_iter
+     0.00%     0.00%  [.] 0x000000000094bb1a
+     0.00%     0.00%  [.] 0x00000000004c851c
+     0.00%     0.00%  [.] 0x00000000004c8752
+     0.00%     0.00%  [k] ext4_file_read_iter
+     0.00%     0.00%  [.] kvm_vcpu_ioctl
+     0.00%     0.00%  [.] 0x000000000002c860
+     0.00%     0.00%  [.] 0x00000000005e3c33
+     0.00%     0.00%  [.] 0x000000000042c86a
+     0.00%     0.00%  [k] poll_select_set_timeout
+     0.00%     0.00%  [k] crc_array
+     0.00%     0.00%  [.] 0x000000000006b1a0
+     0.00%     0.00%  [.] 0x00000000004eca54
+     0.00%     0.00%  [.] 0x000000000046b1aa
+     0.00%     0.00%  [k] kvm_lapic_switch_to_sw_timer
+     0.00%     0.00%  [k] start_sw_timer
+     0.00%     0.00%  [.] g_array_remove_range
+     0.00%     0.00%  [.] 0x000000000005c68e
+     0.00%     0.00%  [.] 0x00000000004260dc
+     0.00%     0.00%  [.] 0x0000000000483f7d
+     0.00%     0.00%  [.] 0x0000000000461f05
+     0.00%     0.00%  [.] 0x000000000045c696
+     0.00%     0.00%  [k] pull_rt_task
+     0.00%     0.00%  [.] __GI___kill
+     0.00%     0.00%  [k] __x64_sys_kill
+     0.00%     0.00%  [k] __virt_addr_valid
+     0.00%     0.00%  [k] balance_dirty_pages_ratelimited
+     0.00%     0.00%  [.] 0x000000000006957c
+     0.00%     0.00%  [.] 0x0000000000469fd3
+     0.00%     0.00%  [.] 0x000000000046957f
+     0.00%     0.00%  [k] task_tick_idle
+     0.00%     0.00%  [k] 0x0000557add3f2430
+     0.00%     0.00%  [.] sd_event_wait
+     0.00%     0.00%  [.] __GI___geteuid
+     0.00%     0.00%  [k] refresh_cpu_vm_stats
+     0.00%     0.00%  [k] 0x00045fe90000441f
+     0.00%     0.00%  [k] 0x000000c000270330
+     0.00%     0.00%  [k] next_signal
+     0.00%     0.00%  [k] x2apic_send_IPI
+     0.00%     0.00%  [k] native_smp_send_reschedule
+     0.00%     0.00%  [.] pixman_image_composite
+     0.00%     0.00%  [k] nf_ct_gc_expired
+     0.00%     0.00%  [.] 0x000000000050d8a5
+     0.00%     0.00%  [.] 0x000000000090d8ad
+     0.00%     0.00%  [.] 0x0000000000457a8f
+     0.00%     0.00%  [.] 0x00380720007c0720
+     0.00%     0.00%  [.] 0x000055fd3d50ea91
+     0.00%     0.00%  [k] vmx_vcpu_load
+     0.00%     0.00%  [k] vcpu_load
+     0.00%     0.00%  [k] kvm_arch_vcpu_load
+     0.00%     0.00%  [.] 0x0000000000273f32
+     0.00%     0.00%  [.] 0x0000000000673f35
+     0.00%     0.00%  [k] rcu_segcblist_accelerate
+     0.00%     0.00%  [k] put_prev_task_idle
+     0.00%     0.00%  [k] get_iowait_time.isra.0
+     0.00%     0.00%  [k] get_cpu_iowait_time_us
+     0.00%     0.00%  [.] g_poll
+     0.00%     0.00%  [.] 0x000000000001cfe0
+     0.00%     0.00%  [.] 0x00007f08d3f7bfe4
+     0.00%     0.00%  [.] 0x0aa0017c057d205d
+     0.00%     0.00%  [.] 0x00000000005ec720
+     0.00%     0.00%  [k] __put_user_8
+     0.00%     0.00%  [.] _PyEval_EvalCodeWithName
+     0.00%     0.00%  [.] 0x0000000000907420
+     0.00%     0.00%  [.] 0x0000000000457a5f
+     0.00%     0.00%  [.] 0x000055fd3d50ea62
+     0.00%     0.00%  [k] touch_softlockup_watchdog_sched
+     0.00%     0.00%  [.] 0x00000000001ded4a
+     0.00%     0.00%  [.] 0x00000000005ded51
+     0.00%     0.00%  [k] find_get_entry
+     0.00%     0.00%  [k] wq_worker_last_func
+     0.00%     0.00%  [k] memcpy_toio
+     0.00%     0.00%  [.] qemu_spice_destroy_update
+     0.00%     0.00%  [.] 0x0000030100000000
+     0.00%     0.00%  [.] 0x0000000000005913
+     0.00%     0.00%  [.] 0x000055bd712d0917
+     0.00%     0.00%  [k] mutex_unlock
+     0.00%     0.00%  [.] _PyFunction_Vectorcall
+     0.00%     0.00%  [.] PyType_GenericNew
+     0.00%     0.00%  [.] 0x0000000000909780
+     0.00%     0.00%  [k] acpi_ps_init_scope
+     0.00%     0.00%  [k] skip_emulated_instruction
+     0.00%     0.00%  [k] kvm_sched_in
+     0.00%     0.00%  [k] rcu_segcblist_advance
+     0.00%     0.00%  [.] 0x000000000005f671
+     0.00%     0.00%  [.] 0x000000000045f673
+     0.00%     0.00%  [k] native_write_msr_safe
+     0.00%     0.00%  [k] acpi_ut_acquire_mutex
+     0.00%     0.00%  [k] acpi_ex_enter_interpreter
+     0.00%     0.00%  [k] __intel_pmu_enable_all.constprop.0
+     0.00%     0.00%  [k] acpi_ex_allocate_name_string
+     0.00%     0.00%  [k] __x64_sys_inotify_add_watch
+     0.00%     0.00%  [k] inotify_find_inode
+     0.00%     0.00%  [.] 0x00000000001c8491
+     0.00%     0.00%  [.] 0x0000000000089a36
+     0.00%     0.00%  [.] 0x000000000055154a
+     0.00%     0.00%  [.] 0x00000000005324e5
+     0.00%     0.00%  [.] 0x0000000000427d4a
+     0.00%     0.00%  [.] 0x0000000000489a3c
+     0.00%     0.00%  [.] 0x00000000005c8493
+     0.00%     0.00%  [.] 0x000000000003ebc0
+     0.00%     0.00%  [.] 0x0002000000090000
+     0.00%     0.00%  [.] 0x00007f08d3a72bc1
+     0.00%     0.00%  [k] mod_timer
+     0.00%     0.00%  [.] 0x000000000003ec20
+     0.00%     0.00%  [.] 0x000055fd3f780710
+     0.00%     0.00%  [.] 0x0000000800000002
+     0.00%     0.00%  [.] 0x00007f08d3a72c22
+     0.00%     0.00%  [.] 0x000000000003b389
+     0.00%     0.00%  [.] 0x000000000043b38d
+     0.00%     0.00%  [k] complete_fast_pio_in
+     0.00%     0.00%  [k] update_min_vruntime
+     0.00%     0.00%  [k] unix_stream_read_actor
+     0.00%     0.00%  [k] skb_copy_datagram_iter
+     0.00%     0.00%  [k] __skb_datagram_iter
+     0.00%     0.00%  [k] simple_copy_to_iter
+     0.00%     0.00%  [k] rcu_segcblist_pend_cbs
+     0.00%     0.00%  [.] 0x00000000000000e8
+     0.00%     0.00%  [.] 0x000055fd3e64e2c0
+     0.00%     0.00%  [.] 0x0000000000457a5b
+     0.00%     0.00%  [.] 0x000055fd3d50ea5f
+     0.00%     0.00%  [.] 0x000000000002dffa
+     0.00%     0.00%  [.] 0x000000000045e935
+     0.00%     0.00%  [.] 0x000000000042dffc
+     0.00%     0.00%  [k] 0xffffffffc098eb95
+     0.00%     0.00%  [.] __nanosleep
+     0.00%     0.00%  [.] rpl_nanosleep
+     0.00%     0.00%  [k] nf_conntrack_double_lock.isra.0
+     0.00%     0.00%  [k] nf_ct_delete
+     0.00%     0.00%  [k] kvm_lapic_switch_to_hv_timer
+     0.00%     0.00%  [.] 0x00000000000644f7
+     0.00%     0.00%  [.] 0x00007f08d3a984fd
+     0.00%     0.00%  [k] wake_up_nohz_cpu
+     0.00%     0.00%  [k] trigger_dyntick_cpu.isra.0
+     0.00%     0.00%  [k] common_perm
+     0.00%     0.00%  [.] 0x0000000000069a8e
+     0.00%     0.00%  [k] vfs_getattr
+     0.00%     0.00%  [k] security_inode_getattr
+     0.00%     0.00%  [k] apparmor_inode_getattr
+     0.00%     0.00%  [k] common_perm_cond
+     0.00%     0.00%  [.] 0x00000000005e0c54
+     0.00%     0.00%  [.] 0x0000000000469a30
+     0.00%     0.00%  [.] 0x0000000000076bc0
+     0.00%     0.00%  [.] 0x0000000000476bc3
+     0.00%     0.00%  [.] 0x000000000009ab00
+     0.00%     0.00%  [.] 0x00007f08d3ff9b04
+     0.00%     0.00%  [k] timekeeping_max_deferment
+     0.00%     0.00%  [k] blk_flush_complete_seq
+     0.00%     0.00%  [k] blk_mq_add_to_requeue_list
+     0.00%     0.00%  [k] kblockd_mod_delayed_work_on
+     0.00%     0.00%  [k] mod_delayed_work_on
+     0.00%     0.00%  [k] drm_fb_helper_dirty.isra.0
+     0.00%     0.00%  [.] 0x00000000000644a0
+     0.00%     0.00%  [.] 0x00007f08d3a984a4
+     0.00%     0.00%  [k] kvm_on_user_return
+     0.00%     0.00%  [.] 0x00000000000421b7
+     0.00%     0.00%  [.] 0x000055fd3d6a70c0
+     0.00%     0.00%  [k] kvm_set_shared_msr
+     0.00%     0.00%  [.] _ZN4absl12lts_202103245Mutex4LockEv
+     0.00%     0.00%  [k] cgroup_rstat_updated
+     0.00%     0.00%  [k] __x64_sys_clock_nanosleep
+     0.00%     0.00%  [k] cpu_load_update_nohz_start
+     0.00%     0.00%  [k] restore_nameidata
+     0.00%     0.00%  [.] 0x000000000003fe08
+     0.00%     0.00%  [.] 0x000000000043fe11
+     0.00%     0.00%  [k] arch_cpu_idle_exit
+     0.00%     0.00%  [k] kill_something_info
+     0.00%     0.00%  [k] find_vpid
+     0.00%     0.00%  [k] idr_find
+     0.00%     0.00%  [k] kmalloc_slab
+     0.00%     0.00%  [k] nohz_balance_exit_idle
+     0.00%     0.00%  [k] __task_pid_nr_ns
+     0.00%     0.00%  [k] cpuacct_account_field
+     0.00%     0.00%  [k] account_system_time
+     0.00%     0.00%  [k] unix_destruct_scm
+     0.00%     0.00%  [k] skb_release_head_state
+     0.00%     0.00%  [k] br_hello_timer_expired
+     0.00%     0.00%  [k] br_config_bpdu_generation
+     0.00%     0.00%  [k] br_transmit_config.part.0
+     0.00%     0.00%  [k] br_send_config_bpdu
+     0.00%     0.00%  [k] br_send_bpdu.isra.0.constprop.0
+     0.00%     0.00%  [k] sch_direct_xmit
+     0.00%     0.00%  [k] dev_hard_start_xmit
+     0.00%     0.00%  [k] tun_net_xmit
+     0.00%     0.00%  [k] vhost_poll_wakeup
+     0.00%     0.00%  [k] vhost_work_queue
+     0.00%     0.00%  [k] get_work_pool
+     0.00%     0.00%  [.] _ZL20note_deadline_changeP11timer_shard.isra.0
+     0.00%     0.00%  [k] stp_pdu_rcv
+     0.00%     0.00%  [k] llc_rcv
+     0.00%     0.00%  [k] __netif_receive_skb_core
+     0.00%     0.00%  [k] acpi_os_read_memory
+     0.00%     0.00%  [k] delay_tsc
+     0.00%     0.00%  [k] wait_lapic_expire
+     0.00%     0.00%  [k] __delay
+     0.00%     0.00%  [k] aa_label_sk_perm.part.0
+     0.00%     0.00%  [k] security_socket_sendmsg
+     0.00%     0.00%  [k] apparmor_socket_sendmsg
+     0.00%     0.00%  [k] sched_idle_set_state
+     0.00%     0.00%  [k] native_set_fixmap
+     0.00%     0.00%  [.] 0x00007f11bf759770
+     0.00%     0.00%  [.] 0x0000563106a44e20
+     0.00%     0.00%  [k] memcpy_fromio
+     0.00%     0.00%  [k] console_trylock
+     0.00%     0.00%  [k] __down_trylock_console_sem.isra.0
+     0.00%     0.00%  [k] down_trylock
+     0.00%     0.00%  [k] raise_softirq_irqoff
+     0.00%     0.00%  [k] prepare_to_swait_exclusive
+     0.00%     0.00%  [.] 0x0000000000457a91
+     0.00%     0.00%  [.] 0x0008072000080720
+     0.00%     0.00%  [.] 0x000055fd3d50ea95
+     0.00%     0.00%  [k] check_stack_object
+     0.00%     0.00%  [k] __build_skb
+     0.00%     0.00%  [.] 0x0000000000060331
+     0.00%     0.00%  [.] 0x0000000000460334
+     0.00%     0.00%  [k] nf_ct_delete_from_lists
+     0.00%     0.00%  [k] build_skb
+     0.00%     0.00%  [k] nf_conntrack_free
+     0.00%     0.00%  [k] nf_conntrack_destroy
+     0.00%     0.00%  [k] strscpy
+     0.00%     0.00%  [k] i40e_detect_recover_hung
+     0.00%     0.00%  [k] wb_timer_fn
+     0.00%     0.00%  [.] 0x000000000004df80
+     0.00%     0.00%  [.] 0x00007f08d3facfa6
+     0.00%     0.00%  [k] tick_nohz_idle_got_tick
+     0.00%     0.00%  [k] i40e_process_skb_fields
+     0.00%     0.00%  [.] 0x0000000000000711
+     0.00%     0.00%  [.] 0x00000000004df5b7
+     0.00%     0.00%  [.] 0x000000000048ade6
+     0.00%     0.00%  [k] pick_next_task_rt
+     0.00%     0.00%  [k] kvm_read_l1_tsc
+     0.00%     0.00%  [k] vmx_post_block
+     0.00%     0.00%  [k] restart_apic_timer
+     0.00%     0.00%  [k] vmx_set_hv_timer
+     0.00%     0.00%  [k] rcu_jiffies_till_stall_check
+     0.00%     0.00%  [k] timer_clear_idle
+     0.00%     0.00%  [k] generic_exec_single
+     0.00%     0.00%  [k] intel_bts_enable_local
+     0.00%     0.00%  [k] intel_pmu_handle_irq
+
+
+#
+# (Tip: To set sample time separation other than 100ms with --sort time use --time-quantum)
+#

@@ -1,0 +1,237 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 17K of event 'cycles'
+# Event count (approx.): 54645866403
+#
+# Children      Self
+# ........  ........
+#
+   100.00%   100.00%
+            |          
+            |--71.92%--start_thread
+            |          |          
+            |           --71.88%--flowop_start
+            |                     |          
+            |                     |--33.73%--flowoplib_readwholefile
+            |                     |          |          
+            |                     |           --33.71%--fb_lfs_read
+            |                     |                     _ufs_READ
+            |                     |                     __pread
+            |                     |                     __memmove_evex_unaligned_erms
+            |                     |          
+            |                     |--29.97%--flowoplib_writewholefile
+            |                     |          |          
+            |                     |           --29.92%--fb_lfs_write
+            |                     |                     _ufs_WRITE
+            |                     |                     |          
+            |                     |                      --29.91%--__pwrite
+            |                     |                                |          
+            |                     |                                 --29.76%--__memmove_evex_unaligned_erms
+            |                     |                                           |          
+            |                     |                                            --2.45%--page_fault
+            |                     |                                                      |          
+            |                     |                                                       --2.34%--do_page_fault
+            |                     |                                                                 __do_page_fault
+            |                     |                                                                 |          
+            |                     |                                                                  --2.34%--do_user_addr_fault
+            |                     |                                                                            |          
+            |                     |                                                                             --2.32%--handle_mm_fault
+            |                     |                                                                                       |          
+            |                     |                                                                                        --2.32%--__handle_mm_fault
+            |                     |                                                                                                  |          
+            |                     |                                                                                                   --2.22%--__do_fault
+            |                     |                                                                                                             |          
+            |                     |                                                                                                              --2.22%--ufs_fault
+            |                     |                                                                                                                        |          
+            |                     |                                                                                                                         --2.21%--ufs_subtree_root_populate_on_pfault
+            |                     |                                                                                                                                   |          
+            |                     |                                                                                                                                    --2.01%--__subtree_root_migrate_from_pte_table_to_huge_pmd
+            |                     |                                                                                                                                              |          
+            |                     |                                                                                                                                               --1.87%--__flush_tlb_range
+            |                     |          
+            |                     |--3.93%--flowoplib_closefile
+            |                     |          |          
+            |                     |           --3.88%--_hub_CLOSE
+            |                     |                     |          
+            |                     |                      --3.86%--_ufs_CLOSE
+            |                     |                                |          
+            |                     |                                 --3.61%--ufs_ino_to_void
+            |                     |                                           |          
+            |                     |                                            --3.57%--ufs_ioctl
+            |                     |                                                      |          
+            |                     |                                                       --3.57%--__GI___ioctl_time64
+            |                     |                                                                 |          
+            |                     |                                                                  --3.56%--entry_SYSCALL_64_after_hwframe
+            |                     |                                                                            do_syscall_64
+            |                     |                                                                            __x64_sys_ioctl
+            |                     |                                                                            ksys_ioctl
+            |                     |                                                                            |          
+            |                     |                                                                             --3.54%--do_vfs_ioctl
+            |                     |                                                                                       ioctl
+            |                     |                                                                                       file_close
+            |                     |                                                                                       ufs_vma_remove
+            |                     |                                                                                       |          
+            |                     |                                                                                        --3.52%--vm_munmap
+            |                     |                                                                                                  __vm_munmap
+            |                     |                                                                                                  __do_munmap
+            |                     |                                                                                                  |          
+            |                     |                                                                                                   --3.50%--unmap_region
+            |                     |                                                                                                             |          
+            |                     |                                                                                                              --3.45%--unmap_vmas
+            |                     |                                                                                                                        |          
+            |                     |                                                                                                                         --3.45%--ufs_on_munmap
+            |                     |                                                                                                                                   |          
+            |                     |                                                                                                                                    --3.41%--__flush_tlb_range
+            |                     |          
+            |                     |--3.43%--flowoplib_createfile
+            |                     |          |          
+            |                     |           --3.31%--fileset_openfile
+            |                     |                     |          
+            |                     |                     |--1.81%--fileset_mkdir.constprop.0
+            |                     |                     |          |          
+            |                     |                     |           --1.77%--_ufs_MKDIR
+            |                     |                     |                     |          
+            |                     |                     |                     |--0.92%--__ufs_transaction_begin
+            |                     |                     |                     |          |          
+            |                     |                     |                     |           --0.61%--__move_head
+            |                     |                     |                     |          
+            |                     |                     |                      --0.67%--ufs_path_to_ino
+            |                     |                     |                                |          
+            |                     |                     |                                 --0.59%--path_hash_to_bucket
+            |                     |                     |                                           |          
+            |                     |                     |                                            --0.57%--hash
+            |                     |                     |          
+            |                     |                      --1.22%--fb_lfs_open
+            |                     |                                _hub_OPEN64
+            |                     |                                |          
+            |                     |                                 --1.21%--_hub_OPEN
+            |                     |                                           _ufs_OPEN
+            |                     |                                           |          
+            |                     |                                            --1.01%--ufs_path_to_ino
+            |                     |          
+            |                      --0.77%--flowoplib_openfile_common
+            |                                |          
+            |                                 --0.67%--fileset_openfile
+            |                                           |          
+            |                                            --0.60%--fb_lfs_open
+            |                                                      _hub_OPEN64
+            |                                                      _hub_OPEN
+            |                                                      |          
+            |                                                       --0.59%--_ufs_OPEN
+            |          
+            |--24.74%--0x6e6176772f656d6f
+            |          0x7fffe56d0b3f
+            |          __libc_start_call_main
+            |          main
+            |          yyparse
+            |          parser_run
+            |          |          
+            |           --24.72%--fileset_createsets
+            |                     fileset_create
+            |                     |          
+            |                      --24.69%--fileset_alloc_file
+            |                                |          
+            |                                |--21.30%--fb_lfs_write
+            |                                |          _ufs_WRITE
+            |                                |          |          
+            |                                |           --21.29%--__pwrite
+            |                                |                     |          
+            |                                |                      --21.11%--__memmove_evex_unaligned_erms
+            |                                |                                |          
+            |                                |                                 --2.36%--page_fault
+            |                                |                                           |          
+            |                                |                                            --2.25%--do_page_fault
+            |                                |                                                      |          
+            |                                |                                                       --2.25%--__do_page_fault
+            |                                |                                                                 do_user_addr_fault
+            |                                |                                                                 |          
+            |                                |                                                                  --2.24%--handle_mm_fault
+            |                                |                                                                            |          
+            |                                |                                                                             --2.23%--__handle_mm_fault
+            |                                |                                                                                       |          
+            |                                |                                                                                        --2.17%--__do_fault
+            |                                |                                                                                                  |          
+            |                                |                                                                                                   --2.16%--ufs_fault
+            |                                |                                                                                                             ufs_subtree_root_populate_on_pfault
+            |                                |                                                                                                             |          
+            |                                |                                                                                                              --2.00%--__subtree_root_migrate_from_pte_table_to_huge_pmd
+            |                                |                                                                                                                        |          
+            |                                |                                                                                                                         --1.77%--__flush_tlb_range
+            |                                |          
+            |                                |--2.11%--_hub_CLOSE
+            |                                |          |          
+            |                                |           --2.10%--_ufs_CLOSE
+            |                                |                     |          
+            |                                |                      --1.99%--ufs_ino_to_void
+            |                                |                                |          
+            |                                |                                 --1.97%--ufs_ioctl
+            |                                |                                           __GI___ioctl_time64
+            |                                |                                           |          
+            |                                |                                            --1.96%--entry_SYSCALL_64_after_hwframe
+            |                                |                                                      |          
+            |                                |                                                       --1.96%--do_syscall_64
+            |                                |                                                                 __x64_sys_ioctl
+            |                                |                                                                 ksys_ioctl
+            |                                |                                                                 |          
+            |                                |                                                                  --1.95%--do_vfs_ioctl
+            |                                |                                                                            ioctl
+            |                                |                                                                            file_close
+            |                                |                                                                            ufs_vma_remove
+            |                                |                                                                            vm_munmap
+            |                                |                                                                            __vm_munmap
+            |                                |                                                                            |          
+            |                                |                                                                             --1.94%--__do_munmap
+            |                                |                                                                                       |          
+            |                                |                                                                                        --1.93%--unmap_region
+            |                                |                                                                                                  |          
+            |                                |                                                                                                   --1.89%--unmap_vmas
+            |                                |                                                                                                             |          
+            |                                |                                                                                                              --1.89%--ufs_on_munmap
+            |                                |                                                                                                                        |          
+            |                                |                                                                                                                         --1.87%--__flush_tlb_range
+            |                                |          
+            |                                 --1.19%--fb_lfs_open
+            |                                           _hub_OPEN64
+            |                                           |          
+            |                                            --1.18%--_hub_OPEN
+            |                                                      |          
+            |                                                       --1.17%--_ufs_OPEN
+            |                                                                 |          
+            |                                                                  --0.94%--ufs_path_to_ino
+            |          
+             --2.42%--secondary_startup_64
+                       |          
+                       |--1.37%--start_secondary
+                       |          cpu_startup_entry
+                       |          |          
+                       |           --1.37%--do_idle
+                       |                     |          
+                       |                      --1.32%--call_cpuidle
+                       |                                cpuidle_enter
+                       |                                |          
+                       |                                 --1.31%--cpuidle_enter_state
+                       |                                           |          
+                       |                                            --1.23%--intel_idle
+                       |          
+                        --1.05%--x86_64_start_kernel
+                                  x86_64_start_reservations
+                                  start_kernel
+                                  arch_call_rest_init
+                                  rest_init
+                                  cpu_startup_entry
+                                  do_idle
+                                  |          
+                                   --1.04%--call_cpuidle
+                                             cpuidle_enter
+                                             cpuidle_enter_state
+                                             |          
+                                              --1.03%--intel_idle
+
+
+
+#
+# (Tip: Use parent filter to see specific call path: perf report -p <regex>)
+#

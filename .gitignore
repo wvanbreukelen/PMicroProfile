@@ -6,9 +6,13 @@ debian_small/*
 ubuntu_ctfs/*
 ubuntu_splitfs/*
 
-!/fedora/*.sh
-!/debian/*.sh
-!/debian_small/*.sh
-!/debian_small/image/*.sh
-!/ubuntu_ctfs/*.sh
-!/ubuntu_splitfs/*.sh
+#!/fedora/*.sh
+#!/debian/*.sh
+#!/debian_small/*.sh
+#!/debian_small/image/*.sh
+#!/ubuntu_ctfs/*.sh
+#!/ubuntu_splitfs/*.sh
+
+*.perf
+*.trf
+trace_extractor/*.txt

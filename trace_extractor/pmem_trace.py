@@ -29,6 +29,10 @@ b = BPF(text="""
 #include <linux/dax.h>
 #include <linux/types.h>
 
+// https://unix.stackexchange.com/questions/605568/in-64-bit-linux-kernel-how-much-memory-is-contiguously-mapped-by-the-kernel
+// https://unix.stackexchange.com/questions/4929/what-are-high-memory-and-low-memory-on-linux
+#define PAGE_OFFSET_HIGHMEM_LV_4 0xffff888000000000
+
 struct access_t {
 	void* pmem_addr;
 	unsigned int off;
@@ -36,11 +40,11 @@ struct access_t {
 
 
 void trace_write(struct pt_regs *ctx, void *pmem_addr, struct page *page, unsigned int off, unsigned int len) {
-	bpf_trace_printk("W %p %u %u\\n", pmem_addr, off, len);
+	bpf_trace_printk("W 0x%lx %u %u\\n", (pmem_addr - PAGE_OFFSET_HIGHMEM_LV_4), off, len);
 }
 
 void trace_read(struct pt_regs *ctx, struct page *page, unsigned int off, void* pmem_addr, unsigned int len) {
-	bpf_trace_printk("R %p %u %u\\n", pmem_addr, off, len);
+	bpf_trace_printk("R 0x%lx %u %u\\n", (pmem_addr - PAGE_OFFSET_HIGHMEM_LV_4), off, len);
 }
 
 void trace_pmem_req(struct pt_regs *ctx, void* pmem_device, struct page *page, unsigned int len, unsigned int off, unsigned int op, sector_t sector) {
@@ -49,7 +53,7 @@ void trace_pmem_req(struct pt_regs *ctx, void* pmem_device, struct page *page, u
 
 //void trace_dax_request(struct pt_regs *ctx, struct dax_device *dax_dev, pgoff_t pgoff, long nr_pages, void **kaddr) {
 void trace_dax_request(struct pt_regs *ctx, resource_size_t offset, void* pmem_virt_addr, void **kaddr) {	
-	bpf_trace_printk("DAX %p\\n", (pmem_virt_addr + offset));
+	bpf_trace_printk("DAX 0x%lx\\n", ((pmem_virt_addr + offset) - PAGE_OFFSET_HIGHMEM_LV_4));
 }
 """)
 
