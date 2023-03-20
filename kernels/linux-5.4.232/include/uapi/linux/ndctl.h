@@ -117,7 +117,8 @@ enum {
 	ND_CMD_VENDOR_EFFECT_LOG = 8,
 	ND_CMD_VENDOR = 9,
 	ND_CMD_CALL = 10,
-	ND_CMD_TRACE = 11,
+	ND_CMD_TRACE_ENABLE = 11,
+	ND_CMD_TRACE_DISABLE = 12,
 };
 
 enum {
@@ -152,7 +153,7 @@ static inline const char *nvdimm_cmd_name(unsigned cmd)
 	case ND_CMD_VENDOR_EFFECT_LOG:		return "effect_log";
 	case ND_CMD_VENDOR:			return "vendor";
 	case ND_CMD_CALL:			return "cmd_call";
-	case ND_CMD_TRACE: 			return "cmd_trace";
+	case ND_CMD_TRACE_ENABLE: 			return "cmd_trace_enable";
 	default:				return "unknown";
 	}
 }
