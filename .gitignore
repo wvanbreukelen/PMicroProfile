@@ -16,3 +16,7 @@ ubuntu_splitfs/*
 *.perf
 *.trf
 trace_extractor/*.txt
+
+
+#bench_tool/build
+	
