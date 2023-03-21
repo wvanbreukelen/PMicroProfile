@@ -25,7 +25,7 @@
 #define TRACER_OUTPUT_PIPE "/sys/kernel/debug/tracing/trace_pipe"
 
 
-//#define ENABLE_SAMPLING
+#define ENABLE_SAMPLING
 const unsigned int SAMPLE_RATE = 60; // 10 hz
 const unsigned int DUTY_CYCLE = 2;
 
@@ -195,38 +195,45 @@ void* pmemtrace_output_thread(void *arg)
 	const struct read_thread_args* thread_args = (const struct read_thread_args* ) arg;
 
 	int in = open(TRACER_OUTPUT_PIPE, O_RDONLY);
-	int out = open(thread_args->output_file, O_RDWR | O_CREAT);
+	int out = open(thread_args->output_file, O_WRONLY | O_CREAT | O_TRUNC, 644);
 
 	if (!in || !out) {
 		perror("Failed to open file!\n");
 		pthread_exit(NULL);
 	}
 
+	unsigned long device_start = 0, device_end = 0;
+
+	char header[256];
+	sprintf(header, "PMEMTRACE DEVICE START: %lx, DEVICE END: %lx\n", device_start, device_end);
+	write(out, header, strnlen(header, sizeof(header)) + 1);
+
 	fd_set rfds;
 	FD_ZERO(&rfds);
 	FD_SET(in, &rfds);
 
-	struct timeval timeout = {0};
-	timeout.tv_sec = 1;
+	//struct timeval timeout = {0};
+	//timeout.tv_sec = 1;
 
-	
 	char buffer[1024];
 	size_t n;
-	int rv;
 
 	while (true) {
 		if (getStopIssued())
 			break;
 
-		rv = select(in + 1, &rfds, NULL, NULL, &timeout);
+		n = read(in, buffer, sizeof(buffer));
+		write(out, buffer, n);
 
-		if (rv == -1) {
-			perror("Reading error!\n");
-			pthread_exit(NULL);
-		} else if (rv > 0) {
-			n = read(in, buffer, sizeof(buffer));
-			write(out, buffer, n);
-		}
+		//rv = select(in + 1, &rfds, NULL, NULL, &timeout);
+
+		//if (rv == -1) {
+		//	perror("Reading error!\n");
+		//	pthread_exit(NULL);
+		//} else if (rv > 0) {
+		//	n = read(in, buffer, sizeof(buffer));
+		//	write(out, buffer, n);
+		//}
 	}
 
 
