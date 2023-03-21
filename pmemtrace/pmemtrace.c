@@ -26,8 +26,8 @@
 
 
 //#define ENABLE_SAMPLING
-const unsigned int SAMPLE_RATE = 120; // 10 hz
-const unsigned int DUTY_CYCLE = 32;
+const unsigned int SAMPLE_RATE = 60; // 10 hz
+const unsigned int DUTY_CYCLE = 2;
 
 volatile bool is_stopped = false;
 pthread_mutex_t stopMutex;
@@ -195,7 +195,7 @@ void* pmemtrace_output_thread(void *arg)
 	const struct read_thread_args* thread_args = (const struct read_thread_args* ) arg;
 
 	int in = open(TRACER_OUTPUT_PIPE, O_RDONLY);
-	int out = open(thread_args->output_file, O_RDWR);
+	int out = open(thread_args->output_file, O_RDWR | O_CREAT);
 
 	if (!in || !out) {
 		perror("Failed to open file!\n");
@@ -370,6 +370,8 @@ int main(int argc, char** argv)
 	pthread_detach(tid_smpl);
 	#endif
 	pthread_detach(tid_rd);
+
+	sleep(3);
 
 	printf("Running command...\n");
 
