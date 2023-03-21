@@ -44,6 +44,7 @@ struct sample_thread_args {
 
 struct read_thread_args {
 	const char *output_file;
+	const char *str_cmd;
 };
 
 bool getStopIssued(void) {
@@ -90,6 +91,27 @@ void toggle_mmiotrace(bool enable)
 
 	fflush(fp);
 	fclose(fp);
+}
+
+void get_pmem_range(unsigned long *start, unsigned long *end) {
+    FILE *fp = fopen("/proc/iomem", "r");
+    if (fp == NULL) {
+        perror("Error opening /proc/iomem");
+        return;
+    }
+    char line[256] = {0};
+    while (fgets(line, sizeof(line), fp)) {
+        if (strstr(line, "Persistent Memory") != NULL) {
+            char *start_str = strtok(line, "-");
+            char *end_str = strtok(NULL, " ");
+            *start = strtoul(start_str, NULL, 16);
+            *end = strtoul(end_str, NULL, 16);
+            fclose(fp);
+            return;
+        }
+    }
+    fclose(fp);
+    perror("PMEM range not found in /proc/iomem");
 }
 
 void enable_pmemtrace(int fd)
@@ -155,24 +177,16 @@ void* pmem_sampler(void *arg)
 	const int period = 1000000 / thread_args->sample_rate;
 	bool is_enabled = true;
 
-	//pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-	//pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);	
-
 	printf("Thread running...\n");
 
 	while (!getStopIssued()) {
-		//printf("Hello\n\f");
-		//pthread_testcancel();
-		
 		if (is_enabled) {
 			usleep(period * thread_args->duty_cycle);
-			//printf("Disable...\n\f");
 			#ifndef DEBUG
 			ioctl(thread_args->fd, ND_CMD_TRACE_DISABLE);
 			#endif
 		} else {
 			usleep(period);
-			//printf("Enable...\n\f");
 			#ifndef DEBUG
 			ioctl(thread_args->fd, ND_CMD_TRACE_ENABLE);
 			#endif
@@ -184,8 +198,6 @@ void* pmem_sampler(void *arg)
 	#ifndef DEBUG
 	ioctl(thread_args->fd, ND_CMD_TRACE_DISABLE);
 	#endif
-
-	printf("Stopping pmem_sampler...\n");
 
 	pthread_exit(NULL);
 }
@@ -204,9 +216,14 @@ void* pmemtrace_output_thread(void *arg)
 
 	unsigned long device_start = 0, device_end = 0;
 
-	char header[256];
-	sprintf(header, "PMEMTRACE DEVICE START: %lx, DEVICE END: %lx\n", device_start, device_end);
-	write(out, header, strnlen(header, sizeof(header)) + 1);
+	get_pmem_range(&device_start, &device_end);
+	char header_str[128];
+	char cmd_str[256];
+	sprintf(header_str, "PMEMTRACE DEVICE: [%p-%p]\n", (void*) device_start, (void*) device_end);
+	sprintf(cmd_str, "TRACE COMMAND:%s\n###\n", thread_args->str_cmd);
+
+	write(out, header_str, strnlen(header_str, sizeof(header_str)) + 1);
+	write(out, cmd_str, strnlen(cmd_str, sizeof(cmd_str)) + 1);
 
 	fd_set rfds;
 	FD_ZERO(&rfds);
@@ -246,8 +263,6 @@ void* pmemtrace_output_thread(void *arg)
 	// 	fwrite(buffer, 1, n, out);
 	// }
 
-	printf("Stopping pmemtrace_output_thread...\n");
-
 	close(in);
 	close(out);
 
@@ -267,6 +282,17 @@ void signal_handler(int sig)
 			kill(exec_pid, SIGTERM);
 		}
 	}
+}
+
+char* concat_args(int argc, char* argv[]) {
+    char* result = (char*) malloc(sizeof(char));
+    result[0] = '\0';
+    for (int i = 0; i < argc; i++) {
+        result = (char*) realloc(result, strlen(result) + strlen(argv[i]) + 2);
+        strcat(result, " ");
+        strcat(result, argv[i]);
+    }
+    return result;
 }
 
 int main(int argc, char** argv)
@@ -291,6 +317,7 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
+
 	if (is_mmiotrace_enabled()) {
 		printf("mmiotrace is enabled\n");
    	} else {
@@ -310,14 +337,6 @@ int main(int argc, char** argv)
 
 	//printf("Current trace buffer size: %u\n", get_trace_buf_size());
 
-
-
-
-
-
-	struct read_thread_args rd_thread_args = {"trace_dump.log"};
-
-	int ret_code, status;
 	int pipe_fds[2];
 
 	if (pipe(pipe_fds) < 0) {
@@ -329,6 +348,12 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Error: fork error!\n");
 		exit(EXIT_FAILURE);
 	}
+
+	char* merge_cmd = concat_args(argc - 2, &argv[2]);
+
+	struct read_thread_args rd_thread_args = {"trace_dump.log", merge_cmd};
+
+	int ret_code, status;
 
 	if (exec_pid == 0) {
 		char buf[1];
@@ -409,6 +434,8 @@ int main(int argc, char** argv)
 	close(fd);
 	sleep(2);
 	toggle_mmiotrace(false);
+
+	free(merge_cmd);
 
 	return ret_code;
 }
