@@ -7,7 +7,7 @@ qemu-system-x86_64\
 	-kernel $1/arch/x86/boot/bzImage \
 	-machine pc,nvdimm=on \
 	-m 4G,slots=2,maxmem=32G \
-	-object memory-backend-file,id=mem1,mem-path=./nvdimm0,share=off,pmem=on,size=4G,align=2M \
+	-object memory-backend-file,id=mem1,mem-path=./nvdimm0,share=off,pmem=on,size=28G,align=2M \
 	-device nvdimm,memdev=mem1,id=nv1,label-size=256K \
 	-net user,host=10.0.2.10,hostfwd=tcp:127.0.0.1:2222-:22 \
 	-net nic,model=e1000 \

@@ -167,9 +167,10 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 
 	unsigned char *ip = (unsigned char *)instptr;
 
-	// switch (hw_error_code) {
-	// 	case X86_PF_READ:
-	if (hw_error_code & X86_PF_WRITE) {
+	if (type == REG_READ) {
+		my_trace->opcode = MMIO_READ;
+		my_trace->width = get_ins_mem_width(instptr);
+	} else if (hw_error_code & X86_PF_WRITE) {
 		my_trace->opcode = MMIO_WRITE;
 		my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
 		my_trace->value = (*ip) << 16 | *(ip + 1) << 8 |
