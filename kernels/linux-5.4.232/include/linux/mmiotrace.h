@@ -49,6 +49,8 @@ extern void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
 							void __iomem *addr);
 extern void mmiotrace_iounmap(volatile void __iomem *addr);
 
+extern void mmiotrace_disarm_trace_probe(volatile void __iomem *addr);
+
 /* For anyone to insert markers. Remember trailing newline. */
 extern __printf(1, 2) int mmiotrace_printk(const char *fmt, ...);
 #else /* !CONFIG_MMIOTRACE: */

@@ -239,6 +239,7 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 							void __iomem *addr)
 {
 	static atomic_t next_id;
+	struct remap_trace *trace_in_list;
 	struct remap_trace *trace = kmalloc(sizeof(*trace), GFP_KERNEL);
 	/* These are page-unaligned. */
 	struct mmiotrace_map map = {
@@ -272,6 +273,13 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 		goto not_enabled;
 	}
 
+	list_for_each_entry(trace_in_list, &trace_list, list) {
+		if ((unsigned long)addr == trace_in_list->probe.addr) {
+			pr_debug("Already mapped, skipping %p...\n", addr);
+			goto not_enabled;
+		}
+	}
+
 	mmio_trace_mapping(&map);
 	list_add_tail(&trace->list, &trace_list);
 	if (!nommiotrace)
@@ -295,6 +303,36 @@ void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
 	}
 		
 	ioremap_trace_core(offset, size, addr);
+}
+
+void mmiotrace_disarm_trace_probe(volatile void __iomem *addr)
+{
+	struct remap_trace *trace;
+	struct remap_trace *tmp;
+	struct remap_trace *found_trace = NULL;
+
+	spin_lock_irq(&trace_lock);
+	if (!is_enabled())
+		goto not_enabled;
+
+	list_for_each_entry_safe(trace, tmp, &trace_list, list) {
+		if ((unsigned long)addr == trace->probe.addr) {
+			if (!nommiotrace) {
+				pr_debug("Unmapping %p.\n", addr);
+				unregister_kmmio_probe(&trace->probe);
+			}
+			
+			found_trace = trace;
+			break;
+		}
+	}
+
+not_enabled:
+	spin_unlock_irq(&trace_lock);
+	if (found_trace) {
+		synchronize_rcu(); /* unregister_kmmio_probe() requirement */
+		kfree(found_trace);
+	}
 }
 
 static void iounmap_trace_core(volatile void __iomem *addr)
