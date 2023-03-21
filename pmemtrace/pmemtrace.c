@@ -26,10 +26,11 @@
 
 
 #define ENABLE_SAMPLING
-const unsigned int SAMPLE_RATE = 120; // 10 hz
-const unsigned int DUTY_CYCLE = 32;
+const unsigned int SAMPLE_RATE = 60; // 10 hz
+const unsigned int DUTY_CYCLE = 2;
 
-bool is_tracing = true;
+volatile bool is_stopped = false;
+pthread_mutex_t stopMutex;
 pid_t exec_pid;
 //#define ND_IOCTL_VENDOR _IOWR(ND_IOCTL, ND_CMD_TRACE, void)
 //#define ND_IOCTL_VENDOR _IOWR(ND_IOCTL, ND_CMD_TRACE_DISABLE, void)
@@ -43,8 +44,22 @@ struct sample_thread_args {
 
 struct read_thread_args {
 	const char *output_file;
+	const char *str_cmd;
 };
 
+bool getStopIssued(void) {
+	bool ret;
+	pthread_mutex_lock(&stopMutex);
+	ret = is_stopped;
+	pthread_mutex_unlock(&stopMutex);
+	return ret;
+}
+
+void setStopIssued(bool val) {
+	pthread_mutex_lock(&stopMutex);
+	is_stopped = val;
+	pthread_mutex_unlock(&stopMutex);
+}
 
 bool is_mmiotrace_enabled() {
 	char tracer[256];
@@ -72,11 +87,31 @@ void toggle_mmiotrace(bool enable)
 		exit(EXIT_FAILURE);
 	}
 
-	printf("Writing: %s\n", ((enable) ? "mmiotrace" : "nop"));
-
 	fprintf(fp, ((enable) ? "mmiotrace" : "nop"));
 
+	fflush(fp);
 	fclose(fp);
+}
+
+void get_pmem_range(unsigned long *start, unsigned long *end) {
+    FILE *fp = fopen("/proc/iomem", "r");
+    if (fp == NULL) {
+        perror("Error opening /proc/iomem");
+        return;
+    }
+    char line[256] = {0};
+    while (fgets(line, sizeof(line), fp)) {
+        if (strstr(line, "Persistent Memory") != NULL) {
+            char *start_str = strtok(line, "-");
+            char *end_str = strtok(NULL, " ");
+            *start = strtoul(start_str, NULL, 16);
+            *end = strtoul(end_str, NULL, 16);
+            fclose(fp);
+            return;
+        }
+    }
+    fclose(fp);
+    perror("PMEM range not found in /proc/iomem");
 }
 
 void enable_pmemtrace(int fd)
@@ -142,24 +177,16 @@ void* pmem_sampler(void *arg)
 	const int period = 1000000 / thread_args->sample_rate;
 	bool is_enabled = true;
 
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);	
-
 	printf("Thread running...\n");
 
-	while (is_tracing) {
-		//printf("Hello\n\f");
-		pthread_testcancel();
-		
+	while (!getStopIssued()) {
 		if (is_enabled) {
 			usleep(period * thread_args->duty_cycle);
-			//printf("Disable...\n\f");
 			#ifndef DEBUG
 			ioctl(thread_args->fd, ND_CMD_TRACE_DISABLE);
 			#endif
 		} else {
 			usleep(period);
-			//printf("Enable...\n\f");
 			#ifndef DEBUG
 			ioctl(thread_args->fd, ND_CMD_TRACE_ENABLE);
 			#endif
@@ -172,53 +199,81 @@ void* pmem_sampler(void *arg)
 	ioctl(thread_args->fd, ND_CMD_TRACE_DISABLE);
 	#endif
 
-	printf("Stopping pmem_sampler...\n");
-
 	pthread_exit(NULL);
 }
 
 void* pmemtrace_output_thread(void *arg)
 {
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);	
-
 	const struct read_thread_args* thread_args = (const struct read_thread_args* ) arg;
 
-	FILE *in = fopen(TRACER_OUTPUT_PIPE, "r");
-	FILE *out = fopen(thread_args->output_file, "w");
+	int in = open(TRACER_OUTPUT_PIPE, O_RDONLY);
+	int out = open(thread_args->output_file, O_WRONLY | O_CREAT | O_TRUNC, 644);
 
 	if (!in || !out) {
 		perror("Failed to open file!\n");
-		exit(EXIT_FAILURE);
+		pthread_exit(NULL);
 	}
+
+	unsigned long device_start = 0, device_end = 0;
+
+	get_pmem_range(&device_start, &device_end);
+	char header_str[128];
+	char cmd_str[256];
+	sprintf(header_str, "PMEMTRACE DEVICE: [%p-%p]\n", (void*) device_start, (void*) device_end);
+	sprintf(cmd_str, "TRACE COMMAND:%s\n###\n", thread_args->str_cmd);
+
+	write(out, header_str, strnlen(header_str, sizeof(header_str)) + 1);
+	write(out, cmd_str, strnlen(cmd_str, sizeof(cmd_str)) + 1);
+
+	fd_set rfds;
+	FD_ZERO(&rfds);
+	FD_SET(in, &rfds);
+
+	//struct timeval timeout = {0};
+	//timeout.tv_sec = 1;
 
 	char buffer[1024];
 	size_t n;
 
-	while (is_tracing) {
-		while ((n = fread(buffer, 1, sizeof(buffer), in)) > 0) {
-			fwrite(buffer, 1, n, out);
-		}
+	while (true) {
+		if (getStopIssued())
+			break;
+
+		n = read(in, buffer, sizeof(buffer));
+		write(out, buffer, n);
+
+		//rv = select(in + 1, &rfds, NULL, NULL, &timeout);
+
+		//if (rv == -1) {
+		//	perror("Reading error!\n");
+		//	pthread_exit(NULL);
+		//} else if (rv > 0) {
+		//	n = read(in, buffer, sizeof(buffer));
+		//	write(out, buffer, n);
+		//}
 	}
+
+
+	// while (!getStopIssued() && ((n = fread(buffer, 1, sizeof(buffer), in)) > 0)) {
+	// 	fwrite(buffer, 1, n, out);			
+	// }
 
 	// Make sure all data is flushed.
-	while ((n = fread(buffer, 1, sizeof(buffer), in)) > 0) {
-		fwrite(buffer, 1, n, out);
-	}
+	// while ((n = fread(buffer, 1, sizeof(buffer), in)) > 0) {
+	// 	fwrite(buffer, 1, n, out);
+	// }
 
-	fclose(in);
-	fclose(out);
+	close(in);
+	close(out);
 
-	printf("Stopping pmemtrace_output_thread...\n");
-
-
+	
 	pthread_exit(NULL);
 }
 
 void signal_handler(int sig)
 {
 	if (sig == SIGINT) {
-		is_tracing = false;
+		setStopIssued(true);
 		putchar('\n');
 		//signal(SIGINT, SIG_DFL);
 		//raise(SIGINT);
@@ -227,6 +282,17 @@ void signal_handler(int sig)
 			kill(exec_pid, SIGTERM);
 		}
 	}
+}
+
+char* concat_args(int argc, char* argv[]) {
+    char* result = (char*) malloc(sizeof(char));
+    result[0] = '\0';
+    for (int i = 0; i < argc; i++) {
+        result = (char*) realloc(result, strlen(result) + strlen(argv[i]) + 2);
+        strcat(result, " ");
+        strcat(result, argv[i]);
+    }
+    return result;
 }
 
 int main(int argc, char** argv)
@@ -251,6 +317,7 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
+
 	if (is_mmiotrace_enabled()) {
 		printf("mmiotrace is enabled\n");
    	} else {
@@ -270,6 +337,34 @@ int main(int argc, char** argv)
 
 	//printf("Current trace buffer size: %u\n", get_trace_buf_size());
 
+	int pipe_fds[2];
+
+	if (pipe(pipe_fds) < 0) {
+        perror("Unable to establish pipe between processes!\n");
+        exit(EXIT_FAILURE);
+    }
+
+	if ((exec_pid = fork()) < 0) {
+		fprintf(stderr, "Error: fork error!\n");
+		exit(EXIT_FAILURE);
+	}
+
+	char* merge_cmd = concat_args(argc - 2, &argv[2]);
+
+	struct read_thread_args rd_thread_args = {"trace_dump.log", merge_cmd};
+
+	int ret_code, status;
+
+	if (exec_pid == 0) {
+		char buf[1];
+		close(pipe_fds[1]);
+		read(pipe_fds[0], buf, 1);
+
+		execvp(argv[2], &argv[2]);
+
+		exit(EXIT_FAILURE);
+	}
+
 	int fd = open(argv[1], O_RDWR);
 	if (fd < 0)
 	{
@@ -287,19 +382,13 @@ int main(int argc, char** argv)
     sigaction(SIGINT, &sa, NULL);
 
 	enable_pmemtrace(fd);
-
-	sleep(1);
-
+	
 	pthread_t tid_rd;
-
-	struct read_thread_args rd_thread_args = {"trace_dump.log"};
 
 	if (pthread_create(&tid_rd, NULL, pmemtrace_output_thread, (void*) &rd_thread_args) < 0) {
 		fprintf(stderr, "Error: pthread_create failed!\n");
 		exit(EXIT_FAILURE);
 	}
-
-	pthread_detach(tid_rd);
 
 	#ifdef ENABLE_SAMPLING
 	pthread_t tid_smpl;
@@ -311,43 +400,42 @@ int main(int argc, char** argv)
 	}
 
 	pthread_detach(tid_smpl);
-	
 	#endif
+	pthread_detach(tid_rd);
 
+	sleep(3);
 
+	printf("Running command...\n");
 
-	int ret_code, status;
+	close(pipe_fds[0]);
+	write(pipe_fds[1], "x", 1);
 
-	if ((exec_pid = fork()) < 0) {
-		fprintf(stderr, "Error: fork error!\n");
-		exit(EXIT_FAILURE);
-	}
+	waitpid(exec_pid, &status, 0);
 
-	if (exec_pid == 0) {
-		ret_code = execvp(argv[2], &argv[2]);
-	} else {
-		waitpid(exec_pid, &status, 0);
-	}
+	ret_code = WIFEXITED(status);
 
+	printf("Stop running...\n");
+
+	setStopIssued(true);
+
+	
+	pthread_join(tid_rd, NULL);
 	#ifdef ENABLE_SAMPLING
 	pthread_join(tid_smpl, NULL);
 	#endif
-	pthread_join(tid_rd, NULL);
+	
 
 	//printf("PIDs: %ld %ld %ld\n", tid_rd, tid_smpl, exec_pid);
-
-	is_tracing = false;
-
-
 	
 	printf("Disabling pmemtrace...\n");
 
 	disable_pmemtrace(fd);
 
 	close(fd);
-	
-	sleep(4);
+	sleep(2);
 	toggle_mmiotrace(false);
+
+	free(merge_cmd);
 
 	return ret_code;
 }
