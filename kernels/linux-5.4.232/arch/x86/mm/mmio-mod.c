@@ -136,6 +136,7 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 	const unsigned long instptr = instruction_pointer(regs);
 	const enum reason_type type = get_ins_type(instptr);
 	struct remap_trace *trace = p->private;
+	unsigned char *ip;
 
 	/* it doesn't make sense to have more than one active trace per cpu */
 	if (my_reason->active_traces)
@@ -165,16 +166,21 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 	 * on event ordering?
 	 */
 
-	unsigned char *ip = (unsigned char *)instptr;
+	ip = (unsigned char *)instptr;
 
 	if (type == REG_READ) {
 		my_trace->opcode = MMIO_READ;
 		my_trace->width = get_ins_mem_width(instptr);
+	} else if (type == REG_WRITE) {
+		my_trace->opcode = MMIO_WRITE;
+		my_trace->width = get_ins_mem_width(instptr);
+		my_trace->value = get_ins_reg_val(instptr, regs);
 	} else if (hw_error_code & X86_PF_WRITE) {
 		my_trace->opcode = MMIO_WRITE;
 		my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
 		my_trace->value = (*ip) << 16 | *(ip + 1) << 8 |
 								*(ip + 2);
+		//my_trace->value = get_ins_imm_val(instptr);
 	} else {
 		my_trace->opcode = MMIO_READ;
 		my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
