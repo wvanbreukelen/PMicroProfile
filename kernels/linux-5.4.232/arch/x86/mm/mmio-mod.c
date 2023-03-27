@@ -176,7 +176,6 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 		my_trace->width = get_ins_mem_width(instptr);
 		my_trace->value = get_ins_reg_val(instptr, regs);
 	} else if (type == INS_CACHE_OP) {
-		pr_info("clflush instruction!");
 		my_trace->opcode = MMIO_CLFLUSH;
 	} else if (hw_error_code & X86_PF_WRITE) {
 		my_trace->opcode = MMIO_WRITE;
@@ -326,7 +325,7 @@ void mmiotrace_disarm_trace_probe(volatile void __iomem *addr)
 	list_for_each_entry_safe(trace, tmp, &trace_list, list) {
 		if ((unsigned long)addr == trace->probe.addr) {
 			if (!nommiotrace) {
-				pr_debug("Unmapping %p.\n", addr);
+				//pr_debug("Unmapping %p.\n", addr);
 				unregister_kmmio_probe(&trace->probe);
 			}
 			
@@ -355,7 +354,7 @@ static void iounmap_trace_core(volatile void __iomem *addr)
 	struct remap_trace *tmp;
 	struct remap_trace *found_trace = NULL;
 
-	pr_debug("Unmapping %p.\n", addr);
+	//pr_debug("Unmapping %p.\n", addr);
 
 	spin_lock_irq(&trace_lock);
 	if (!is_enabled())
