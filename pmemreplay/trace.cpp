@@ -1,9 +1,42 @@
 #include "trace.hpp"
 
+#include <string>
+
+#include <sstream>
+#include <cassert>
+
 std::ostream& operator<<(std::ostream &os, const TraceEntry &entry) {
-    os << "[" << entry.timestamp_sec << "] OP: " << ((entry.op == TraceOperation::READ) ? "read" : "write") << " OP size: " << entry.op_size << " addr: " << "0x" << std::hex << entry.addr;
+    os << "[" << entry.timestamp_sec << "] OP: " << ((entry.op == TraceOperation::READ) ? "read" : "write") << " OP size: " << entry.op_size << " addr: " << "0x" << std::hex << entry.abs_addr;
 
     return os;
+}
+
+const std::vector<uint8_t> hex_string_to_bytes(const std::string& hexString) {
+    std::vector<uint8_t> bytes;
+
+    // Make sure the string starts with "0x"
+    if (hexString.substr(0, 2) != "0x") {
+        throw std::invalid_argument("Input string must start with '0x'");
+    }
+
+    std::string hex = hexString.substr(2);
+
+    // If the string has an odd number of characters, add a leading zero
+    if (hex.length() % 2 == 1) {
+        hex = "0" + hex;
+    }
+
+    std::vector<uint8_t> result;
+
+    // Iterate over the string, converting each pair of characters to a byte
+    for (size_t i = 0; i < hex.length(); i += 2) {
+        std::string byteString = hex.substr(i, 2);
+        uint8_t byte = std::stoi(byteString, nullptr, 16);
+        assert(byte < 256);
+        result.push_back(byte);
+    }
+
+    return result;
 }
 
 std::optional<TraceFile> parse_trace(const std::string& filename)
@@ -15,6 +48,8 @@ std::optional<TraceFile> parse_trace(const std::string& filename)
         return std::nullopt;
     }
 
+    // std::regex pattern(R"(([RW])\s+([\d]+)+\s+([\d.]+)\s+\d+\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)\s+.*)");
+   
     std::regex pattern(R"((R|W)\s+(\d+)\s+([\d.]+)\s+\d+\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+))");
     std::smatch matches;
     TraceFile trace;
@@ -33,7 +68,9 @@ std::optional<TraceFile> parse_trace(const std::string& filename)
                 return std::nullopt;
             }
 
-            trace.emplace_back(op, std::stoi(matches[2]), std::stod(matches[3]), std::stoul(matches[4], nullptr, 16));
+            const std::vector<uint8_t> op_bytes = hex_string_to_bytes(matches[5]);
+
+            trace.emplace_back(op, std::stoi(matches[2]), std::stod(matches[3]), std::stoul(matches[4], nullptr, 16), op_bytes);
         }
     }
 

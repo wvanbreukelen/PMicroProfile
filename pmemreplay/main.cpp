@@ -4,6 +4,7 @@
 #include "trace.hpp"
 #include "bench_suite.hpp"
 
+#define BENCH_MAP_SIZE (4UL * 1024 * 1024 * 1024)
 
 int main(int argc, char** argv)
 {
@@ -35,11 +36,12 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    //std::regex pattern(R"(([RW])\s+([\d]+)+\s+([\d.]+)\s+\d+\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)\s+.*)");
-   
+    BenchSuite bsuite(*trace, BENCH_MAP_SIZE, num_threads);
 
-    std::cout << std::dec;
-    std::cout << "Total bytes read: " << trace->get_total(TraceOperation::READ) << " total bytes write: " << trace->get_total(TraceOperation::WRITE) << std::endl;
+    bsuite.run();
+
+    // std::cout << std::dec;
+    // std::cout << "Total bytes read: " << trace->get_total(TraceOperation::READ) << " total bytes write: " << trace->get_total(TraceOperation::WRITE) << std::endl;
 
     return 0;
 }

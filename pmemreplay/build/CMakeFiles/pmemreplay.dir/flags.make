@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = 
+CXX_INCLUDES = -I/home/wiebe/Documents/test-debian-custom-kernel/pmemreplay
 
-CXX_FLAGS =  -pthread
+CXX_FLAGS =  -pthread -O3 -mavx -mavx2 -march=native
 
