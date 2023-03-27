@@ -11,6 +11,22 @@
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
+struct WorkerArguments {
+public:
+    WorkerArguments(TraceFile *trace_file, const size_t replay_rounds) :
+        trace_file(trace_file),
+        replay_rounds(replay_rounds)
+    {}
+
+    WorkerArguments():
+        trace_file(nullptr),
+        replay_rounds(0)
+    {}
+
+    TraceFile* trace_file;
+    const size_t replay_rounds;
+};
+
 
 // from: https://github.com/hpides/perma-bench/blob/75b6e3ceea6895fdb779b4981aa43a2ff6185104/src/read_write_ops.hpp
 #define READ_SIMD_512(mem_addr, offset) _mm512_load_si512((void*)((mem_addr) + ((offset)*CACHE_LINE_SIZE)))
@@ -131,40 +147,46 @@ void BenchSuite::deallocate_mem_area()
 
 static void* do_work(void *arg)
 {
-    TraceFile* trace_file = static_cast<TraceFile*>(arg);
+    //TraceFile* trace_file = static_cast<TraceFile*>(arg);
+    struct WorkerArguments *args = static_cast<struct WorkerArguments*>(arg);
     char* write_addr;
 
-    for (const TraceEntry& entry : (*trace_file)) {
-        write_addr = static_cast<char*>(entry.dax_addr);
+    std::cout << "num rounds: " << args->replay_rounds << std::endl;
 
-        switch (entry.op_size)
-        {
-        case 1:
-            *(write_addr) = entry.data[0];
-            flush_clflushopt(write_addr, 1);
-            _mm_sfence();
 
-            break;
-        case 4:
-            *(write_addr) = (((uint32_t)entry.data[0] << 24) | ((uint32_t)entry.data[1] << 16) | ((uint32_t)entry.data[2] << 8) | (uint32_t) entry.data[3]);
-            flush_clflushopt(write_addr, 4);
-            _mm_sfence();
+    for (size_t i = 0; args->replay_rounds + 1; ++i) {
+        for (const TraceEntry& entry : *(args->trace_file)) {
+            write_addr = static_cast<char*>(entry.dax_addr);
 
-            break;
-        case 8:
-            *(write_addr) = ((uint64_t)entry.data[0] << 56) | ((uint64_t)entry.data[1] << 48) | ((uint64_t)entry.data[2] << 40) | ((uint64_t)entry.data[3] << 32)
-                                | ((uint64_t)entry.data[4] << 24) | ((uint64_t)entry.data[5] << 16) | ((uint64_t)entry.data[6] << 8) | (uint64_t)entry.data[7];
+            switch (entry.op_size)
+            {
+            case 1:
+                *(write_addr) = entry.data[0];
+                flush_clflushopt(write_addr, 1);
+                _mm_sfence();
 
-            flush_clflushopt(write_addr, 8);
-            _mm_sfence();
+                break;
+            case 4:
+                *(write_addr) = (((uint32_t)entry.data[0] << 24) | ((uint32_t)entry.data[1] << 16) | ((uint32_t)entry.data[2] << 8) | (uint32_t) entry.data[3]);
+                flush_clflushopt(write_addr, 4);
+                _mm_sfence();
 
-            break;
+                break;
+            case 8:
+                *(write_addr) = ((uint64_t)entry.data[0] << 56) | ((uint64_t)entry.data[1] << 48) | ((uint64_t)entry.data[2] << 40) | ((uint64_t)entry.data[3] << 32)
+                                    | ((uint64_t)entry.data[4] << 24) | ((uint64_t)entry.data[5] << 16) | ((uint64_t)entry.data[6] << 8) | (uint64_t)entry.data[7];
 
-        default:
-            std::cerr << "Unsupported op size " << entry.op_size << "!" << std::endl;
+                flush_clflushopt(write_addr, 8);
+                _mm_sfence();
 
-            pthread_exit(NULL);
-            break;
+                break;
+
+            default:
+                std::cerr << "Unsupported op size " << entry.op_size << "!" << std::endl;
+
+                pthread_exit(NULL);
+                break;
+            }
         }
     }
 
@@ -172,7 +194,7 @@ static void* do_work(void *arg)
     pthread_exit(NULL);
 }
 
-void BenchSuite::run()
+void BenchSuite::run(const size_t replay_rounds)
 {
     if (!allocate_pmem_area()) {
         std::cerr << "Unable to allocate DAX-backed region, switching to main memory backed area..." << std::endl;
@@ -188,17 +210,24 @@ void BenchSuite::run()
     // Spawn the threads
 
     pthread_t threads[this->num_threads] = {};
+    struct WorkerArguments thread_args[this->num_threads] = {{const_cast<TraceFile*>(&(this->trace_file)), replay_rounds}};
 
-    int rc;
+    std::cout << "Initializing " << this->num_threads << " threads ..." << std::endl;
+
     
+    int rc;
     for (size_t i = 0; i < this->num_threads; ++i) {
-        rc = pthread_create(&threads[i], NULL, do_work, static_cast<void*>(const_cast<TraceFile*>(&(trace_file))));
+        rc = pthread_create(&threads[i], NULL, do_work, static_cast<void*>(&(thread_args[i])));
 
         if (rc) {
             std::cerr << "Unable to create thread" << std::endl;
             deallocate_mem_area();
             return;
         }
+    }
+
+    for (size_t i = 0; i < this->num_threads; ++i) {
+        pthread_join(threads[i], NULL);
     }
 
     // drop_caches();

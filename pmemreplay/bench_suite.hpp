@@ -1,5 +1,4 @@
 #pragma once
-
 #include "trace.hpp"
 
 class BenchSuite {
@@ -13,7 +12,7 @@ public:
         dax_fd = -1;
     };
 
-    void run();
+    void run(const size_t replay_rounds);
 
 private:
     void drop_caches();
