@@ -1,0 +1,1 @@
+/usr/bin/c++  -pthread CMakeFiles/pmemreplay.dir/trace.cpp.o CMakeFiles/pmemreplay.dir/bench_suite.cpp.o CMakeFiles/pmemreplay.dir/main.cpp.o -o pmemreplay 
