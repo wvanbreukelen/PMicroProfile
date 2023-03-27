@@ -26,8 +26,8 @@
 
 
 #define ENABLE_SAMPLING
-const unsigned int SAMPLE_RATE = 60; // 10 hz
-const unsigned int DUTY_CYCLE = 2;
+const unsigned int SAMPLE_RATE = 10; // was 60 hz for ext4-dax
+const double DUTY_CYCLE = 0.25; // was 2 for ext4-dax
 
 volatile bool is_stopped = false;
 pthread_mutex_t stopMutex;
@@ -38,7 +38,7 @@ pid_t exec_pid;
 
 struct sample_thread_args {
 	unsigned int sample_rate;
-	unsigned int duty_cycle;
+	double duty_cycle;
 	int fd;
 };
 
@@ -214,16 +214,21 @@ void* pmemtrace_output_thread(void *arg)
 		pthread_exit(NULL);
 	}
 
+	if (chmod(thread_args->output_file, 0644) < 0) {
+		perror("Failed setting file permissions!\n");
+		pthread_exit(NULL);
+	}
+
 	unsigned long device_start = 0, device_end = 0;
 
 	get_pmem_range(&device_start, &device_end);
-	char header_str[128];
-	char cmd_str[256];
+	char header_str[128] = {0};
+	char cmd_str[256] = {0};
 	sprintf(header_str, "PMEMTRACE DEVICE: [%p-%p]\n", (void*) device_start, (void*) device_end);
 	sprintf(cmd_str, "TRACE COMMAND:%s\n###\n", thread_args->str_cmd);
 
-	write(out, header_str, strnlen(header_str, sizeof(header_str)) + 1);
-	write(out, cmd_str, strnlen(cmd_str, sizeof(cmd_str)) + 1);
+	write(out, header_str, strnlen(header_str, sizeof(header_str)));
+	write(out, cmd_str, strnlen(cmd_str, sizeof(cmd_str)));
 
 	fd_set rfds;
 	FD_ZERO(&rfds);
@@ -351,7 +356,7 @@ int main(int argc, char** argv)
 
 	char* merge_cmd = concat_args(argc - 2, &argv[2]);
 
-	struct read_thread_args rd_thread_args = {"trace_dump.log", merge_cmd};
+	struct read_thread_args rd_thread_args = {"trace_dump.trf", merge_cmd};
 
 	int ret_code, status;
 
