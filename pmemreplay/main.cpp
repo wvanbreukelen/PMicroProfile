@@ -4,7 +4,7 @@
 #include "trace.hpp"
 #include "bench_suite.hpp"
 
-#define BENCH_MAP_SIZE (4UL * 1024 * 1024 * 1024)
+#define BENCH_MAP_SIZE (30UL * 1024 * 1024 * 1024)
 
 int main(int argc, char** argv)
 {

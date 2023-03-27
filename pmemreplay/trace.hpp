@@ -37,66 +37,66 @@ public:
 class TraceFile : protected std::vector<TraceEntry> {
 public:
     // Define a nested iterator class
-    class ConstIterator {
+    class Iterator {
     public:
         // Define the iterator typedefs required by the STL
         using iterator_category = std::input_iterator_tag;
         using value_type = TraceEntry;
         using difference_type = ptrdiff_t;
-        using pointer = const TraceEntry*;
-        using reference = const TraceEntry&;
+        using pointer = TraceEntry*;
+        using reference = TraceEntry&;
 
         // Constructor takes a pointer to the underlying vector and an index
-        ConstIterator(const std::vector<TraceEntry>* vec, size_t index)
+        Iterator(std::vector<TraceEntry>* vec, size_t index)
             : m_vec(vec), m_index(index)
         {}
 
         // Prefix increment operator (++it)
-        ConstIterator& operator++() {
+        Iterator& operator++() {
             ++m_index;
             return *this;
         }
 
         // Postfix increment operator (it++)
-        ConstIterator operator++(int) {
-            ConstIterator temp(*this);
+        Iterator operator++(int) {
+            Iterator temp(*this);
             ++m_index;
             return temp;
         }
 
         // Dereference operator
-        reference operator*() const {
+        reference operator*() {
             return (*m_vec)[m_index];
         }
 
         // Member access operator
-        pointer operator->() const {
+        pointer operator->() {
             return &(*m_vec)[m_index];
         }
 
         // Equality operator
-        bool operator==(const ConstIterator& other) const {
+        bool operator==(const Iterator& other) const {
             return m_vec == other.m_vec && m_index == other.m_index;
         }
 
         // Inequality operator
-        bool operator!=(const ConstIterator& other) const {
+        bool operator!=(const Iterator& other) const {
             return !(*this == other);
         }
 
     private:
-        const std::vector<TraceEntry>* m_vec;
+        std::vector<TraceEntry>* m_vec;
         size_t m_index;
     };
 
 
 
-    ConstIterator begin() const {
-        return ConstIterator(this, 0);
+    Iterator begin() {
+        return Iterator(this, 0);
     }
 
-    ConstIterator end() const {
-        return ConstIterator(this, size());
+    Iterator end() {
+        return Iterator(this, size());
     }
 
     template<typename... Args>
@@ -104,7 +104,7 @@ public:
         std::vector<TraceEntry>::emplace_back(std::forward<Args>(args)...);
     }
 
-    size_t get_total(const TraceOperation &op) const
+    size_t get_total(const TraceOperation &op)
     {
         size_t total = 0;
 

@@ -3,7 +3,7 @@
 
 class BenchSuite {
 public:
-    BenchSuite(const TraceFile &trace_file, const size_t mem_size, const unsigned int num_threads) :
+    BenchSuite(TraceFile &trace_file, const size_t mem_size, const unsigned int num_threads) :
         trace_file(trace_file),
         mem_size(mem_size),
         num_threads(num_threads)
@@ -20,7 +20,7 @@ private:
     bool allocate_dram_area();
     void deallocate_mem_area();
 
-    const TraceFile &trace_file;
+    TraceFile &trace_file;
     const size_t mem_size;
     const unsigned int num_threads;
 

@@ -150,14 +150,22 @@ static void* do_work(void *arg)
 {
     //TraceFile* trace_file = static_cast<TraceFile*>(arg);
     struct WorkerArguments *args = static_cast<struct WorkerArguments*>(arg);
-    char* write_addr;
+    char* write_addr = nullptr;
+
+    std::cout << "here" << std::endl;
 
     std::cout << "num rounds: " << args->replay_rounds << std::endl;
 
 
     for (size_t i = 0; args->replay_rounds + 1; ++i) {
+
         for (const TraceEntry& entry : *(args->trace_file)) {
             write_addr = static_cast<char*>(entry.dax_addr);
+            //std::cout << "write_addr: " << (void*) write_addr << std::endl;
+
+    
+            std::cout << entry.op_size << " " << entry.data.size() << std::endl;
+            std::cout << (unsigned long) write_addr << std::endl;
             assert(entry.op_size <= entry.data.size());
 
             switch (entry.op_size)
@@ -175,8 +183,8 @@ static void* do_work(void *arg)
 
                 break;
             case 8:
-                *(write_addr) = ((uint64_t)entry.data[0] << 56) | ((uint64_t)entry.data[1] << 48) | ((uint64_t)entry.data[2] << 40) | ((uint64_t)entry.data[3] << 32)
-                                    | ((uint64_t)entry.data[4] << 24) | ((uint64_t)entry.data[5] << 16) | ((uint64_t)entry.data[6] << 8) | (uint64_t)entry.data[7];
+                 *(write_addr) = ((uint64_t)entry.data[0] << 56) | ((uint64_t)entry.data[1] << 48) | ((uint64_t)entry.data[2] << 40) | ((uint64_t)entry.data[3] << 32)
+                                     | ((uint64_t)entry.data[4] << 24) | ((uint64_t)entry.data[5] << 16) | ((uint64_t)entry.data[6] << 8) | (uint64_t)entry.data[7];
 
                 flush_clflushopt(write_addr, 8);
                 _mm_sfence();
@@ -209,16 +217,22 @@ void BenchSuite::run(const size_t replay_rounds)
 
     std::cout << "DAX area: [" << std::hex << this->mem_area << '-' << (void*) ((uintptr_t) this->mem_area + this->mem_size) << ']' << std::endl;
 
-    // Spawn the threads
+    // Calculate the DAX addresses based on the offset inside the trace PMEM region.
+    for (TraceEntry &entry : this->trace_file) {
+        entry.dax_addr = static_cast<char*>(this->mem_area) + entry.rel_addr;
+    }
 
+
+    // Spawn the threads
     pthread_t threads[this->num_threads] = {};
-    struct WorkerArguments thread_args[this->num_threads] = {{const_cast<TraceFile*>(&(this->trace_file)), replay_rounds}};
+    struct WorkerArguments thread_args[this->num_threads] = {{(&(this->trace_file)), replay_rounds}};
 
     std::cout << "Initializing " << this->num_threads << " threads ..." << std::endl;
 
     
     int rc;
     for (size_t i = 0; i < this->num_threads; ++i) {
+        std::cout << thread_args[i].trace_file->get_total(TraceOperation::WRITE) << std::endl;
         rc = pthread_create(&threads[i], NULL, do_work, static_cast<void*>(&(thread_args[i])));
 
         if (rc) {

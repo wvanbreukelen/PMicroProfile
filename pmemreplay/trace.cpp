@@ -66,6 +66,7 @@ std::optional<TraceFile> parse_trace(const std::string& filename)
     const auto pmem_range_end = std::stoul(match[2].str(), nullptr, 16);
     std::cout << "Start address: " << std::hex << pmem_range_start << '\n';
     std::cout << "End address: " << std::hex << pmem_range_end << '\n';
+    std::cout << "Size: " << std::dec << (pmem_range_end - pmem_range_start) / (1024 * 1024 * 1024) << " GiB" << std::endl; 
    
     std::regex pattern(R"((R|W)\s+(\d+)\s+([\d.]+)\s+\d+\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+))");
     TraceFile trace;
