@@ -175,6 +175,9 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 		my_trace->opcode = MMIO_WRITE;
 		my_trace->width = get_ins_mem_width(instptr);
 		my_trace->value = get_ins_reg_val(instptr, regs);
+	} else if (type == INS_CACHE_OP) {
+		pr_info("clflush instruction!");
+		my_trace->opcode = MMIO_CLFLUSH;
 	} else if (hw_error_code & X86_PF_WRITE) {
 		my_trace->opcode = MMIO_WRITE;
 		my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
@@ -184,8 +187,6 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 	} else {
 		my_trace->opcode = MMIO_READ;
 		my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
-		my_trace->value = (*ip) << 16 | *(ip + 1) << 8 |
-							*(ip + 2);
 	}
 
 	// switch (type) {

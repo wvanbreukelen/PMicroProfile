@@ -49,6 +49,7 @@ static unsigned int reg_rop[] = {
 };
 static unsigned int reg_wop[] = { 0x88, 0x89, 0xAA, 0xAB, 0xC30F };
 static unsigned int imm_wop[] = { 0xC6, 0xC7 };
+static unsigned int cache_op[] = { 0xAE0F };
 static unsigned int rw8[] = { 0xC6, 0x88, 0x8A, 0xAA, 0xA4 };
 static unsigned int rw32[] = {
 	0xC7, 0x89, 0x8B, 0xB60F, 0xB70F, 0xBE0F, 0xBF0F, 0xAB, 0xC30F
@@ -58,9 +59,9 @@ static unsigned int mw8[] = { 0xC6, 0x88, 0x8A, 0xB60F, 0xBE0F, 0xAA, 0xA4 };
 /* 16 bit only */
 static unsigned int mw16[] = { 0xB70F, 0xBF0F };
 /* 16 or 32 bit */
-static unsigned int mw32[] = { 0xC7, 0xC30F };
+static unsigned int mw32[] = { 0xC7 };
 /* 16, 32 or 64 bit */
-static unsigned int mw64[] = { 0x89, 0x8B, 0xAB };
+static unsigned int mw64[] = { 0x89, 0x8B, 0xAB, 0xC30F };
 #endif /* not __i386__ */
 
 struct prefix_bits {
@@ -139,6 +140,7 @@ enum reason_type get_ins_type(unsigned long ins_addr)
 	CHECK_OP_TYPE(opcode, reg_rop, REG_READ);
 	CHECK_OP_TYPE(opcode, reg_wop, REG_WRITE);
 	CHECK_OP_TYPE(opcode, imm_wop, IMM_WRITE);
+	CHECK_OP_TYPE(opcode, cache_op, INS_CACHE_OP);
 
 exit:
 	return rv;
