@@ -68,7 +68,7 @@ std::optional<TraceFile> parse_trace(const std::string& filename)
     std::cout << "End address: " << std::hex << pmem_range_end << '\n';
     std::cout << "Size: " << std::dec << (pmem_range_end - pmem_range_start) / (1024 * 1024 * 1024) << " GiB" << std::endl; 
    
-    std::regex pattern(R"((R|W)\s+(\d+)\s+([\d.]+)\s+\d+\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+))");
+    std::regex pattern(R"((R|W|F)\s+(\d+)\s+([\d.]+)\s+\d+\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+))");
     TraceFile trace;
     std::smatch matches;
     
@@ -79,6 +79,8 @@ std::optional<TraceFile> parse_trace(const std::string& filename)
                 op = TraceOperation::READ;
             } else if (matches[1] == "W") {
                 op = TraceOperation::WRITE;
+            } else if (matches[1] == "F") {
+                op = TraceOperation::CLFLUSH;
             } else {
                 std::cerr << "Unknown trace operation: " << matches[1] << std::endl;
 

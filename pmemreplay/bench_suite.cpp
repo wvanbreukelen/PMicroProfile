@@ -152,51 +152,67 @@ static void* do_work(void *arg)
     struct WorkerArguments *args = static_cast<struct WorkerArguments*>(arg);
     char* write_addr = nullptr;
 
-    std::cout << "here" << std::endl;
-
-    std::cout << "num rounds: " << args->replay_rounds << std::endl;
-
 
     for (size_t i = 0; args->replay_rounds + 1; ++i) {
 
         for (const TraceEntry& entry : *(args->trace_file)) {
-            write_addr = static_cast<char*>(entry.dax_addr);
-            //std::cout << "write_addr: " << (void*) write_addr << std::endl;
 
-    
-            std::cout << entry.op_size << " " << entry.data.size() << std::endl;
-            std::cout << (unsigned long) write_addr << std::endl;
-            assert(entry.op_size <= entry.data.size());
+            if (entry.op == TraceOperation::READ) {
+                switch (entry.op_size)
+                {
+                    case 1:
+                        break;
+                    case 4:
+                        break;
+                    case 8:
+                        break;
+                    default:
+                        std::cerr << "Unsupported op size " << entry.op_size << "!" << std::endl;
 
-            switch (entry.op_size)
-            {
-            case 1:
-                *(write_addr) = entry.data[0];
-                flush_clflushopt(write_addr, 1);
+                        pthread_exit(NULL);
+                        break;
+                }
+            } else if (entry.op == TraceOperation::WRITE) {
+                write_addr = static_cast<char*>(entry.dax_addr);
+                //std::cout << "write_addr: " << (void*) write_addr << std::endl;
+                std::cout << entry.op_size << " " << entry.data.size() << std::endl;
+                std::cout << (unsigned long) write_addr << std::endl;
+                assert(entry.op_size <= entry.data.size());
+
+                switch (entry.op_size)
+                {
+                case 1:
+                    *(write_addr) = entry.data[0];
+                    //flush_clflushopt(write_addr, 1);
+                    //_mm_sfence();
+
+                    break;
+                case 4:
+                    *(write_addr) = (((uint32_t)entry.data[0] << 24) | ((uint32_t)entry.data[1] << 16) | ((uint32_t)entry.data[2] << 8) | (uint32_t) entry.data[3]);
+                    //flush_clflushopt(write_addr, 4);
+                    //_mm_sfence();
+
+                    break;
+                case 8:
+                        *(write_addr) = ((uint64_t)entry.data[0] << 56) | ((uint64_t)entry.data[1] << 48) | ((uint64_t)entry.data[2] << 40) | ((uint64_t)entry.data[3] << 32)
+                                            | ((uint64_t)entry.data[4] << 24) | ((uint64_t)entry.data[5] << 16) | ((uint64_t)entry.data[6] << 8) | (uint64_t)entry.data[7];
+
+                    //flush_clflushopt(write_addr, 8);
+                    //_mm_sfence();
+
+                    break;
+
+                default:
+                    std::cerr << "Unsupported op size " << entry.op_size << "!" << std::endl;
+
+                    pthread_exit(NULL);
+                    break;
+                }
+            } else if (entry.op == TraceOperation::CLFLUSH) {
+                flush_clflushopt(static_cast<char*>(entry.dax_addr), 1);
                 _mm_sfence();
-
-                break;
-            case 4:
-                *(write_addr) = (((uint32_t)entry.data[0] << 24) | ((uint32_t)entry.data[1] << 16) | ((uint32_t)entry.data[2] << 8) | (uint32_t) entry.data[3]);
-                flush_clflushopt(write_addr, 4);
-                _mm_sfence();
-
-                break;
-            case 8:
-                 *(write_addr) = ((uint64_t)entry.data[0] << 56) | ((uint64_t)entry.data[1] << 48) | ((uint64_t)entry.data[2] << 40) | ((uint64_t)entry.data[3] << 32)
-                                     | ((uint64_t)entry.data[4] << 24) | ((uint64_t)entry.data[5] << 16) | ((uint64_t)entry.data[6] << 8) | (uint64_t)entry.data[7];
-
-                flush_clflushopt(write_addr, 8);
-                _mm_sfence();
-
-                break;
-
-            default:
-                std::cerr << "Unsupported op size " << entry.op_size << "!" << std::endl;
-
-                pthread_exit(NULL);
-                break;
             }
+
         }
     }
 

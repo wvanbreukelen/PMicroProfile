@@ -10,7 +10,8 @@
 
 enum class TraceOperation {
     READ,
-    WRITE
+    WRITE,
+    CLFLUSH
 };
 
 struct TraceEntry {
