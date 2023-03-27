@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/mman.h>
+#include <cassert>
 
 #include <immintrin.h>
 #include <xmmintrin.h>
@@ -157,6 +158,7 @@ static void* do_work(void *arg)
     for (size_t i = 0; args->replay_rounds + 1; ++i) {
         for (const TraceEntry& entry : *(args->trace_file)) {
             write_addr = static_cast<char*>(entry.dax_addr);
+            assert(entry.op_size <= entry.data.size());
 
             switch (entry.op_size)
             {

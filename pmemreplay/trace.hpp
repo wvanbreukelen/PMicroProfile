@@ -15,11 +15,12 @@ enum class TraceOperation {
 
 struct TraceEntry {
 public:
-    TraceEntry(const TraceOperation op, const size_t op_size, const double timestamp_sec, const unsigned long addr, const std::vector<uint8_t> data) :
+    TraceEntry(const TraceOperation op, const size_t op_size, const double timestamp_sec, const unsigned long abs_addr, const unsigned long rel_addr, const std::vector<uint8_t> data) :
         op(op),
         op_size(op_size),
         timestamp_sec(timestamp_sec),
-        abs_addr(addr),
+        abs_addr(abs_addr),
+        rel_addr(rel_addr),
         dax_addr(nullptr),
         data(data)
     {};
@@ -28,6 +29,7 @@ public:
     const size_t op_size;
     const double timestamp_sec;
     const unsigned long abs_addr;
+    const unsigned long rel_addr;
     void* dax_addr;
     const std::vector<uint8_t> data;
 };

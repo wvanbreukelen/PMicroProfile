@@ -313,6 +313,8 @@ CMakeFiles/pmemreplay.dir/bench_suite.cpp.o: ../bench_suite.cpp \
   /usr/include/x86_64-linux-gnu/bits/mman-map-flags-generic.h \
   /usr/include/x86_64-linux-gnu/bits/mman-linux.h \
   /usr/include/x86_64-linux-gnu/bits/mman-shared.h \
+  /usr/include/c++/11/cassert \
+  /usr/include/assert.h \
   /usr/lib/gcc/x86_64-linux-gnu/11/include/immintrin.h \
   /usr/lib/gcc/x86_64-linux-gnu/11/include/x86gprintrin.h \
   /usr/lib/gcc/x86_64-linux-gnu/11/include/ia32intrin.h \
@@ -1014,8 +1016,6 @@ CMakeFiles/pmemreplay.dir/trace.cpp.o: ../trace.cpp \
   /usr/include/assert.h
 
 
-/usr/include/assert.h:
-
 /usr/include/c++/11/tr1/poly_laguerre.tcc:
 
 /usr/include/c++/11/tr1/poly_hermite.tcc:
@@ -1140,10 +1140,6 @@ CMakeFiles/pmemreplay.dir/trace.cpp.o: ../trace.cpp \
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/pkuintrin.h:
 
-/usr/include/c++/11/cassert:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/pconfigintrin.h:
-
 /usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitintrin.h:
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/movdirintrin.h:
@@ -1163,6 +1159,12 @@ CMakeFiles/pmemreplay.dir/trace.cpp.o: ../trace.cpp \
 /usr/include/c++/11/tr1/riemann_zeta.tcc:
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/x86gprintrin.h:
+
+/usr/include/assert.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/pconfigintrin.h:
+
+/usr/include/c++/11/cassert:
 
 /usr/include/x86_64-linux-gnu/bits/mman-shared.h:
 

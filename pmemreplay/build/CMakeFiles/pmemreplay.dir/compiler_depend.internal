@@ -314,6 +314,8 @@ CMakeFiles/pmemreplay.dir/bench_suite.cpp.o
  /usr/include/x86_64-linux-gnu/bits/mman-map-flags-generic.h
  /usr/include/x86_64-linux-gnu/bits/mman-linux.h
  /usr/include/x86_64-linux-gnu/bits/mman-shared.h
+ /usr/include/c++/11/cassert
+ /usr/include/assert.h
  /usr/lib/gcc/x86_64-linux-gnu/11/include/immintrin.h
  /usr/lib/gcc/x86_64-linux-gnu/11/include/x86gprintrin.h
  /usr/lib/gcc/x86_64-linux-gnu/11/include/ia32intrin.h

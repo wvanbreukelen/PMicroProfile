@@ -48,13 +48,29 @@ std::optional<TraceFile> parse_trace(const std::string& filename)
         return std::nullopt;
     }
 
-    // std::regex pattern(R"(([RW])\s+([\d]+)+\s+([\d.]+)\s+\d+\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)\s+.*)");
+    std::string line;
+
+    if (!std::getline(trace_handle, line)) {
+        return std::nullopt;
+    }
+
+    std::regex re(R"(PMEMTRACE DEVICE:\s+\[(0x[\da-fA-F]+)-(0x[\da-fA-F]+)\])");
+    std::smatch match;
+
+    if (!std::regex_search(line, match, re)) {
+        std::cerr << "Invalid trace file format" << std::endl;
+        return std::nullopt;
+    }
+
+    const auto pmem_range_start = std::stoul(match[1].str(), nullptr, 16);
+    const auto pmem_range_end = std::stoul(match[2].str(), nullptr, 16);
+    std::cout << "Start address: " << std::hex << pmem_range_start << '\n';
+    std::cout << "End address: " << std::hex << pmem_range_end << '\n';
    
     std::regex pattern(R"((R|W)\s+(\d+)\s+([\d.]+)\s+\d+\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+))");
-    std::smatch matches;
     TraceFile trace;
+    std::smatch matches;
     
-    std::string line;
     TraceOperation op;
     while (std::getline(trace_handle, line)) {
         if (std::regex_search(line, matches, pattern)) {
@@ -70,7 +86,13 @@ std::optional<TraceFile> parse_trace(const std::string& filename)
 
             const std::vector<uint8_t> op_bytes = hex_string_to_bytes(matches[5]);
 
-            trace.emplace_back(op, std::stoi(matches[2]), std::stod(matches[3]), std::stoul(matches[4], nullptr, 16), op_bytes);
+            const unsigned long abs_addr = std::stoul(matches[4], nullptr, 16);
+            assert(abs_addr > pmem_range_start);
+            assert(abs_addr < pmem_range_end);
+            const unsigned long rel_addr = abs_addr - pmem_range_start;
+
+
+            trace.emplace_back(op, std::stoi(matches[2]), std::stod(matches[3]), abs_addr, rel_addr, op_bytes);
         }
     }
 
