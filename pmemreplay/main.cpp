@@ -1,4 +1,5 @@
 #include <optional>
+#include <string>
 
 #include "CLI11.hpp"
 #include "trace.hpp"
@@ -16,6 +17,7 @@ int main(int argc, char** argv)
     std::string pmem_device_loc;
     size_t replay_rounds;
     bool do_fallback_ram = false;
+    bool force_dram = false;
 
     app.add_option("trace file", trace_file, "Trace file to execute (must have .trf extension)")
         ->required()
@@ -33,10 +35,17 @@ int main(int argc, char** argv)
         ->default_val(false);
     app.add_flag("--fallback-ram", do_fallback_ram, "Fallback using RAM in case Persistent Memory is not available")
         ->default_val(false);
-    app.add_option("d, --device", pmem_device_loc, "Location of Persistent Memory DAX device")
+    app.add_option("d, --device", pmem_device_loc, "Location of Persistent Memory DAX device. Enter 'dram' to use DRAM instead.")
         ->default_val("/dev/dax0.0");
 
     CLI11_PARSE(app, argc, argv);
+
+    std::transform(pmem_device_loc.begin(), pmem_device_loc.end(), pmem_device_loc.begin(), ::tolower);
+
+    if (pmem_device_loc == "dram") {
+        std::cout << "Using DRAM as backing device..." << std::endl;
+        force_dram = true;
+    }
 
     std::optional<TraceFile> trace = parse_trace(trace_file);
 
@@ -45,7 +54,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    BenchSuite bsuite(*trace, pmem_device_loc, BENCH_MAP_SIZE, num_threads, do_fallback_ram);
+    BenchSuite bsuite(*trace, pmem_device_loc, BENCH_MAP_SIZE, num_threads, force_dram, do_fallback_ram);
 
     bsuite.run(replay_rounds);
 

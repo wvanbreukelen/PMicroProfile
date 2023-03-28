@@ -150,6 +150,15 @@ bool BenchSuite::allocate_dram_area()
 
 void BenchSuite::allocate_mem_area()
 {
+    if (force_ram) {
+        if (!allocate_dram_area()) {
+            std::cerr << "Unable to allocate DRAM-backed region, exiting..." << std::endl;
+            return;
+        }
+
+        return;
+    }
+
     if (!allocate_pmem_area()) {
         std::cerr << "Unable to allocate DAX-backed region at " << this->pmem_device_loc << ", switching to main memory backed area..." << std::endl;
 
