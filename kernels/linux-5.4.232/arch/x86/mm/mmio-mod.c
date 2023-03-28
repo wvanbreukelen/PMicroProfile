@@ -138,6 +138,7 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 	struct remap_trace *trace = p->private;
 	unsigned char *ip;
 
+
 	/* it doesn't make sense to have more than one active trace per cpu */
 	if (my_reason->active_traces)
 		die_kmmio_nesting_error(regs, addr);
@@ -150,6 +151,7 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 
 	my_trace->phys = addr - trace->probe.addr + trace->phys;
 	my_trace->map_id = trace->id;
+	
 
 	/*
 	 * Only record the program counter when requested.
@@ -166,6 +168,10 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 	 * on event ordering?
 	 */
 
+	
+
+	my_trace->opcode_cpu = get_ins_opcode(instptr);
+
 	ip = (unsigned char *)instptr;
 
 	if (type == REG_READ) {
@@ -177,16 +183,18 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 		my_trace->value = get_ins_reg_val(instptr, regs);
 	} else if (type == INS_CACHE_OP) {
 		my_trace->opcode = MMIO_CLFLUSH;
-	} else if (hw_error_code & X86_PF_WRITE) {
-		my_trace->opcode = MMIO_WRITE;
-		my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
-		my_trace->value = (*ip) << 16 | *(ip + 1) << 8 |
-								*(ip + 2);
-		//my_trace->value = get_ins_imm_val(instptr);
-	} else {
-		my_trace->opcode = MMIO_READ;
-		my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
+	} else { // (hw_error_code & X86_PF_WRITE) 
+		pr_info("Unknown instruction: %x\n", my_trace->opcode_cpu);
 	}
+	// 	my_trace->opcode = MMIO_WRITE;
+	// 	my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
+	// 	my_trace->value = (*ip) << 16 | *(ip + 1) << 8 |
+	// 							*(ip + 2);
+	// 	//my_trace->value = get_ins_imm_val(instptr);
+	// } else {
+	// 	my_trace->opcode = MMIO_READ;
+	// 	my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
+	// }
 
 	// switch (type) {
 	// case REG_READ:

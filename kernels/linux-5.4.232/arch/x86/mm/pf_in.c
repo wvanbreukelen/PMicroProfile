@@ -47,7 +47,7 @@ static unsigned char prefix_codes[] = {
 static unsigned int reg_rop[] = {
 	0x8A, 0x8B, 0xB60F, 0xB70F, 0xBE0F, 0xBF0F
 };
-static unsigned int reg_wop[] = { 0x88, 0x89, 0xAA, 0xAB, 0xC30F };
+static unsigned int reg_wop[] = { 0x88, 0x89, 0xAA, 0xAB, 0xA4, 0xC30F };
 static unsigned int imm_wop[] = { 0xC6, 0xC7 };
 static unsigned int cache_op[] = { 0xAE0F };
 static unsigned int rw8[] = { 0xC6, 0x88, 0x8A, 0xAA, 0xA4 };
@@ -146,6 +146,19 @@ exit:
 	return rv;
 }
 #undef CHECK_OP_TYPE
+
+unsigned int get_ins_opcode(unsigned long ins_addr)
+{
+	unsigned int opcode;
+	unsigned char *p;
+	struct prefix_bits prf;
+
+	p = (unsigned char *)ins_addr;
+	p += skip_prefix(p, &prf);
+	p += get_opcode(p, &opcode);
+
+	return opcode;
+}
 
 static unsigned int get_ins_reg_width(unsigned long ins_addr)
 {

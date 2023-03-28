@@ -93,6 +93,7 @@ struct mmiotrace_rw {
 	unsigned long	value;
 	unsigned long	pc;	/* optional program counter */
 	int		map_id;
+	unsigned int 	opcode_cpu;
 	unsigned char	opcode;	/* one of MMIO_{READ,WRITE,UNKNOWN_OP} */
 	unsigned char	width;	/* size of register access in bytes */
 };
