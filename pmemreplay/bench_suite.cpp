@@ -5,12 +5,22 @@
 #include <pthread.h>
 #include <sys/mman.h>
 #include <cassert>
+#include <chrono>
 
 #include <immintrin.h>
 #include <xmmintrin.h>
 
+#define Mebibyte (1024 * 1024)
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
+
+struct io_stat {
+public:
+    size_t total_bytes = 0;
+    size_t read_bytes = 0;
+    size_t write_bytes = 0;
+    int64_t latency_sum = 0;
+};
 
 struct WorkerArguments {
 public:
@@ -26,6 +36,7 @@ public:
 
     TraceFile* trace_file;
     const size_t replay_rounds;
+    io_stat stat;
 };
 
 
@@ -123,13 +134,30 @@ bool BenchSuite::allocate_dram_area()
         return false;
     }
 
+    if (mprotect(mem_area, this->mem_size, PROT_READ | PROT_WRITE) < 0) {
+        std::cerr << "Warning: unable to mprotect DRAM-backed memory region" << std::endl;
+    }
+
     if (mlock(mem_area, this->mem_size) < 0) {
         std::cerr << "Warning: unable to mlock DRAM-backed memory region" << std::endl;
     }
 
+
     this->mem_area = mem_area;
 
     return true;
+}
+
+void BenchSuite::allocate_mem_area()
+{
+    if (!allocate_pmem_area()) {
+        std::cerr << "Unable to allocate DAX-backed region, switching to main memory backed area..." << std::endl;
+
+        if (!allocate_dram_area()) {
+            std::cerr << "Unable to allocate DRAM-backed region, exiting..." << std::endl;
+            return;
+        }
+    }
 }
 
 void BenchSuite::deallocate_mem_area()
@@ -148,23 +176,33 @@ void BenchSuite::deallocate_mem_area()
 
 static void* do_work(void *arg)
 {
-    //TraceFile* trace_file = static_cast<TraceFile*>(arg);
     struct WorkerArguments *args = static_cast<struct WorkerArguments*>(arg);
-    char* write_addr = nullptr;
+    char* dev_addr = nullptr;
 
+    size_t count = 0;
+    volatile unsigned long long temp_var = 0;
+    
+    const auto time_start = std::chrono::high_resolution_clock::now();
+    size_t total_bytes = 0;
+    size_t i = 0;
 
-    for (size_t i = 0; args->replay_rounds + 1; ++i) {
+    for (; i < args->replay_rounds + 1; ++i) {
 
         for (const TraceEntry& entry : *(args->trace_file)) {
-
+            dev_addr = static_cast<char*>(entry.dax_addr);
             if (entry.op == TraceOperation::READ) {
                 switch (entry.op_size)
                 {
                     case 1:
+                        *(reinterpret_cast<volatile char*>(&temp_var)) = *(dev_addr);
+
                         break;
                     case 4:
+                        *(reinterpret_cast<volatile int*>(&temp_var)) = *(dev_addr);
+
                         break;
                     case 8:
+                        *(reinterpret_cast<volatile long*>(&temp_var)) = *(dev_addr);
                         break;
                     default:
                         std::cerr << "Unsupported op size " << entry.op_size << "!" << std::endl;
@@ -172,32 +210,27 @@ static void* do_work(void *arg)
                         pthread_exit(NULL);
                         break;
                 }
-            } else if (entry.op == TraceOperation::WRITE) {
-                write_addr = static_cast<char*>(entry.dax_addr);
-                //std::cout << "write_addr: " << (void*) write_addr << std::endl;
-                std::cout << entry.op_size << " " << entry.data.size() << std::endl;
-                std::cout << (unsigned long) write_addr << std::endl;
-                assert(entry.op_size <= entry.data.size());
 
+                total_bytes += entry.op_size;
+            } else if (entry.op == TraceOperation::WRITE) {
                 switch (entry.op_size)
                 {
                 case 1:
-                    *(write_addr) = entry.data[0];
-                    //flush_clflushopt(write_addr, 1);
+                    *(dev_addr) = static_cast<unsigned char>(entry.data);
                     //_mm_sfence();
+                    //flush_clflushopt(write_addr, 1);
 
                     break;
                 case 4:
-                    *(write_addr) = (((uint32_t)entry.data[0] << 24) | ((uint32_t)entry.data[1] << 16) | ((uint32_t)entry.data[2] << 8) | (uint32_t) entry.data[3]);
-                    //flush_clflushopt(write_addr, 4);
+                    _mm_stream_si32((int*) entry.dax_addr, (int) entry.data);
                     //_mm_sfence();
+                    //flush_clflushopt(write_addr, 4);
 
                     break;
                 case 8:
-                        *(write_addr) = ((uint64_t)entry.data[0] << 56) | ((uint64_t)entry.data[1] << 48) | ((uint64_t)entry.data[2] << 40) | ((uint64_t)entry.data[3] << 32)
-                                            | ((uint64_t)entry.data[4] << 24) | ((uint64_t)entry.data[5] << 16) | ((uint64_t)entry.data[6] << 8) | (uint64_t)entry.data[7];
+                    _mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
 
-                    //flush_clflushopt(write_addr, 8);
+                    //flush_clflushopt(dev_addr, 8);
                     //_mm_sfence();
 
                     break;
@@ -208,13 +241,27 @@ static void* do_work(void *arg)
                     pthread_exit(NULL);
                     break;
                 }
-            } else if (entry.op == TraceOperation::CLFLUSH) {
-                flush_clflushopt(static_cast<char*>(entry.dax_addr), 1);
-                _mm_sfence();
-            }
 
+                //total_bytes += entry.op_size;
+            } else if (entry.op == TraceOperation::CLFLUSH) {
+                flush_clflushopt(dev_addr, 1);
+                _mm_sfence();
+                //total_bytes += 8;
+            } else {
+                assert(false);
+            }
+            (void) temp_var;
         }
     }
+
+    const auto time_stop = std::chrono::high_resolution_clock::now();
+    
+    struct io_stat *stat = &(args->stat);
+    stat->latency_sum += std::chrono::duration_cast<std::chrono::nanoseconds>(time_stop - time_start).count();
+    
+    stat->read_bytes += (args->trace_file->get_total(TraceOperation::READ) * i);
+    stat->write_bytes += (args->trace_file->get_total(TraceOperation::WRITE) * i);
+    stat->total_bytes += (stat->read_bytes + stat->write_bytes);
 
 
     pthread_exit(NULL);
@@ -222,14 +269,7 @@ static void* do_work(void *arg)
 
 void BenchSuite::run(const size_t replay_rounds)
 {
-    if (!allocate_pmem_area()) {
-        std::cerr << "Unable to allocate DAX-backed region, switching to main memory backed area..." << std::endl;
-
-        if (!allocate_dram_area()) {
-            std::cerr << "Unable to allocate DRAM-backed region, exiting..." << std::endl;
-            return;
-        }
-    }
+    
 
     std::cout << "DAX area: [" << std::hex << this->mem_area << '-' << (void*) ((uintptr_t) this->mem_area + this->mem_size) << ']' << std::endl;
 
@@ -245,10 +285,10 @@ void BenchSuite::run(const size_t replay_rounds)
 
     std::cout << "Initializing " << this->num_threads << " threads ..." << std::endl;
 
-    
+    this->drop_caches();
+
     int rc;
     for (size_t i = 0; i < this->num_threads; ++i) {
-        std::cout << thread_args[i].trace_file->get_total(TraceOperation::WRITE) << std::endl;
         rc = pthread_create(&threads[i], NULL, do_work, static_cast<void*>(&(thread_args[i])));
 
         if (rc) {
@@ -262,7 +302,15 @@ void BenchSuite::run(const size_t replay_rounds)
         pthread_join(threads[i], NULL);
     }
 
-    // drop_caches();
+    for (size_t i = 0; i < this->num_threads; ++i) {
+        std::cout << "Thread " << i << " -> Latency: " << std::dec << thread_args[i].stat.latency_sum << " us (" << (static_cast<double>(thread_args[i].stat.latency_sum) / 1000000) << " sec)" <<
+            " Read: " << (static_cast<double>(thread_args[i].stat.read_bytes) / Mebibyte) << " MB" <<
+            " Write: " << (static_cast<double>(thread_args[i].stat.write_bytes) / Mebibyte) << " MB" <<
+            " Total bytes: "  << (static_cast<double>(thread_args[i].stat.total_bytes) / Mebibyte) << " MB"
+            " Bandwidth: " << (static_cast<double>(thread_args[i].stat.total_bytes) / Mebibyte / (thread_args[i].stat.latency_sum / 1000000)) << " GB/s" << std::endl;
+    }
+
+    
 
     // unsigned int z = 0;
 
@@ -278,6 +326,5 @@ void BenchSuite::run(const size_t replay_rounds)
     //     if ((z++) >= 100)
     //         break;
     // }
-
-    deallocate_mem_area();
 }
+

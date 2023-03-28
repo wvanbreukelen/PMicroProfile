@@ -16,9 +16,10 @@ enum class TraceOperation {
 
 struct TraceEntry {
 public:
-    TraceEntry(const TraceOperation op, const size_t op_size, const double timestamp_sec, const unsigned long abs_addr, const unsigned long rel_addr, const std::vector<uint8_t> data) :
+    TraceEntry(const TraceOperation op, const size_t op_size, const unsigned int opcode, const double timestamp_sec, const unsigned long abs_addr, const unsigned long rel_addr, const unsigned long long data) :
         op(op),
         op_size(op_size),
+        opcode(opcode),
         timestamp_sec(timestamp_sec),
         abs_addr(abs_addr),
         rel_addr(rel_addr),
@@ -27,15 +28,17 @@ public:
     {};
 
     const TraceOperation op;
+    const unsigned int opcode;
     const size_t op_size;
     const double timestamp_sec;
     const unsigned long abs_addr;
     const unsigned long rel_addr;
     void* dax_addr;
-    const std::vector<uint8_t> data;
+    //const std::vector<uint8_t> data;
+    const unsigned long long data;
 };
 
-class TraceFile : protected std::vector<TraceEntry> {
+class TraceFile : public std::vector<TraceEntry> {
 public:
     // Define a nested iterator class
     class Iterator {
@@ -115,6 +118,21 @@ public:
         }
 
         return total;
+    }
+
+    size_t get_total_all_ops()
+    {
+        size_t total = 0;
+
+        total += this->get_total(TraceOperation::READ);
+        total += this->get_total(TraceOperation::WRITE);
+
+        return total;
+    }
+
+    size_t get_size()
+    {
+        return size();
     }
 };
 
