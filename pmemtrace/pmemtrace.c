@@ -27,7 +27,7 @@
 
 #define ENABLE_SAMPLING
 const unsigned int SAMPLE_RATE = 10; // was 60 hz for ext4-dax
-const double DUTY_CYCLE = 0.25; // was 2 for ext4-dax
+const double DUTY_CYCLE = 0.5; // was 2 for ext4-dax
 
 volatile bool is_stopped = false;
 pthread_mutex_t stopMutex;
@@ -114,7 +114,7 @@ void get_pmem_range(unsigned long *start, unsigned long *end) {
     perror("PMEM range not found in /proc/iomem");
 }
 
-void enable_pmemtrace(int fd)
+inline void enable_pmemtrace(int fd)
 {
 	#ifndef DEBUG
 	ioctl(fd, ND_CMD_TRACE_ENABLE);
@@ -122,7 +122,7 @@ void enable_pmemtrace(int fd)
 	//sleep(1);
 }
 
-void disable_pmemtrace(int fd) {
+inline void disable_pmemtrace(int fd) {
 	// printf("Disabling pmemtrace...\n");
 	#ifndef DEBUG
 	ioctl(fd, ND_CMD_TRACE_DISABLE);
@@ -389,9 +389,19 @@ int main(int argc, char** argv)
 	enable_pmemtrace(fd);
 	
 	pthread_t tid_rd;
+	// pthread_attr_t attr;
+	// sched_param param;
+	// pthread_attr_init(&attr);
+	// attr.sched_priority = 0;
+	
 
 	if (pthread_create(&tid_rd, NULL, pmemtrace_output_thread, (void*) &rd_thread_args) < 0) {
 		fprintf(stderr, "Error: pthread_create failed!\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (pthread_setschedprio(tid_rd, 50) < 0) {
+		fprintf(stderr, "Error: set prio failed!\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -410,7 +420,7 @@ int main(int argc, char** argv)
 
 	sleep(3);
 
-	printf("Running command...\n");
+	printf("Running command...\n\f");
 
 	close(pipe_fds[0]);
 	write(pipe_fds[1], "x", 1);
