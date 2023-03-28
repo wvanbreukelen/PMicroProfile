@@ -3,7 +3,12 @@
 #include <string>
 
 #include <sstream>
+
+
+#ifdef ENABLE_ASSERTS
 #include <cassert>
+#endif
+
 
 std::ostream& operator<<(std::ostream &os, const TraceEntry &entry) {
     os << "[" << entry.timestamp_sec << "] OP: " << ((entry.op == TraceOperation::READ) ? "read" : "write") << " OP size: " << entry.op_size << " addr: "
@@ -35,7 +40,9 @@ const std::vector<uint8_t> hex_string_to_bytes(const std::string& hexString) {
     for (size_t i = 0; i < hex.length(); i += 2) {
         std::string byteString = hex.substr(i, 2);
         uint8_t byte = std::stoi(byteString, nullptr, 16);
+        #ifdef ENABLE_ASSERTS
         assert(byte < 256);
+        #endif
         result.push_back(byte);
     }
 
@@ -98,8 +105,10 @@ std::optional<TraceFile> parse_trace(const std::string& filename)
             //std::cout << std::hex << data << std::endl;
 
             const unsigned long abs_addr = std::stoul(matches[5], nullptr, 16);
+            #ifdef ENABLE_ASSERTS
             assert(abs_addr > pmem_range_start);
             assert(abs_addr < pmem_range_end);
+            #endif
             const unsigned long rel_addr = abs_addr - pmem_range_start;
 
             //trace.emplace_back(op, std::stoi(matches[2]), std::stod(matches[3]), abs_addr, rel_addr, op_bytes);
