@@ -104,7 +104,7 @@ void BenchSuite::drop_caches()
 
 bool BenchSuite::allocate_pmem_area()
 {
-    int fd = open("/dev/dax0.0", O_RDWR);
+    int fd = open(this->pmem_device_loc.c_str(), O_RDWR);
 
     if (fd < 0) {
         return false;
@@ -151,7 +151,13 @@ bool BenchSuite::allocate_dram_area()
 void BenchSuite::allocate_mem_area()
 {
     if (!allocate_pmem_area()) {
-        std::cerr << "Unable to allocate DAX-backed region, switching to main memory backed area..." << std::endl;
+        std::cerr << "Unable to allocate DAX-backed region at " << this->pmem_device_loc << ", switching to main memory backed area..." << std::endl;
+
+        if (!this->do_fallback_ram) {
+            std::cerr << "Exiting. Fallback to RAM can be enabled by setting the --fallback-ram flag." << std::endl;
+            exit(1);
+            return;
+        }
 
         if (!allocate_dram_area()) {
             std::cerr << "Unable to allocate DRAM-backed region, exiting..." << std::endl;

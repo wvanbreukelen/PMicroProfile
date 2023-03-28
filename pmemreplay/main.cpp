@@ -10,10 +10,12 @@ int main(int argc, char** argv)
 {
     CLI::App app{"App description"};
 
-    bool is_verbose;
+    bool is_verbose = false;
     unsigned int num_threads;
     std::string trace_file;
+    std::string pmem_device_loc;
     size_t replay_rounds;
+    bool do_fallback_ram = false;
 
     app.add_option("trace file", trace_file, "Trace file to execute (must have .trf extension)")
         ->required()
@@ -23,12 +25,16 @@ int main(int argc, char** argv)
             }
             return "";
         });
-    app.add_flag("-v,--verbose", is_verbose, "Enable verbose output")
-        ->default_val(false);
     app.add_option("-t, --num-threads", num_threads, "Number of execution threads")
         ->default_val(1);
     app.add_option("-r, --replay-rounds", replay_rounds, "Number of replay rounds")
         ->default_val(0);
+    app.add_flag("-v,--verbose", is_verbose, "Enable verbose output")
+        ->default_val(false);
+    app.add_flag("--fallback-ram", do_fallback_ram, "Fallback using RAM in case Persistent Memory is not available")
+        ->default_val(false);
+    app.add_option("d, --device", pmem_device_loc, "Location of Persistent Memory DAX device")
+        ->default_val("/dev/dax0.0");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -39,7 +45,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    BenchSuite bsuite(*trace, BENCH_MAP_SIZE, num_threads);
+    BenchSuite bsuite(*trace, pmem_device_loc, BENCH_MAP_SIZE, num_threads, do_fallback_ram);
 
     bsuite.run(replay_rounds);
 
