@@ -85,6 +85,7 @@ enum mm_io_opcode {
 	MMIO_PROBE	= 0x3,	/* struct mmiotrace_map */
 	MMIO_UNPROBE	= 0x4,	/* struct mmiotrace_map */
 	MMIO_UNKNOWN_OP = 0x5,	/* struct mmiotrace_rw */
+	MMIO_CLFLUSH = 0x6,
 };
 
 struct mmiotrace_rw {

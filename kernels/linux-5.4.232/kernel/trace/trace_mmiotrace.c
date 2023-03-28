@@ -192,6 +192,13 @@ static enum print_line_t mmio_print_rw(struct trace_iterator *iter)
 			(unsigned long long)rw->phys,
 			rw->value, rw->pc, 0);
 		break;
+	case MMIO_CLFLUSH:
+		trace_seq_printf(s,
+			"F %d %u.%06lu %d 0x%llx 0x%lx 0x%lx %d\n",
+			rw->width, secs, usec_rem, rw->map_id,
+			(unsigned long long)rw->phys,
+			rw->value, rw->pc, 0);
+		break;
 	case MMIO_UNKNOWN_OP:
 		trace_seq_printf(s,
 			"UNKNOWN %u.%06lu %d 0x%llx %02lx,%02lx,"
