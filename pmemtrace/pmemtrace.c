@@ -27,7 +27,7 @@
 
 #define ENABLE_SAMPLING
 const unsigned int SAMPLE_RATE = 10; // was 60 hz for ext4-dax
-const double DUTY_CYCLE = 0.5; // was 2 for ext4-dax
+const double DUTY_CYCLE = 1; // was 2 for ext4-dax
 
 volatile bool is_stopped = false;
 pthread_mutex_t stopMutex;
@@ -318,6 +318,11 @@ int main(int argc, char** argv)
 	}
 
 	if (argc < 3) {
+		fprintf(stderr, "Please specify the trace name, e.g. my_simple_trace\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (argc < 4) {
 		fprintf(stderr, "Please provide the command to run\n");
 		exit(EXIT_FAILURE);
 	}
@@ -342,6 +347,15 @@ int main(int argc, char** argv)
 
 	//printf("Current trace buffer size: %u\n", get_trace_buf_size());
 
+	char* trace_name = strdup(argv[2]);
+	char* trace_loc = strcat(trace_name, ".trf");
+        printf("Trace file location: %s\n", trace_loc);
+        char* merge_cmd = concat_args(argc - 3, &argv[3]);
+
+        struct read_thread_args rd_thread_args = {trace_loc, merge_cmd};
+
+
+
 	int pipe_fds[2];
 
 	if (pipe(pipe_fds) < 0) {
@@ -354,10 +368,6 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	char* merge_cmd = concat_args(argc - 2, &argv[2]);
-
-	struct read_thread_args rd_thread_args = {"trace_dump.trf", merge_cmd};
-
 	int ret_code, status;
 
 	if (exec_pid == 0) {
@@ -365,7 +375,7 @@ int main(int argc, char** argv)
 		close(pipe_fds[1]);
 		read(pipe_fds[0], buf, 1);
 
-		execvp(argv[2], &argv[2]);
+		execvp(argv[3], &argv[3]);
 
 		exit(EXIT_FAILURE);
 	}

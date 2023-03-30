@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -O2 -Wall -Wextra -pthread
+CFLAGS = -O3 -Wall -Wextra -pthread -march=native
 SRC = pmemtrace.c
 OUT = pmemtrace
 
