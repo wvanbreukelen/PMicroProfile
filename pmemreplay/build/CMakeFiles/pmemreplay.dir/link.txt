@@ -1,1 +1,0 @@
-/usr/bin/c++  -pthread -O3 -mavx -mavx2 -march=native CMakeFiles/pmemreplay.dir/trace.cpp.o CMakeFiles/pmemreplay.dir/bench_suite.cpp.o CMakeFiles/pmemreplay.dir/main.cpp.o -o pmemreplay  -lpthread 
