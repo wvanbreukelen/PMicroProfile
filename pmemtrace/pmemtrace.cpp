@@ -244,6 +244,10 @@ void* pmemtrace_output_thread(void *arg)
 		pthread_exit(NULL);
 	}
 
+	int flags = fcntl(in, F_GETFL, 0);
+	fcntl(in, F_SETFL, flags | O_NONBLOCK);
+
+
 	if (chmod(thread_args->output_file, 0644) < 0) {
 		perror("Failed setting file permissions!\n");
 		pthread_exit(NULL);
@@ -260,13 +264,6 @@ void* pmemtrace_output_thread(void *arg)
 	write(out, header_str, strnlen(header_str, sizeof(header_str)));
 	write(out, cmd_str, strnlen(cmd_str, sizeof(cmd_str)));
 
-	fd_set rfds;
-	FD_ZERO(&rfds);
-	FD_SET(in, &rfds);
-
-	//struct timeval timeout = {0};
-	//timeout.tv_sec = 1;
-
 	char buffer[1024];
 	size_t n;
 
@@ -274,36 +271,15 @@ void* pmemtrace_output_thread(void *arg)
 		if (getStopIssued())
 			break;
 
+
 		n = read(in, buffer, sizeof(buffer));
-		if (write(out, buffer, n) == 0) {
-			perror("Reading error!\n");
-			pthread_exit(NULL);
-		}
 
-		//rv = select(in + 1, &rfds, NULL, NULL, &timeout);
-
-		//if (rv == -1) {
-		//	perror("Reading error!\n");
-		//	pthread_exit(NULL);
-		//} else if (rv > 0) {
-		//	n = read(in, buffer, sizeof(buffer));
-		//	write(out, buffer, n);
-		//}
+		if (n > 0)
+ 			(void) write(out, buffer, n);
 	}
-
-
-	// while (!getStopIssued() && ((n = fread(buffer, 1, sizeof(buffer), in)) > 0)) {
-	// 	fwrite(buffer, 1, n, out);			
-	// }
-
-	// Make sure all data is flushed.
-	// while ((n = fread(buffer, 1, sizeof(buffer), in)) > 0) {
-	// 	fwrite(buffer, 1, n, out);
-	// }
 
 	close(in);
 	close(out);
-
 	
 	pthread_exit(NULL);
 }
@@ -463,6 +439,10 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
+
+
+	int ret_code, status;
+
 	std::string pmem_device_loc;
 	std::string trace_name;
 	bool disable_sampling = false;
@@ -482,18 +462,51 @@ int main(int argc, char** argv)
 	
 	app.allow_extras();
 
-    CLI11_PARSE(app, argc, argv);
+   	CLI11_PARSE(app, argc, argv);
 
-	std::vector<std::string> remaining_args = app.remaining();
+	std::vector<std::string> _remaining_args = app.remaining();
 
-	if (remaining_args.size() == 0) {
+	if (_remaining_args.size() == 0) {
 		perror("Provide an CLI command!\n");
 		return -1;
 	}
 
+	char **remaining_args = new char*[_remaining_args.size()];
+
+	for (size_t i = 0; i < _remaining_args.size(); ++i) {
+		remaining_args[i] = new char[_remaining_args[i].size() + 1];
+		std::strcpy(remaining_args[i], _remaining_args[i].c_str());
+	}
+
+
+	int pipe_fds[2];
+
+	if (pipe(pipe_fds) < 0) {
+        perror("Unable to establish pipe between processes!\n");
+        exit(EXIT_FAILURE);
+    }
+
+	if ((exec_pid = fork()) < 0) {
+		fprintf(stderr, "Error: fork error!\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (exec_pid == 0) {
+		char buf[1];
+		close(pipe_fds[1]);
+
+		//char* args = &(remaining_args[0]);
+
+		(void) read(pipe_fds[0], buf, 1);
+
+		execvp(remaining_args[0], &(remaining_args[0]));
+		exit(EXIT_SUCCESS);
+		return 0;
+	}
+
 	// Combine remaining_args into a single string
 	std::string cmd;
-	for (const auto& arg : remaining_args) {
+	for (const auto& arg : _remaining_args) {
 		cmd += arg;
 		cmd += " ";
 	}
@@ -519,35 +532,12 @@ int main(int argc, char** argv)
 
 	char* trace_name_dup = strdup(trace_name.c_str());
 	char* trace_loc = strcat(trace_name_dup, ".trf");
-        printf("Trace file location: %s\n", trace_loc);
+	printf("Trace file location: %s\n", trace_loc);
 
-        struct read_thread_args rd_thread_args = {trace_loc, cmd.c_str()};
+	struct read_thread_args rd_thread_args = {trace_loc, cmd.c_str()};
 
 
 
-	int pipe_fds[2];
-
-	if (pipe(pipe_fds) < 0) {
-        perror("Unable to establish pipe between processes!\n");
-        exit(EXIT_FAILURE);
-    }
-
-	if ((exec_pid = fork()) < 0) {
-		fprintf(stderr, "Error: fork error!\n");
-		exit(EXIT_FAILURE);
-	}
-
-	int ret_code, status;
-
-	if (exec_pid == 0) {
-		char buf[1];
-		close(pipe_fds[1]);
-		(void) read(pipe_fds[0], buf, 1);
-
-		execvp(argv[3], &argv[3]);
-
-		exit(EXIT_FAILURE);
-	}
 
 	int fd = open(pmem_device_loc.c_str(), O_RDWR);
 	if (fd < 0)
@@ -618,15 +608,19 @@ int main(int argc, char** argv)
 		pthread_join(tid_smpl, NULL);
 	}
 
+	sleep(3);
+
 
 	//printf("PIDs: %ld %ld %ld\n", tid_rd, tid_smpl, exec_pid);
 	
 	printf("Disabling pmemtrace...\n");
 
+	
 	disable_pmemtrace(fd);
 
 	close(fd);
-	sleep(2);
+	sleep(1);
+
 	toggle_mmiotrace(false);
 
 	printf("Compressing trace file...\n");
