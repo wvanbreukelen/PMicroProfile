@@ -11,6 +11,7 @@
 #include <xmmintrin.h>
 
 #define Mebibyte (1024 * 1024)
+#define Gibibyte (1024 * 1024 * 1024)
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
@@ -318,11 +319,11 @@ void BenchSuite::run(const size_t replay_rounds)
     }
 
     for (size_t i = 0; i < this->num_threads; ++i) {
-        std::cout << "Thread " << i << " -> Latency: " << std::dec << thread_args[i].stat.latency_sum << " us (" << (static_cast<double>(thread_args[i].stat.latency_sum) / 1000000) << " sec)" <<
+        std::cout << "Thread " << i << " -> Latency: " << std::dec << thread_args[i].stat.latency_sum << " us (" << (static_cast<double>(thread_args[i].stat.latency_sum) / 1'000'000'000) << " sec)" <<
             " Read: " << (static_cast<double>(thread_args[i].stat.read_bytes) / Mebibyte) << " MB" <<
             " Write: " << (static_cast<double>(thread_args[i].stat.write_bytes) / Mebibyte) << " MB" <<
             " Total bytes: "  << (static_cast<double>(thread_args[i].stat.total_bytes) / Mebibyte) << " MB"
-            " Bandwidth: " << (static_cast<double>(thread_args[i].stat.total_bytes) / Mebibyte / (thread_args[i].stat.latency_sum / 1000000)) << " GB/s" << std::endl;
+            " Bandwidth: " << (static_cast<double>(thread_args[i].stat.total_bytes) / Gibibyte / (thread_args[i].stat.latency_sum / 1'000'000'000)) << " GB/s" << std::endl;
     }
 
     

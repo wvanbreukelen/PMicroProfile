@@ -13,6 +13,9 @@ ubuntu_splitfs/*
 #!/ubuntu_ctfs/*.sh
 #!/ubuntu_splitfs/*.sh
 
+CMakeFiles/
+build/
+
 *.perf
 *.trf
 *.o
