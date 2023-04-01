@@ -20,6 +20,7 @@ build/
 *.trf
 *.o
 *.d
+*.parquet
 trace_extractor/*.txt
 
 

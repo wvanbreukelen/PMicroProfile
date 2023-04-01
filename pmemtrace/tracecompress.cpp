@@ -91,7 +91,7 @@ arrow::Status trace_to_arrow(std::filesystem::path path, const std::vector<Trace
     return arrow::Status::OK();
 }
 
-int parse_trace(std::filesystem::path path)
+int compress_trace(std::filesystem::path path)
 {
     std::ifstream trace_handle(path);
 
@@ -142,7 +142,7 @@ int parse_trace(std::filesystem::path path)
     
     // https://arrow.apache.org/docs/cpp/parquet.html
     schema = std::static_pointer_cast<parquet::schema::GroupNode>(parquet::schema::GroupNode::Make(
-        "MyData", parquet::Repetition::REQUIRED, {
+        path.filename(), parquet::Repetition::REQUIRED, {
             parquet::schema::PrimitiveNode::Make("timestamp", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE),
             parquet::schema::PrimitiveNode::Make("op", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
             parquet::schema::PrimitiveNode::Make("opcode", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
@@ -227,17 +227,37 @@ void read_parquet_trace(std::filesystem::path& path)
 
     double timestamp_sec;
     uint32_t op;
+    TraceOperation trace_op;
     unsigned int opcode;
     size_t opcode_size;
     unsigned long abs_addr;
     unsigned long rel_addr;
     unsigned long data;
 
+    size_t count_reads = 0, count_writes = 0, count_flushes = 0;
+
     while (!(stream.eof())) {
         stream >> timestamp_sec >> op >> opcode >> opcode_size >> abs_addr >> rel_addr >> data >> parquet::EndRow;
-        std::cout << "OP: " << op << " timestamp: " << timestamp_sec << " 0x" << std::hex << abs_addr << " data: 0x" << data << std::endl;
+        std::cout << "OP: " << op << " opcode: 0x" << std::hex << opcode << " timestamp: " << timestamp_sec << " 0x" << std::hex << abs_addr << " data: 0x" << data << std::endl;
+
+        trace_op = static_cast<TraceOperation>(op);
+
+
+        switch (trace_op) {
+            case TraceOperation::READ:
+                ++count_reads; break;
+            case TraceOperation::WRITE:
+                ++count_writes; break;
+            case TraceOperation::CLFLUSH:
+                ++count_flushes; break;
+            default:
+                break;
+        }
+
         break;
     }
+
+    std::cout << "Reads: " << std::dec << count_reads << " Writes: " << count_writes << " Flushes: " << count_flushes << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -246,7 +266,7 @@ int main(int argc, char* argv[]) {
     if (argc < 2)
         return -1;
 
-    const int ret_code = parse_trace(std::string(argv[1]));
+    const int ret_code = compress_trace(std::string(argv[1]));
     std::cout << ret_code << std::endl;
 
     read_parquet_trace(std::filesystem::path(argv[1]).replace_extension(".parquet"));
