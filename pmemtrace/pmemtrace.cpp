@@ -33,6 +33,8 @@
 #include <parquet/stream_reader.h>
 #include <parquet/stream_writer.h>
 
+#include "CLI11.hpp"
+
 using parquet::ArrowWriterProperties;
 using parquet::WriterProperties;
 
@@ -54,9 +56,8 @@ enum class TraceOperation {
 #define TRACER_OUTPUT_PIPE "/sys/kernel/debug/tracing/trace_pipe"
 
 
-#define ENABLE_SAMPLING
-const unsigned int SAMPLE_RATE = 10; // was 60 hz for ext4-dax
-const double DUTY_CYCLE = 1; // was 2 for ext4-dax
+unsigned int SAMPLE_RATE = 10; // was 60 hz for ext4-dax
+double DUTY_CYCLE = 1; // was 2 for ext4-dax
 
 volatile bool is_stopped = false;
 pthread_mutex_t stopMutex;
@@ -457,31 +458,45 @@ int compress_trace(std::filesystem::path path)
 
 int main(int argc, char** argv)
 {
-	// sudo ./tracer /dev/ndctl0 sudo bash -c "head -c 1M </dev/urandom >/mnt/pmem_emul/some_rand2.txt"
-
-	assert(DUTY_CYCLE > 0);
-	assert(SAMPLE_RATE > 0);
-
 	if (geteuid() != 0) {
 		fprintf(stderr, "This program must be run as root.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (argc < 2) {
-		fprintf(stderr, "Please provide a ndctl device handle, e.g. /dev/ndctl0\n");
-		exit(EXIT_FAILURE);
+	std::string pmem_device_loc;
+	std::string trace_name;
+	bool disable_sampling = false;
+
+ 	CLI::App app{"pmemtrace - A Persistent Memory Micro-Architecture Aware Trace Capture Tool"};
+
+	app.add_option("tracename", trace_name, "Trace name")
+        ->required();
+	app.add_option("--device", pmem_device_loc, "Persistent Memory ndctl device handle")
+        ->default_val("/dev/ndctl0");
+	app.add_flag("--disable-sampling", disable_sampling, "Disable sampling; use a 100\% duty cycle")
+		->default_val(false);
+	app.add_option("-s, --sample-rate", SAMPLE_RATE, "Sample rate")
+        ->default_val(SAMPLE_RATE);
+	app.add_option("--duty-cycle", DUTY_CYCLE, "Duty cycle")
+		->default_val(DUTY_CYCLE);
+	
+	app.allow_extras();
+
+    CLI11_PARSE(app, argc, argv);
+
+	std::vector<std::string> remaining_args = app.remaining();
+
+	if (remaining_args.size() == 0) {
+		perror("Provide an CLI command!\n");
+		return -1;
 	}
 
-	if (argc < 3) {
-		fprintf(stderr, "Please specify the trace name, e.g. my_simple_trace\n");
-		exit(EXIT_FAILURE);
+	// Combine remaining_args into a single string
+	std::string cmd;
+	for (const auto& arg : remaining_args) {
+		cmd += arg;
+		cmd += " ";
 	}
-
-	if (argc < 4) {
-		fprintf(stderr, "Please provide the command to run\n");
-		exit(EXIT_FAILURE);
-	}
-
 
 	if (is_mmiotrace_enabled()) {
 		printf("mmiotrace is enabled\n");
@@ -502,12 +517,11 @@ int main(int argc, char** argv)
 
 	//printf("Current trace buffer size: %u\n", get_trace_buf_size());
 
-	char* trace_name = strdup(argv[2]);
-	char* trace_loc = strcat(trace_name, ".trf");
+	char* trace_name_dup = strdup(trace_name.c_str());
+	char* trace_loc = strcat(trace_name_dup, ".trf");
         printf("Trace file location: %s\n", trace_loc);
-        char* merge_cmd = concat_args(argc - 3, &argv[3]);
 
-        struct read_thread_args rd_thread_args = {trace_loc, merge_cmd};
+        struct read_thread_args rd_thread_args = {trace_loc, cmd.c_str()};
 
 
 
@@ -535,10 +549,10 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	int fd = open(argv[1], O_RDWR);
+	int fd = open(pmem_device_loc.c_str(), O_RDWR);
 	if (fd < 0)
 	{
-		fprintf(stderr, "Failed to open device %s!\n", argv[1]);
+		fprintf(stderr, "Failed to open device %s!\n", pmem_device_loc.c_str());
 		exit(EXIT_FAILURE);
 	}
 
@@ -554,6 +568,7 @@ int main(int argc, char** argv)
 	enable_pmemtrace(fd);
 	
 	pthread_t tid_rd;
+	pthread_t tid_smpl;
 	// pthread_attr_t attr;
 	// sched_param param;
 	// pthread_attr_init(&attr);
@@ -570,17 +585,16 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	#ifdef ENABLE_SAMPLING
-	pthread_t tid_smpl;
-	struct sample_thread_args smpl_thread_args = {SAMPLE_RATE, DUTY_CYCLE, fd};
+	if (!disable_sampling) {
+		struct sample_thread_args smpl_thread_args = {SAMPLE_RATE, DUTY_CYCLE, fd};
 
-	if (pthread_create(&tid_smpl, NULL, pmem_sampler, (void*) &smpl_thread_args) < 0) {
-		fprintf(stderr, "Error: pthread_create failed!\n");
-		exit(EXIT_FAILURE);
+		if (pthread_create(&tid_smpl, NULL, pmem_sampler, (void*) &smpl_thread_args) < 0) {
+			fprintf(stderr, "Error: pthread_create failed!\n");
+			exit(EXIT_FAILURE);
+		}
+
+		pthread_detach(tid_smpl);
 	}
-
-	pthread_detach(tid_smpl);
-	#endif
 	pthread_detach(tid_rd);
 
 	sleep(3);
@@ -600,10 +614,10 @@ int main(int argc, char** argv)
 
 	
 	pthread_join(tid_rd, NULL);
-	#ifdef ENABLE_SAMPLING
-	pthread_join(tid_smpl, NULL);
-	#endif
-	
+	if (!disable_sampling) {
+		pthread_join(tid_smpl, NULL);
+	}
+
 
 	//printf("PIDs: %ld %ld %ld\n", tid_rd, tid_smpl, exec_pid);
 	
@@ -614,8 +628,6 @@ int main(int argc, char** argv)
 	close(fd);
 	sleep(2);
 	toggle_mmiotrace(false);
-
-	free(merge_cmd);
 
 	printf("Compressing trace file...\n");
 
