@@ -238,7 +238,7 @@ void read_parquet_trace(std::filesystem::path& path)
 
     while (!(stream.eof())) {
         stream >> timestamp_sec >> op >> opcode >> opcode_size >> abs_addr >> rel_addr >> data >> parquet::EndRow;
-        std::cout << "OP: " << op << " opcode: 0x" << std::hex << opcode << " timestamp: " << timestamp_sec << " 0x" << std::hex << abs_addr << " data: 0x" << data << std::endl;
+        //std::cout << "OP: " << op << " opcode: 0x" << std::hex << opcode << " timestamp: " << timestamp_sec << " 0x" << std::hex << abs_addr << " data: 0x" << data << std::endl;
 
         trace_op = static_cast<TraceOperation>(op);
 
@@ -253,8 +253,6 @@ void read_parquet_trace(std::filesystem::path& path)
             default:
                 break;
         }
-
-        break;
     }
 
     std::cout << "Reads: " << std::dec << count_reads << " Writes: " << count_writes << " Flushes: " << count_flushes << std::endl;
@@ -266,8 +264,8 @@ int main(int argc, char* argv[]) {
     if (argc < 2)
         return -1;
 
-    const int ret_code = compress_trace(std::string(argv[1]));
-    std::cout << ret_code << std::endl;
+    // const int ret_code = compress_trace(std::string(argv[1]));
+    // std::cout << ret_code << std::endl;
 
     read_parquet_trace(std::filesystem::path(argv[1]).replace_extension(".parquet"));
 

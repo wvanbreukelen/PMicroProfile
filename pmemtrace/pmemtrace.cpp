@@ -51,7 +51,7 @@ enum class TraceOperation {
 
 #define CURRENT_TRACER "/sys/kernel/debug/tracing/current_tracer"
 
-#define TRACER_BUF_SIZE 128000
+#define TRACER_BUF_SIZE (128000 * 2)
 #define TRACER_BUF_SIZE_PATH "/sys/kernel/debug/tracing/buffer_size_kb"
 #define TRACER_OUTPUT_PIPE "/sys/kernel/debug/tracing/trace_pipe"
 
@@ -264,18 +264,101 @@ void* pmemtrace_output_thread(void *arg)
 	write(out, header_str, strnlen(header_str, sizeof(header_str)));
 	write(out, cmd_str, strnlen(cmd_str, sizeof(cmd_str)));
 
-	char buffer[1024];
+	// std::shared_ptr<WriterProperties> props =
+    //     WriterProperties::Builder().compression(arrow::Compression::GZIP)->build();
+
+    // std::shared_ptr<arrow::io::FileOutputStream> outfile;
+
+    // // path = path.replace_extension(".parquet");
+
+    // PARQUET_ASSIGN_OR_THROW(
+    //     outfile,
+    //     arrow::io::FileOutputStream::Open("test.parquet"));
+
+    // parquet::WriterProperties::Builder builder;
+    // std::shared_ptr<parquet::schema::GroupNode> schema;
+    
+    
+    // // https://arrow.apache.org/docs/cpp/parquet.html
+    // schema = std::static_pointer_cast<parquet::schema::GroupNode>(parquet::schema::GroupNode::Make(
+    //     "test", parquet::Repetition::REQUIRED, {
+    //         parquet::schema::PrimitiveNode::Make("timestamp", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE),
+    //         parquet::schema::PrimitiveNode::Make("op", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
+    //         parquet::schema::PrimitiveNode::Make("opcode", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
+    //         parquet::schema::PrimitiveNode::Make("op_size", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
+    //         parquet::schema::PrimitiveNode::Make("abs_addr", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
+    //         parquet::schema::PrimitiveNode::Make("rel_addr", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
+    //         parquet::schema::PrimitiveNode::Make("data", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
+    //     }
+    // ));
+
+	// std::regex pattern(R"((R|W|F)\s+(\d+)\s+(0x[\da-fA-F]+)\s+([\d.]+)\s+\d+\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+))");
+	// std::smatch matches;
+    
+    // parquet::StreamWriter os{
+    //     parquet::ParquetFileWriter::Open(outfile, schema, props)};
+
+	char buffer[4096];
 	size_t n;
+	char *line_start = buffer;
+	std::string temp_str;
+
+	nice(19);
 
 	while (true) {
 		if (getStopIssued())
 			break;
 
-
 		n = read(in, buffer, sizeof(buffer));
 
 		if (n > 0)
- 			(void) write(out, buffer, n);
+ 		 	(void) write(out, buffer, n);
+		
+		//usleep(1000);
+
+		// char *p = buffer;
+		// while (p < buffer + n) {
+		// 	if (*p == '\n') {
+		// 		*p = '\0';
+		// 		//printf("%s\n", line_start);
+		// 		temp_str = std::string(line_start);
+		// 		std::cout << temp_str << std::endl;
+
+		// 		if (std::regex_search(temp_str, matches, pattern)) {
+		// 			TraceOperation op;
+
+		// 			if (matches[1] == "R") {
+		// 				op = TraceOperation::READ;
+		// 			} else if (matches[1] == "W") {
+		// 				op = TraceOperation::WRITE;
+		// 			} else if (matches[1] == "F") {
+		// 				op = TraceOperation::CLFLUSH;
+		// 			} else {
+		// 				std::cerr << "Unknown trace operation: " << matches[1] << std::endl;
+
+		// 				pthread_exit(NULL);
+		// 			}
+
+		// 			const double timestamp_sec = std::stod(matches[4]);
+		// 			const unsigned int opcode = std::stoi(matches[3], nullptr, 16);
+		// 			const size_t opcode_size = std::stoul(matches[2], nullptr, 16);
+		// 			const unsigned long abs_addr = std::stoul(matches[5], nullptr, 16);
+		// 			#ifdef ENABLE_ASSERTS
+		// 			assert(abs_addr > pmem_range_strawnameart);
+		// 			assert(abs_addr < pmem_range_end);
+		// 			#endif
+		// 			const unsigned long rel_addr = abs_addr - device_start;
+		// 			const unsigned long data = std::stoul(matches[6], nullptr, 16);
+
+		// 			os << timestamp_sec << static_cast<uint32_t>(op) << opcode << opcode_size << abs_addr << rel_addr << data << parquet::EndRow;
+		// 		}
+
+		// 		line_start = p + 1;
+		// 	}
+		// 	++p;
+		// }
+
+
 	}
 
 	close(in);
@@ -309,19 +392,22 @@ char* concat_args(int argc, char* argv[]) {
     return result;
 }
 
-int compress_trace(std::filesystem::path path)
+
+bool compress_trace(std::filesystem::path read_path, std::filesystem::path write_path)
 {
-    std::ifstream trace_handle(path);
+    std::ifstream trace_handle(read_path);
+
+	std::cout << "Compressing to file " << write_path << std::endl;
 
     if (!trace_handle) {
-        std::cerr << "Failed to open trace file: " << path << std::endl;
-        return -1;
+        std::cerr << "Failed to open trace file: " << read_path << std::endl;
+        return false;
     }
 
     std::string line;
 
     if (!std::getline(trace_handle, line)) {
-        return -1;
+        return false;
     }
 
     std::regex re(R"(PMEMTRACE DEVICE:\s+\[(0x[\da-fA-F]+)-(0x[\da-fA-F]+)\])");
@@ -329,7 +415,7 @@ int compress_trace(std::filesystem::path path)
 
     if (!std::regex_search(line, match, re)) {
         std::cerr << "Invalid trace file format" << std::endl;
-        return -1;
+        return false;
     }
 
     const auto pmem_range_start = std::stoul(match[1].str(), nullptr, 16);
@@ -348,19 +434,16 @@ int compress_trace(std::filesystem::path path)
 
     std::shared_ptr<arrow::io::FileOutputStream> outfile;
 
-    path = path.replace_extension(".parquet");
-
     PARQUET_ASSIGN_OR_THROW(
         outfile,
-        arrow::io::FileOutputStream::Open(path));
+        arrow::io::FileOutputStream::Open(write_path));
 
     parquet::WriterProperties::Builder builder;
     std::shared_ptr<parquet::schema::GroupNode> schema;
     
-    
     // https://arrow.apache.org/docs/cpp/parquet.html
     schema = std::static_pointer_cast<parquet::schema::GroupNode>(parquet::schema::GroupNode::Make(
-        path.filename(), parquet::Repetition::REQUIRED, {
+        write_path.filename(), parquet::Repetition::REQUIRED, {
             parquet::schema::PrimitiveNode::Make("timestamp", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE),
             parquet::schema::PrimitiveNode::Make("op", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
             parquet::schema::PrimitiveNode::Make("opcode", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
@@ -388,12 +471,8 @@ int compress_trace(std::filesystem::path path)
             } else {
                 std::cerr << "Unknown trace operation: " << matches[1] << std::endl;
 
-                return -1;
+                return false;
             }
-
-            // const std::vector<uint8_t> op_bytes = hex_string_to_bytes(matches[5]);
-            // std::cout << matches[5] << std::endl;
-
 
             const double timestamp_sec = std::stod(matches[4]);
             const unsigned int opcode = std::stoi(matches[3], nullptr, 16);
@@ -406,30 +485,13 @@ int compress_trace(std::filesystem::path path)
             const unsigned long rel_addr = abs_addr - pmem_range_start;
             const unsigned long data = std::stoul(matches[6], nullptr, 16);
 
-
-            //std::cout << std::hex << abs_addr << std::endl;
-
-            //trace.emplace_back(op, std::stoi(matches[2]), std::stod(matches[3]), abs_addr, rel_addr, op_bytes);
-            //TraceEntry(const TraceOperation op, const size_t op_size, const unsigned int opcode, const double timestamp_sec, const unsigned long abs_addr, const unsigned long rel_addr, const unsigned long long data) :
-            //trace_entries.emplace_back(op, std::stoi(matches[2]), std::stoi(matches[3], nullptr, 16), std::stod(matches[4]), abs_addr, rel_addr, data);
-
+			
 
             os << timestamp_sec << static_cast<uint32_t>(op) << opcode << opcode_size << abs_addr << rel_addr << data << parquet::EndRow;
         }
     }
 
-    std::cout << "num columns: " << std::dec << os.num_columns() << std::endl;
-
-    // std::cout << std::dec << trace_entries.size() << " entries" << std::endl;
-
-    // arrow::Status st = trace_to_arrow(std::filesystem::path(filename), trace_entries);
-
-    // if (!st.ok()) {
-    //     std::cerr << st << std::endl;
-    //     return -1;
-    // }
-   
-    return 0;
+    return true;
 }
 
 int main(int argc, char** argv)
@@ -439,9 +501,6 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-
-
-	int ret_code, status;
 
 	std::string pmem_device_loc;
 	std::string trace_name;
@@ -496,12 +555,10 @@ int main(int argc, char** argv)
 		close(pipe_fds[1]);
 
 		//char* args = &(remaining_args[0]);
-
 		(void) read(pipe_fds[0], buf, 1);
 
 		execvp(remaining_args[0], &(remaining_args[0]));
-		exit(EXIT_SUCCESS);
-		return 0;
+		exit(EXIT_FAILURE);
 	}
 
 	// Combine remaining_args into a single string
@@ -530,13 +587,12 @@ int main(int argc, char** argv)
 
 	//printf("Current trace buffer size: %u\n", get_trace_buf_size());
 
-	char* trace_name_dup = strdup(trace_name.c_str());
-	char* trace_loc = strcat(trace_name_dup, ".trf");
-	printf("Trace file location: %s\n", trace_loc);
+	const std::string temp_trace_loc = "/tmp/" + trace_name + ".temp";
+	const std::string compressed_trace_loc = trace_name + ".parquet";
 
-	struct read_thread_args rd_thread_args = {trace_loc, cmd.c_str()};
+	printf("Temp trace file location: %s\n", temp_trace_loc.c_str());
 
-
+	struct read_thread_args rd_thread_args = {temp_trace_loc.c_str(), cmd.c_str()};
 
 
 	int fd = open(pmem_device_loc.c_str(), O_RDWR);
@@ -545,7 +601,6 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Failed to open device %s!\n", pmem_device_loc.c_str());
 		exit(EXIT_FAILURE);
 	}
-
 	
 	printf("Opened device, enabling pmemtrace...\n");
 	struct sigaction sa;
@@ -558,12 +613,7 @@ int main(int argc, char** argv)
 	enable_pmemtrace(fd);
 	
 	pthread_t tid_rd;
-	pthread_t tid_smpl;
-	// pthread_attr_t attr;
-	// sched_param param;
-	// pthread_attr_init(&attr);
-	// attr.sched_priority = 0;
-	
+	pthread_t tid_smpl;	
 
 	if (pthread_create(&tid_rd, NULL, pmemtrace_output_thread, (void*) &rd_thread_args) < 0) {
 		fprintf(stderr, "Error: pthread_create failed!\n");
@@ -594,40 +644,40 @@ int main(int argc, char** argv)
 	close(pipe_fds[0]);
 	write(pipe_fds[1], "x", 1);
 
+	int ret_code = 1, status;
+
+
 	waitpid(exec_pid, &status, 0);
 
-	ret_code = WIFEXITED(status);
-
-	printf("Stop running...\n");
+	if (WIFEXITED(status)) {
+		ret_code = WEXITSTATUS(status);
+	}
 
 	setStopIssued(true);
-
 	
 	pthread_join(tid_rd, NULL);
 	if (!disable_sampling) {
 		pthread_join(tid_smpl, NULL);
 	}
 
-	sleep(3);
+	sleep(1);
 
-
-	//printf("PIDs: %ld %ld %ld\n", tid_rd, tid_smpl, exec_pid);
-	
 	printf("Disabling pmemtrace...\n");
 
-	
 	disable_pmemtrace(fd);
 
 	close(fd);
-	sleep(1);
+	sync();
+	sleep(3);
 
 	toggle_mmiotrace(false);
 
 	printf("Compressing trace file...\n");
 
-	compress_trace(std::string(trace_loc));
-
-	printf("Done!\n");
+	if (!compress_trace(temp_trace_loc, compressed_trace_loc)) {
+		perror("Failed to compress file!\n");
+		return 1;
+	}
 
 	return ret_code;
 }
