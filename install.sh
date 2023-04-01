@@ -34,4 +34,9 @@ cd pmemreplay/build
 cmake ..
 make -j4
 
+echo "Cleaning..."
+rm -f apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+
 echo "Done!"
+
+
