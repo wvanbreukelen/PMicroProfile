@@ -9,9 +9,10 @@
 #include <optional>
 
 enum class TraceOperation {
-    READ,
-    WRITE,
-    CLFLUSH
+    READ = 0,
+    WRITE = 1,
+    CLFLUSH = 2,
+    UNKNOWN = 3,
 };
 
 struct TraceEntry {
@@ -27,15 +28,40 @@ public:
         data(data)
     {};
 
-    const TraceOperation op;
-    const unsigned int opcode;
-    const size_t op_size;
-    const double timestamp_sec;
-    const unsigned long abs_addr;
-    const unsigned long rel_addr;
+    TraceEntry() {
+        reset();
+    }
+
+    void reset() {
+        this->op = TraceOperation::UNKNOWN;
+        this->opcode = 0x0000;
+        this->op_size = 0;
+        this->timestamp_sec = 0;
+        this->abs_addr = 0;
+        this->rel_addr = 0;
+        this->dax_addr = nullptr;
+        this->data = 0;
+    }
+
+    /*
+        parquet::schema::PrimitiveNode::Make("timestamp", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE),
+        parquet::schema::PrimitiveNode::Make("op", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
+        parquet::schema::PrimitiveNode::Make("opcode", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
+        parquet::schema::PrimitiveNode::Make("op_size", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
+        parquet::schema::PrimitiveNode::Make("abs_addr", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
+        parquet::schema::PrimitiveNode::Make("rel_addr", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
+        parquet::schema::PrimitiveNode::Make("data", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
+    */
+
+    double timestamp_sec;
+    TraceOperation op;
+    unsigned int opcode;
+    size_t op_size;
+    unsigned long abs_addr;
+    unsigned long rel_addr;
+    unsigned long data;
     void* dax_addr;
     //const std::vector<uint8_t> data;
-    const unsigned long long data;
 };
 
 class TraceFile : public std::vector<TraceEntry> {
@@ -138,4 +164,4 @@ public:
 
 
 
-std::optional<TraceFile> parse_trace(const std::string& filename);
+bool parse_trace(const std::filesystem::path &path, TraceFile &trace);

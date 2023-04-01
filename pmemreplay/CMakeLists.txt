@@ -2,15 +2,20 @@ cmake_minimum_required(VERSION 3.10)
 
 project(pmemreplay LANGUAGES CXX)
 
+find_package(Arrow REQUIRED QUIET)
+find_package(Parquet REQUIRED QUIET)
+
+
 # Set C++ standard to C++17
 set(CMAKE_CXX_STANDARD 17)
 
 # Add compiler flags for Linux threading support
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -O3 -mavx -mavx2 -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native -pthread  -mavx -mavx2 -march=native")
+
 
 # Add the main executable
 add_executable(pmemreplay trace.cpp bench_suite.cpp main.cpp)
 
 target_include_directories(pmemreplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(pmemreplay PRIVATE pthread)
+target_link_libraries(pmemreplay PRIVATE pthread Arrow::arrow_shared Parquet::parquet_shared)
