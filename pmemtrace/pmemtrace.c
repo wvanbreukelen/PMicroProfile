@@ -222,8 +222,8 @@ void* pmemtrace_output_thread(void *arg)
 	unsigned long device_start = 0, device_end = 0;
 
 	get_pmem_range(&device_start, &device_end);
-	char header_str[128] = {0};
-	char cmd_str[256] = {0};
+	char header_str[256] = {0};
+	char cmd_str[512] = {0};
 	sprintf(header_str, "PMEMTRACE DEVICE: [%p-%p]\n", (void*) device_start, (void*) device_end);
 	sprintf(cmd_str, "TRACE COMMAND:%s\n###\n", thread_args->str_cmd);
 
