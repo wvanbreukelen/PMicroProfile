@@ -1,3 +1,0 @@
-/home/wiebe/Documents/test-debian-custom-kernel/pmemreplay/build/CMakeFiles/pmemreplay.dir
-/home/wiebe/Documents/test-debian-custom-kernel/pmemreplay/build/CMakeFiles/edit_cache.dir
-/home/wiebe/Documents/test-debian-custom-kernel/pmemreplay/build/CMakeFiles/rebuild_cache.dir
