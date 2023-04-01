@@ -19,11 +19,11 @@ int main(int argc, char** argv)
     bool do_fallback_ram = false;
     bool force_dram = false;
 
-    app.add_option("trace file", trace_file, "Trace file to execute (must have .trf extension)")
+    app.add_option("trace file", trace_file, "Trace file to execute (must have .parquet extension)")
         ->required()
         ->check([](std::string input){
-            if (input.size() < 4 || input.substr(input.size() - 4) != ".trf") {
-                return "Trace file must have .trf extension";
+            if (input.size() < 8 || input.substr(input.size() - 8) != ".parquet") {
+                return "Trace file must have .parquet extension";
             }
             return "";
         });
@@ -47,14 +47,16 @@ int main(int argc, char** argv)
         force_dram = true;
     }
 
-    std::optional<TraceFile> trace = parse_trace(trace_file);
+    TraceFile trace;
 
-    if (!trace) {
+    if (!(parse_trace(trace_file, trace))) {
         std::cout << "Unable to parse trace " << trace_file << ", exiting..." << std::endl;
         return 1;
     }
 
-    BenchSuite bsuite(*trace, pmem_device_loc, BENCH_MAP_SIZE, num_threads, force_dram, do_fallback_ram);
+    std::cout << "Trace -> #R: " << trace.get_total(TraceOperation::READ) << " #W: " << trace.get_total(TraceOperation::WRITE) << " #FLUSH: " << trace.get_total(TraceOperation::CLFLUSH) << std::endl;
+
+    BenchSuite bsuite(trace, pmem_device_loc, BENCH_MAP_SIZE, num_threads, force_dram, do_fallback_ram);
 
     bsuite.run(replay_rounds);
 
