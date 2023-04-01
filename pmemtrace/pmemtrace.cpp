@@ -256,14 +256,8 @@ void* pmemtrace_output_thread(void *arg)
 	sprintf(header_str, "PMEMTRACE DEVICE: [%p-%p]\n", (void*) device_start, (void*) device_end);
 	sprintf(cmd_str, "TRACE COMMAND:%s\n###\n", thread_args->str_cmd);
 
-	if (write(out, header_str, strnlen(header_str, sizeof(header_str))) < (ssize_t) sizeof(header_str)) {
-		perror("Writing error!\n");
-		pthread_exit(NULL);
-	}
-	if (write(out, cmd_str, strnlen(cmd_str, sizeof(cmd_str))) < (ssize_t) sizeof(header_str)) {
-		perror("Writing error!\n");
-		pthread_exit(NULL);
-	}
+	write(out, header_str, strnlen(header_str, sizeof(header_str)));
+	write(out, cmd_str, strnlen(cmd_str, sizeof(cmd_str)));
 
 	fd_set rfds;
 	FD_ZERO(&rfds);
