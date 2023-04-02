@@ -12,6 +12,7 @@
 
 #define DEBUG 1
 
+
 #include <linux/moduleparam.h>
 #include <linux/debugfs.h>
 #include <linux/slab.h>
@@ -310,8 +311,8 @@ void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
 	if (!is_enabled()) /* recheck and proper locking in *_core() */
 		return;
 
-	pr_debug("ioremap_*(0x%llx, 0x%lx) = %p\n",
-		 (unsigned long long)offset, size, addr);
+	//pr_debug("ioremap_*(0x%llx, 0x%lx) = %p\n",
+		 //(unsigned long long)offset, size, addr);
 	if ((filter_offset) && (offset != filter_offset)) {
 		printk("Filter_offset skip.\n");
 		return;
@@ -511,7 +512,7 @@ void enable_mmiotrace(void)
 	if (nommiotrace)
 		pr_info("MMIO tracing disabled.\n");
 	kmmio_init();
-	enter_uniprocessor();
+	//enter_uniprocessor();
 	spin_lock_irq(&trace_lock);
 	atomic_inc(&mmiotrace_enabled);
 	spin_unlock_irq(&trace_lock);
@@ -532,7 +533,7 @@ void disable_mmiotrace(void)
 	spin_unlock_irq(&trace_lock);
 
 	clear_trace_list(); /* guarantees: no more kmmio callbacks */
-	leave_uniprocessor();
+	//leave_uniprocessor();
 	kmmio_cleanup();
 	pr_info("disabled.\n");
 out:
