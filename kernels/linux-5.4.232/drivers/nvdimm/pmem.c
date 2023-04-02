@@ -32,6 +32,8 @@
 #include "nd.h"
 #include "nd-core.h"
 
+static DEFINE_SPINLOCK(pmem_mmiotrace_lock);
+
 static struct device *to_dev(struct pmem_device *pmem)
 {
 	/*
@@ -151,10 +153,14 @@ static blk_status_t pmem_do_bvec(struct pmem_device *pmem, struct page *page,
 	bool bad_pmem = false;
 	phys_addr_t pmem_off = sector * 512 + pmem->data_offset;
 	void *pmem_addr = pmem->virt_addr + pmem_off;
+	const int mmiotrace_active = is_kmmio_active();
 
 	if (unlikely(is_bad_pmem(&pmem->bb, sector, len)))
 		bad_pmem = true;
 
+	if (unlikely(mmiotrace_active))
+		spin_lock(&pmem_mmiotrace_lock);
+	
 	if (!op_is_write(op)) {
 		if (unlikely(bad_pmem))
 			rc = BLK_STS_IOERR;
@@ -177,6 +183,7 @@ static blk_status_t pmem_do_bvec(struct pmem_device *pmem, struct page *page,
 		 * indeterminate state we need to perform the write
 		 * after clear poison.
 		 */
+		
 		flush_dcache_page(page);
 		write_pmem(pmem_addr, page, off, len);
 		if (unlikely(bad_pmem)) {
@@ -184,6 +191,9 @@ static blk_status_t pmem_do_bvec(struct pmem_device *pmem, struct page *page,
 			write_pmem(pmem_addr, page, off, len);
 		}
 	}
+
+	if (unlikely(mmiotrace_active))
+		spin_unlock(&pmem_mmiotrace_lock);
 
 	return rc;
 }
@@ -311,13 +321,27 @@ long pmem_dax_direct_access(struct dax_device *dax_dev,
 static size_t pmem_copy_from_iter(struct dax_device *dax_dev, pgoff_t pgoff,
 		void *addr, size_t bytes, struct iov_iter *i)
 {
-	return _copy_from_iter_flushcache(addr, bytes, i);
+	size_t num_read;
+	const int mmiotrace_active = is_kmmio_active();
+	if (unlikely(mmiotrace_active))
+		spin_lock(&pmem_mmiotrace_lock);
+	
+	num_read = _copy_from_iter_flushcache(addr, bytes, i);
+
+	if (unlikely(mmiotrace_active))
+		spin_unlock(&pmem_mmiotrace_lock);
+		
+	return num_read;
 }
 
 static size_t pmem_copy_to_iter(struct dax_device *dax_dev, pgoff_t pgoff,
 		void *addr, size_t bytes, struct iov_iter *i)
 {
-	return _copy_to_iter_mcsafe(addr, bytes, i);
+	size_t num_read;
+	spin_lock(&pmem_mmiotrace_lock);
+	num_read = _copy_to_iter_mcsafe(addr, bytes, i);
+	spin_unlock(&pmem_mmiotrace_lock);
+	return num_read;
 }
 
 static const struct dax_operations pmem_dax_ops = {

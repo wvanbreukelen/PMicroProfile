@@ -173,6 +173,7 @@ static enum print_line_t mmio_print_rw(struct trace_iterator *iter)
 	unsigned long long t	= ns2usecs(iter->ts);
 	unsigned long usec_rem	= do_div(t, USEC_PER_SEC);
 	unsigned secs		= (unsigned long)t;
+	const int proc_id = smp_processor_id();
 
 	trace_assign_type(field, entry);
 	rw = &field->rw;
@@ -183,21 +184,21 @@ static enum print_line_t mmio_print_rw(struct trace_iterator *iter)
 			"R %d 0x%x %u.%06lu %d 0x%llx 0x%lx 0x%lx %d\n",
 			rw->width, rw->opcode_cpu, secs, usec_rem, rw->map_id,
 			(unsigned long long)rw->phys,
-			rw->value, rw->pc, 0);
+			rw->value, rw->pc, proc_id);
 		break;
 	case MMIO_WRITE:
 		trace_seq_printf(s,
 			"W %d 0x%x %u.%06lu %d 0x%llx 0x%lx 0x%lx %d\n",
 			rw->width, rw->opcode_cpu, secs, usec_rem, rw->map_id,
 			(unsigned long long)rw->phys,
-			rw->value, rw->pc, 0);
+			rw->value, rw->pc, proc_id);
 		break;
 	case MMIO_CLFLUSH:
 		trace_seq_printf(s,
 			"F %d 0x%x %u.%06lu %d 0x%llx 0x%lx 0x%lx %d\n",
 			rw->width, rw->opcode_cpu, secs, usec_rem, rw->map_id,
 			(unsigned long long)rw->phys,
-			rw->value, rw->pc, 0);
+			rw->value, rw->pc, proc_id);
 		break;
 	case MMIO_UNKNOWN_OP:
 		trace_seq_printf(s,
@@ -206,7 +207,7 @@ static enum print_line_t mmio_print_rw(struct trace_iterator *iter)
 			secs, usec_rem, rw->map_id, rw->opcode_cpu,
 			(unsigned long long)rw->phys,
 			(rw->value >> 16) & 0xff, (rw->value >> 8) & 0xff,
-			(rw->value >> 0) & 0xff, rw->pc, 0);
+			(rw->value >> 0) & 0xff, rw->pc, proc_id);
 		break;
 	default:
 		trace_seq_puts(s, "rw what?\n");

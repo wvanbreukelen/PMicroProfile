@@ -212,6 +212,7 @@ static int arm_kmmio_fault_page(struct kmmio_fault_page *f)
 	if (f->armed) {
 		pr_warning("double-arm: addr 0x%08lx, ref %d, old %d\n",
 			   f->addr, f->count, !!f->old_presence);
+		//return 0;
 	}
 	ret = clear_page_presence(f, true);
 	WARN_ONCE(ret < 0, KERN_ERR pr_fmt("arming at 0x%08lx failed.\n"),
