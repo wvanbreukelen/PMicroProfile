@@ -233,11 +233,12 @@ void read_parquet_trace(std::filesystem::path& path)
     unsigned long abs_addr;
     unsigned long rel_addr;
     unsigned long data;
+    unsigned int cpu_id;
 
     size_t count_reads = 0, count_writes = 0, count_flushes = 0;
 
     while (!(stream.eof())) {
-        stream >> timestamp_sec >> op >> opcode >> opcode_size >> abs_addr >> rel_addr >> data >> parquet::EndRow;
+        stream >> timestamp_sec >> op >> opcode >> opcode_size >> abs_addr >> rel_addr >> data >> cpu_id >> parquet::EndRow;
         //std::cout << "OP: " << op << " opcode: 0x" << std::hex << opcode << " timestamp: " << timestamp_sec << " 0x" << std::hex << abs_addr << " data: 0x" << data << std::endl;
 
         trace_op = static_cast<TraceOperation>(op);

@@ -207,6 +207,20 @@ void* pmem_sampler(void *arg)
 	const int period = 1000000 / thread_args->sample_rate;
 	bool is_enabled = true;
 
+	cpu_set_t cpuset;
+	CPU_ZERO(&cpuset);
+	CPU_SET(0, &cpuset);
+	pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+
+	struct sched_param sp;
+        sp.sched_priority = sched_get_priority_max(SCHED_FIFO);
+
+	if (sched_setscheduler(getpid(), SCHED_FIFO, &sp) < 0) {
+              fprintf(stderr, "Error setting SCHED_FIFO policy, errno: %d.\n", errno);
+              exit(EXIT_FAILURE);
+        }
+
+
 	printf("Thread running...\n");
 
 	while (!getStopIssued()) {
@@ -229,12 +243,34 @@ void* pmem_sampler(void *arg)
 	ioctl(thread_args->fd, ND_CMD_TRACE_DISABLE);
 	#endif
 
+	sp.sched_priority = sched_get_priority_min(SCHED_OTHER);
+
+	if (sched_setscheduler(getpid(), SCHED_OTHER, &sp) < 0) {
+              fprintf(stderr, "Error setting SCHED_OTHER policy, errno: %d.\n", errno);
+              exit(EXIT_FAILURE);
+        }
+
 	pthread_exit(NULL);
 }
 
 void* pmemtrace_output_thread(void *arg)
 {
 	const struct read_thread_args* thread_args = (const struct read_thread_args* ) arg;
+
+	//cpu_set_t cpuset;
+        //CPU_ZERO(&cpuset);
+        //CPU_SET(0, &cpuset);
+        //pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+
+
+	//struct sched_param sp;
+        //sp.sched_priority = sched_get_priority_min(SCHED_FIFO);
+
+        //if (sched_setscheduler(getpid(), SCHED_FIFO, &sp) < 0) {
+              //fprintf(stderr, "Error setting SCHED_FIFO policy, errno: %d.\n", errno);
+              //exit(EXIT_FAILURE);
+        //}
+
 
 	int in = open(TRACER_OUTPUT_PIPE, O_RDONLY);
 	int out = open(thread_args->output_file, O_WRONLY | O_CREAT | O_TRUNC, 644);
@@ -363,6 +399,13 @@ void* pmemtrace_output_thread(void *arg)
 
 	close(in);
 	close(out);
+
+	//sp.sched_priority = sched_get_priority_min(SCHED_OTHER);
+
+        //if (sched_setscheduler(getpid(), SCHED_OTHER, &sp) < 0) {
+        //      fprintf(stderr, "Error setting SCHED_OTHER policy, errno: %d.\n", errno);
+        //      exit(EXIT_FAILURE);
+        //}
 	
 	pthread_exit(NULL);
 }
@@ -424,7 +467,7 @@ bool compress_trace(std::filesystem::path read_path, std::filesystem::path write
     std::cout << "End address: " << std::hex << pmem_range_end << '\n';
     std::cout << "Size: " << std::dec << (pmem_range_end - pmem_range_start) / (1024 * 1024 * 1024) << " GiB" << std::endl; 
    
-    std::regex pattern(R"((R|W|F)\s+(\d+)\s+(0x[\da-fA-F]+)\s+([\d.]+)\s+\d+\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+))");
+    std::regex pattern(R"((R|W|F)\s+(\d+)\s+(0x[\da-fA-F]+)\s+([\d.]+)\s+\d+\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+)\s+(\d+))");
     //TraceFile trace;
     std::smatch matches;
     
@@ -451,6 +494,7 @@ bool compress_trace(std::filesystem::path read_path, std::filesystem::path write
             parquet::schema::PrimitiveNode::Make("abs_addr", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
             parquet::schema::PrimitiveNode::Make("rel_addr", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
             parquet::schema::PrimitiveNode::Make("data", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
+			parquet::schema::PrimitiveNode::Make("cpu_id", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
         }
     ));
     
@@ -484,10 +528,9 @@ bool compress_trace(std::filesystem::path read_path, std::filesystem::path write
             #endif
             const unsigned long rel_addr = abs_addr - pmem_range_start;
             const unsigned long data = std::stoul(matches[6], nullptr, 16);
+			const unsigned int cpu_id = std::stoi(matches[8]);
 
-			
-
-            os << timestamp_sec << static_cast<uint32_t>(op) << opcode << opcode_size << abs_addr << rel_addr << data << parquet::EndRow;
+            os << timestamp_sec << static_cast<uint32_t>(op) << opcode << opcode_size << abs_addr << rel_addr << data << cpu_id << parquet::EndRow;
         }
     }
 
@@ -610,6 +653,8 @@ int main(int argc, char** argv)
     sigaddset(&sa.sa_mask, SIGINT);
     sigaction(SIGINT, &sa, NULL);
 
+	
+
 	enable_pmemtrace(fd);
 	
 	pthread_t tid_rd;
@@ -620,10 +665,10 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	if (pthread_setschedprio(tid_rd, 50) < 0) {
-		fprintf(stderr, "Error: set prio failed!\n");
-		exit(EXIT_FAILURE);
-	}
+	//if (pthread_setschedprio(tid_rd, 20) < 0) {
+	//	fprintf(stderr, "Error: set prio failed!\n");
+	//	exit(EXIT_FAILURE);
+	//}
 
 	if (!disable_sampling) {
 		struct sample_thread_args smpl_thread_args = {SAMPLE_RATE, DUTY_CYCLE, fd};
@@ -632,6 +677,22 @@ int main(int argc, char** argv)
 			fprintf(stderr, "Error: pthread_create failed!\n");
 			exit(EXIT_FAILURE);
 		}
+
+		//struct sched_param sp;
+		//sp.sched_priority = sched_get_priority_max(SCHED_FIFO);
+
+		//int errnum;
+
+		//if (sched_setscheduler(tid_rd, SCHED_FIFO, &sp) < 0) {
+		//	fprintf(stderr, "Error setting SCHED_FIFO policy, errno: %d.\n", errno);
+		//	exit(EXIT_FAILURE);
+		//}
+
+		//if (pthread_setschedprio(tid_rd, 5) < 0) {
+                //	fprintf(stderr, "Error: set prio failed!\n");
+                //	exit(EXIT_FAILURE);
+        	//}
+	
 
 		pthread_detach(tid_smpl);
 	}
