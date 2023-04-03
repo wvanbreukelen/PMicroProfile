@@ -435,6 +435,24 @@ char* concat_args(int argc, char* argv[]) {
     return result;
 }
 
+template<size_t N>
+bool tokenize(std::string const &str, std::array<std::string, N>& out)
+{
+	std::stringstream ss(str);
+
+	std::string s;
+	size_t i = 0;
+
+	while (std::getline(ss, s, ' ')) {
+		if ((i + 1) > N) {
+			return false;
+		}
+
+		out[(i++)] = s;
+	}
+
+	return (i == N);
+}
 
 bool compress_trace(std::filesystem::path read_path, std::filesystem::path write_path)
 {
@@ -467,11 +485,7 @@ bool compress_trace(std::filesystem::path read_path, std::filesystem::path write
     std::cout << "End address: " << std::hex << pmem_range_end << '\n';
     std::cout << "Size: " << std::dec << (pmem_range_end - pmem_range_start) / (1024 * 1024 * 1024) << " GiB" << std::endl; 
    
-    std::regex pattern(R"((R|W|F)\s+(\d+)\s+(0x[\da-fA-F]+)\s+([\d.]+)\s+\d+\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+)\s+(\d+))");
-    //TraceFile trace;
-    std::smatch matches;
     
-
     std::shared_ptr<WriterProperties> props =
         WriterProperties::Builder().compression(arrow::Compression::GZIP)->build();
 
@@ -501,37 +515,44 @@ bool compress_trace(std::filesystem::path read_path, std::filesystem::path write
     parquet::StreamWriter os{
         parquet::ParquetFileWriter::Open(outfile, schema, props)};
 
+	TraceOperation op;
+	std::array<std::string, 9> tokens_line;
+	
 
     while (std::getline(trace_handle, line)) {
-        if (std::regex_search(line, matches, pattern)) {
-            TraceOperation op;
+		if (!tokenize(line, tokens_line)) {
+			continue;
+		}
 
-            if (matches[1] == "R") {
-                op = TraceOperation::READ;
-            } else if (matches[1] == "W") {
-                op = TraceOperation::WRITE;
-            } else if (matches[1] == "F") {
-                op = TraceOperation::CLFLUSH;
-            } else {
-                std::cerr << "Unknown trace operation: " << matches[1] << std::endl;
+		if (tokens_line[0] == "R") {
+			op = TraceOperation::READ;
+		} else if (tokens_line[0] == "W") {
+			op = TraceOperation::WRITE;
+		} else if (tokens_line[0] == "F") {
+			op = TraceOperation::CLFLUSH;
+		} else {
+			//std::cerr << "Unknown trace operation: " << tokens_line[0] << std::endl;
 
-                return false;
-            }
+			continue;
+			//return false;
+		}
 
-            const double timestamp_sec = std::stod(matches[4]);
-            const unsigned int opcode = std::stoi(matches[3], nullptr, 16);
-            const size_t opcode_size = std::stoul(matches[2], nullptr, 16);
-            const unsigned long abs_addr = std::stoul(matches[5], nullptr, 16);
-            #ifdef ENABLE_ASSERTS
-            assert(abs_addr > pmem_range_strawnameart);
-            assert(abs_addr < pmem_range_end);
-            #endif
-            const unsigned long rel_addr = abs_addr - pmem_range_start;
-            const unsigned long data = std::stoul(matches[6], nullptr, 16);
-			const unsigned int cpu_id = std::stoi(matches[8]);
+		const double timestamp_sec = std::stod(tokens_line[3]);
+		const unsigned int opcode = std::stoi(tokens_line[2], nullptr, 16);
+		const size_t opcode_size = std::stoul(tokens_line[1], nullptr, 16);
+		const unsigned long abs_addr = std::stoul(tokens_line[5], nullptr, 16);
+		#ifdef ENABLE_ASSERTS
+		assert(abs_addr > pmem_range_strawnameart);
+		assert(abs_addr < pmem_range_end);
+		#endif
+		const unsigned long rel_addr = abs_addr - pmem_range_start;
+		const unsigned long long data = std::stoull(tokens_line[6], nullptr, 16);
+		const unsigned int cpu_id = std::stoi(tokens_line[8]);
 
-            os << timestamp_sec << static_cast<uint32_t>(op) << opcode << opcode_size << abs_addr << rel_addr << data << cpu_id << parquet::EndRow;
-        }
+		//std::cout << timestamp_sec << " " << static_cast<uint32_t>(op) << " " << std::hex << opcode << " " << std::dec << opcode_size << " 0x" << std::hex << abs_addr << " 0x" << rel_addr << " 0x" << data << " " << std::dec << cpu_id << std::endl;
+
+
+		os << timestamp_sec << static_cast<uint32_t>(op) << opcode << opcode_size << abs_addr << rel_addr << static_cast<uint64_t>(data) << cpu_id << parquet::EndRow;
     }
 
     return true;
@@ -665,11 +686,6 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	//if (pthread_setschedprio(tid_rd, 20) < 0) {
-	//	fprintf(stderr, "Error: set prio failed!\n");
-	//	exit(EXIT_FAILURE);
-	//}
-
 	if (!disable_sampling) {
 		struct sample_thread_args smpl_thread_args = {SAMPLE_RATE, DUTY_CYCLE, fd};
 
@@ -677,22 +693,6 @@ int main(int argc, char** argv)
 			fprintf(stderr, "Error: pthread_create failed!\n");
 			exit(EXIT_FAILURE);
 		}
-
-		//struct sched_param sp;
-		//sp.sched_priority = sched_get_priority_max(SCHED_FIFO);
-
-		//int errnum;
-
-		//if (sched_setscheduler(tid_rd, SCHED_FIFO, &sp) < 0) {
-		//	fprintf(stderr, "Error setting SCHED_FIFO policy, errno: %d.\n", errno);
-		//	exit(EXIT_FAILURE);
-		//}
-
-		//if (pthread_setschedprio(tid_rd, 5) < 0) {
-                //	fprintf(stderr, "Error: set prio failed!\n");
-                //	exit(EXIT_FAILURE);
-        	//}
-	
 
 		pthread_detach(tid_smpl);
 	}
@@ -729,7 +729,7 @@ int main(int argc, char** argv)
 
 	close(fd);
 	sync();
-	sleep(3);
+	sleep(2);
 
 	toggle_mmiotrace(false);
 
