@@ -13,6 +13,9 @@
 #define Mebibyte (1024 * 1024)
 #define Gibibyte (1024 * 1024 * 1024)
 
+#define ALIGN_TO_64(ptr) ((char*)(((uintptr_t)(ptr) + 63) & ~(uintptr_t)63))
+// #define FORCE_FLUSHING
+
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
 struct io_stat {
@@ -189,6 +192,20 @@ void BenchSuite::deallocate_mem_area()
     }
 }
 
+/**
+static void clean_cache_range(void *addr, size_t size)
+{
+	u16 x86_clflush_size = boot_cpu_data.x86_clflush_size;
+	unsigned long clflush_mask = x86_clflush_size - 1;
+	void *vend = addr + size;
+	void *p;
+
+	for (p = (void *)((unsigned long)addr & ~clflush_mask);
+	     p < vend; p += x86_clflush_size)
+		clwb(p);
+}
+*/
+
 
 static void* do_work(void *arg)
 {
@@ -201,8 +218,14 @@ static void* do_work(void *arg)
     const auto time_start = std::chrono::high_resolution_clock::now();
     size_t total_bytes = 0;
     size_t i = 0;
+    // TraceOperation prev_op = TraceOperation::UNKNOWN;
+    // char *prev_addr = nullptr;
+    // size_t stride_write_size = 0;
+
+
 
     for (; i < args->replay_rounds + 1; ++i) {
+        //prev_op = (*args->trace_file)[0].op;
 
         for (const TraceEntry& entry : *(args->trace_file)) {
             dev_addr = static_cast<char*>(entry.dax_addr);
@@ -233,21 +256,33 @@ static void* do_work(void *arg)
                 {
                 case 1:
                     *(dev_addr) = static_cast<unsigned char>(entry.data);
-                    //_mm_sfence();
-                    //flush_clflushopt(write_addr, 1);
+
+                    #ifdef FORCE_FLUSHING
+                    _mm_clflushopt(ALIGN_TO_64(static_cast<const char*>(dev_addr)));
+                    _mm_sfence();
+                    #endif
+                    //flush_clflushopt(static_cast<char*>(entry.data), 1);
 
                     break;
                 case 4:
                     _mm_stream_si32((int*) entry.dax_addr, (int) entry.data);
-                    //_mm_sfence();
-                    //flush_clflushopt(write_addr, 4);
 
+                    #ifdef FORCE_FLUSHING
+                    _mm_clflushopt(ALIGN_TO_64(static_cast<const char*>(dev_addr)));
+                    _mm_sfence();
+                    #endif
                     break;
                 case 8:
                     _mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
 
+                    #ifdef FORCE_FLUSHING
+                    _mm_clflushopt(ALIGN_TO_64(static_cast<const char*>(dev_addr)));
+                    _mm_sfence();
+                    #endif
+
+                    //flush_clflushopt(static_cast<char*>(entry.data), 8);
+
                     //flush_clflushopt(dev_addr, 8);
-                    //_mm_sfence();
 
                     break;
 
@@ -260,7 +295,7 @@ static void* do_work(void *arg)
 
                 //total_bytes += entry.op_size;
             } else if (entry.op == TraceOperation::CLFLUSH) {
-                flush_clflushopt(dev_addr, 1);
+                _mm_clflushopt(static_cast<void*>(dev_addr));
                 _mm_sfence();
                 //total_bytes += 8;
             } else {
