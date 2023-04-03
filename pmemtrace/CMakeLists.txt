@@ -15,3 +15,8 @@ add_executable(tracecompress tracecompress.cpp)
 target_link_libraries(pmemtrace PRIVATE pthread Arrow::arrow_shared Parquet::parquet_shared)
 target_link_libraries(tracecompress PRIVATE Arrow::arrow_shared Parquet::parquet_shared)
 
+install(TARGETS pmemtrace DESTINATION /usr/local/bin)
+
+add_custom_target(uninstall
+    COMMAND ${CMAKE_COMMAND} -E remove /usr/local/bin/pmemtrace
+)
