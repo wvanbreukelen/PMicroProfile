@@ -80,6 +80,11 @@ static bool is_enabled(void)
 	return atomic_read(&mmiotrace_enabled);
 }
 
+bool mmiotrace_is_enabled(void)
+{
+	return atomic_read(&mmiotrace_enabled);
+}
+
 static void print_pte(unsigned long address)
 {
 	unsigned int level;
@@ -512,7 +517,7 @@ void enable_mmiotrace(void)
 	if (nommiotrace)
 		pr_info("MMIO tracing disabled.\n");
 	kmmio_init();
-	//enter_uniprocessor();
+	enter_uniprocessor();
 	spin_lock_irq(&trace_lock);
 	atomic_inc(&mmiotrace_enabled);
 	spin_unlock_irq(&trace_lock);
@@ -533,7 +538,7 @@ void disable_mmiotrace(void)
 	spin_unlock_irq(&trace_lock);
 
 	clear_trace_list(); /* guarantees: no more kmmio callbacks */
-	//leave_uniprocessor();
+	leave_uniprocessor();
 	kmmio_cleanup();
 	pr_info("disabled.\n");
 out:

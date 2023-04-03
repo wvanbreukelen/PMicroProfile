@@ -51,6 +51,9 @@ extern void mmiotrace_iounmap(volatile void __iomem *addr);
 
 extern void mmiotrace_disarm_trace_probe(volatile void __iomem *addr);
 
+
+extern bool mmiotrace_is_enabled(void);
+
 /* For anyone to insert markers. Remember trailing newline. */
 extern __printf(1, 2) int mmiotrace_printk(const char *fmt, ...);
 #else /* !CONFIG_MMIOTRACE: */

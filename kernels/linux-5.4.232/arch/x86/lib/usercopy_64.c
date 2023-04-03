@@ -9,7 +9,10 @@
 #include <linux/export.h>
 #include <linux/uaccess.h>
 #include <linux/highmem.h>
-
+#ifdef CONFIG_TRACING
+#include <linux/trace_seq.h>
+#include <linux/mmiotrace.h>
+#endif
 /*
  * Zero Userspace
  */
@@ -94,9 +97,18 @@ static void clean_cache_range(void *addr, size_t size)
 	void *vend = addr + size;
 	void *p;
 
+	// #ifdef CONFIG_MMIOTRACE
+	// if (unlikely(mmiotrace_is_enabled())) {
+	// 	pr_info(
+	// 		"F 0 0x0 0.0 0 %p 0x%lx 0x00 %d\n",
+	// 		addr, size, smp_processor_id());
+	// }
+	// #endif
+
+	// clwb(p);
 	for (p = (void *)((unsigned long)addr & ~clflush_mask);
 	     p < vend; p += x86_clflush_size)
-		clwb(p);
+		clflush(p);
 }
 
 void arch_wb_cache_pmem(void *addr, size_t size)
