@@ -13,7 +13,7 @@
 #define Gibibyte (1024 * 1024 * 1024)
 
 #define ALIGN_TO_64(ptr) ((char*)(((uintptr_t)(ptr) + 63) & ~(uintptr_t)63))
-//#define FORCE_FLUSHING
+//#define STRICT_CONSISTENCY
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
@@ -254,40 +254,40 @@ static void* do_work(void *arg)
                 switch (entry.op_size)
                 {
                 case 1:
-                    #ifdef FORCE_FLUSHING
+                    #ifdef STRICT_CONSISTENCY
                     _mm_sfence();
                     #endif
 
                     *(dev_addr) = static_cast<unsigned char>(entry.data);
 
-                    #ifdef FORCE_FLUSHING
+                    #ifdef STRICT_CONSISTENCY
                     _mm_clflushopt(static_cast<void*>(dev_addr));
                     _mm_sfence();
                     #endif
 
                     break;
                 case 4:
-                    #ifdef FORCE_FLUSHING
+                    #ifdef STRICT_CONSISTENCY
                     _mm_sfence();
                     #endif
 
                     //_mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
                     _mm_stream_si32(static_cast<int*>(entry.dax_addr), static_cast<int>(entry.data));
 
-                    #ifdef FORCE_FLUSHING
+                    #ifdef STRICT_CONSISTENCY
                     _mm_clflushopt(static_cast<void*>(dev_addr));
                     _mm_sfence();
                     #endif
                     break;
                 case 8:
-                    #ifdef FORCE_FLUSHING
+                    #ifdef STRICT_CONSISTENCY
                     _mm_sfence();
                     #endif
 
                     _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), reinterpret_cast<__m64>(entry.data));
                     
 
-                    #ifdef FORCE_FLUSHING
+                    #ifdef STRICT_CONSISTENCY
                     _mm_clflushopt(static_cast<void*>(dev_addr));
                     _mm_sfence();
                     #endif
