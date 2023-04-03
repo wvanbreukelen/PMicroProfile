@@ -10,7 +10,7 @@ find_package(Parquet REQUIRED QUIET)
 set(CMAKE_CXX_STANDARD 17)
 
 # Add compiler flags for Linux threading support
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native -pthread  -mavx -mavx2 -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g -march=native -pthread")
 
 
 # Add the main executable

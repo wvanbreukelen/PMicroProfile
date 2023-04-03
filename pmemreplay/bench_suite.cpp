@@ -8,13 +8,12 @@
 #include <chrono>
 
 #include <immintrin.h>
-#include <xmmintrin.h>
 
 #define Mebibyte (1024 * 1024)
 #define Gibibyte (1024 * 1024 * 1024)
 
 #define ALIGN_TO_64(ptr) ((char*)(((uintptr_t)(ptr) + 63) & ~(uintptr_t)63))
-// #define FORCE_FLUSHING
+//#define FORCE_FLUSHING
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
@@ -76,16 +75,16 @@ inline void flush_clflushopt(char* addr, const size_t len) {
     }
 }
 
-static inline void dax_write(char* addr, uint8_t* data, const size_t data_len) {
-  // Write 512 Bit (64 Byte)
-//   __m512i* data = (__m512i*)(WRITE_DATA);
-//   WRITE_SIMD_512(addr, 0, *data);
-    memcpy(addr, data, data_len);
+// static inline void dax_write(char* addr, uint8_t* data, const size_t data_len) {
+//   // Write 512 Bit (64 Byte)
+// //   __m512i* data = (__m512i*)(WRITE_DATA);
+// //   WRITE_SIMD_512(addr, 0, *data);
+//     memcpy(addr, data, data_len);
 
-    flush_clflushopt(addr, data_len);
-    //barrier();
-    _mm_sfence();
-}
+//     flush_clflushopt(addr, data_len);
+//     //barrier();
+//     _mm_sfence();
+// }
 
 
 void BenchSuite::drop_caches()
@@ -227,7 +226,7 @@ static void* do_work(void *arg)
     for (; i < args->replay_rounds + 1; ++i) {
         //prev_op = (*args->trace_file)[0].op;
 
-        for (const TraceEntry& entry : *(args->trace_file)) {
+        for (TraceEntry& entry : *(args->trace_file)) {
             dev_addr = static_cast<char*>(entry.dax_addr);
             if (entry.op == TraceOperation::READ) {
                 switch (entry.op_size)
@@ -255,34 +254,43 @@ static void* do_work(void *arg)
                 switch (entry.op_size)
                 {
                 case 1:
+                    #ifdef FORCE_FLUSHING
+                    _mm_sfence();
+                    #endif
+
                     *(dev_addr) = static_cast<unsigned char>(entry.data);
 
                     #ifdef FORCE_FLUSHING
-                    _mm_clflushopt(ALIGN_TO_64(static_cast<const char*>(dev_addr)));
+                    _mm_clflushopt(static_cast<void*>(dev_addr));
                     _mm_sfence();
                     #endif
-                    //flush_clflushopt(static_cast<char*>(entry.data), 1);
 
                     break;
                 case 4:
-                    _mm_stream_si32((int*) entry.dax_addr, (int) entry.data);
+                    #ifdef FORCE_FLUSHING
+                    _mm_sfence();
+                    #endif
+
+                    //_mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
+                    _mm_stream_si32(static_cast<int*>(entry.dax_addr), static_cast<int>(entry.data));
 
                     #ifdef FORCE_FLUSHING
-                    _mm_clflushopt(ALIGN_TO_64(static_cast<const char*>(dev_addr)));
+                    _mm_clflushopt(static_cast<void*>(dev_addr));
                     _mm_sfence();
                     #endif
                     break;
                 case 8:
-                    _mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
-
                     #ifdef FORCE_FLUSHING
-                    _mm_clflushopt(ALIGN_TO_64(static_cast<const char*>(dev_addr)));
                     _mm_sfence();
                     #endif
 
-                    //flush_clflushopt(static_cast<char*>(entry.data), 8);
+                    _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), reinterpret_cast<__m64>(entry.data));
+                    
 
-                    //flush_clflushopt(dev_addr, 8);
+                    #ifdef FORCE_FLUSHING
+                    _mm_clflushopt(static_cast<void*>(dev_addr));
+                    _mm_sfence();
+                    #endif
 
                     break;
 
@@ -295,6 +303,7 @@ static void* do_work(void *arg)
 
                 //total_bytes += entry.op_size;
             } else if (entry.op == TraceOperation::CLFLUSH) {
+                _mm_sfence();
                 _mm_clflushopt(static_cast<void*>(dev_addr));
                 _mm_sfence();
                 //total_bytes += 8;
