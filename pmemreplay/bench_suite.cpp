@@ -205,11 +205,29 @@ static void clean_cache_range(void *addr, size_t size)
 }
 */
 
+static double measure_ewr()
+{
+    return 0.0;
+}
+
+static double measure_ebr()
+{
+    return 0.0;
+}
+
+static double measure_hit_ratio_xpbuffer()
+{
+    return 0.0;
+}
+
+
+
+
 
 static void* do_work(void *arg)
 {
     struct WorkerArguments *args = static_cast<struct WorkerArguments*>(arg);
-    char* dev_addr = nullptr;
+    
 
     size_t count = 0;
     volatile unsigned long long temp_var = 0;
@@ -221,26 +239,30 @@ static void* do_work(void *arg)
     // char *prev_addr = nullptr;
     // size_t stride_write_size = 0;
 
-
-
+    
+    
     for (; i < args->replay_rounds + 1; ++i) {
         //prev_op = (*args->trace_file)[0].op;
 
-        for (TraceEntry& entry : *(args->trace_file)) {
-            dev_addr = static_cast<char*>(entry.dax_addr);
+        void* dev_addr = nullptr;
+        uint64_t data;
+        for (const TraceEntry& entry : *(args->trace_file)) {
+            dev_addr = entry.dax_addr;
+            data = entry.data;
             if (entry.op == TraceOperation::READ) {
+                // TODO: measure instruction latency using RDTSC counters.
                 switch (entry.op_size)
                 {
                     case 1:
-                        *(reinterpret_cast<volatile char*>(&temp_var)) = *(dev_addr);
+                        *(reinterpret_cast<volatile char*>(&temp_var)) = *(static_cast<char*>(dev_addr));
 
                         break;
                     case 4:
-                        *(reinterpret_cast<volatile int*>(&temp_var)) = *(dev_addr);
+                        *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<char*>(dev_addr));
 
                         break;
                     case 8:
-                        *(reinterpret_cast<volatile long*>(&temp_var)) = *(dev_addr);
+                        *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<char*>(dev_addr));
                         break;
                     default:
                         std::cerr << "Unsupported op size " << entry.op_size << "!" << std::endl;
@@ -251,6 +273,7 @@ static void* do_work(void *arg)
 
                 total_bytes += entry.op_size;
             } else if (entry.op == TraceOperation::WRITE) {
+                // TODO: measure instruction latency using RDTSC counters.
                 switch (entry.op_size)
                 {
                 case 1:
@@ -258,7 +281,7 @@ static void* do_work(void *arg)
                     _mm_sfence();
                     #endif
 
-                    *(dev_addr) = static_cast<unsigned char>(entry.data);
+                    *(static_cast<unsigned char*>(dev_addr)) = static_cast<unsigned char>(data);
 
                     #ifdef STRICT_CONSISTENCY
                     _mm_clflushopt(static_cast<void*>(dev_addr));
@@ -272,7 +295,7 @@ static void* do_work(void *arg)
                     #endif
 
                     //_mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
-                    _mm_stream_si32(static_cast<int*>(entry.dax_addr), static_cast<int>(entry.data));
+                    _mm_stream_si32(static_cast<int*>(dev_addr), static_cast<int>(data));
 
                     #ifdef STRICT_CONSISTENCY
                     _mm_clflushopt(static_cast<void*>(dev_addr));
@@ -284,7 +307,7 @@ static void* do_work(void *arg)
                     _mm_sfence();
                     #endif
 
-                    _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), reinterpret_cast<__m64>(entry.data));
+                    _mm_stream_pi(static_cast<__m64*>(dev_addr), reinterpret_cast<__m64>(data));
                     
 
                     #ifdef STRICT_CONSISTENCY
@@ -304,7 +327,7 @@ static void* do_work(void *arg)
                 //total_bytes += entry.op_size;
             } else if (entry.op == TraceOperation::CLFLUSH) {
                 _mm_sfence();
-                _mm_clflushopt(static_cast<void*>(dev_addr));
+                _mm_clflushopt(dev_addr);
                 _mm_sfence();
                 //total_bytes += 8;
             } else {
@@ -349,6 +372,10 @@ void BenchSuite::run(const size_t replay_rounds)
 
     int rc;
     for (size_t i = 0; i < this->num_threads; ++i) {
+        // TODO: pin on core!!!!!
+        // https://www.strchr.com/performance_measurements_with_rdtsc
+        // !!! We might need to fix CPU frequency, maybe we can set the CPU governor to performance and disable turbo?
+        // Disabling hyperthreading will be difficult though.
         rc = pthread_create(&threads[i], NULL, do_work, static_cast<void*>(&(thread_args[i])));
 
         if (rc) {
