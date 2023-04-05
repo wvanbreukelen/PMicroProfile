@@ -17,8 +17,28 @@
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
+#define SAMPLE_RATE   1000000
+#define SAMPLE_LENGTH 10000
+#define MAX_SAMPLES   1000000
+
+struct io_sample {
+public:
+    std::chrono::duration<long, std::nano> time_since_start;
+
+    size_t num_reads = 0;
+    size_t num_writes = 0;
+    size_t num_flushes = 0;
+
+    unsigned long long read_inst_cycles = 0;
+    unsigned long long write_inst_cycles = 0;
+    unsigned long long flush_inst_cycles = 0;
+};
+
 struct io_stat {
 public:
+    struct io_sample* samples = nullptr;
+    size_t num_collected_samples = 0;
+
     size_t total_bytes = 0;
     size_t read_bytes = 0;
     size_t write_bytes = 0;
@@ -32,10 +52,19 @@ public:
         replay_rounds(replay_rounds)
     {}
 
+    void init() {
+        stat.samples = new io_sample[MAX_SAMPLES]();
+    }
+
     WorkerArguments():
         trace_file(nullptr),
         replay_rounds(0)
     {}
+
+    ~WorkerArguments() {
+        if (stat.samples)
+            delete[] stat.samples;
+    }
 
     TraceFile* trace_file;
     const size_t replay_rounds;
@@ -221,125 +250,266 @@ static double measure_hit_ratio_xpbuffer()
 }
 
 
-
+static __inline__ unsigned long long rdtsc(void)
+{
+    unsigned hi, lo;
+    __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
+    return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
+}
 
 
 static void* do_work(void *arg)
 {
     struct WorkerArguments *args = static_cast<struct WorkerArguments*>(arg);
-    
+    struct io_stat *stat = &(args->stat);
 
     size_t count = 0;
     volatile unsigned long long temp_var = 0;
     
     const auto time_start = std::chrono::high_resolution_clock::now();
     size_t total_bytes = 0;
-    size_t i = 0;
     // TraceOperation prev_op = TraceOperation::UNKNOWN;
     // char *prev_addr = nullptr;
     // size_t stride_write_size = 0;
 
-    
-    
+
+    struct io_sample *cur_sample;
+    size_t sample_pos = 0;
+
+    cur_sample = &(stat->samples[0]);
+
+    size_t i = 0;
+    unsigned long long latest_sample_time = __builtin_ia32_rdtsc();
     for (; i < args->replay_rounds + 1; ++i) {
         //prev_op = (*args->trace_file)[0].op;
 
         void* dev_addr = nullptr;
         uint64_t data;
+        bool is_sampling = false;
+
+        //size_t num_reads = 0, num_writes = 0, num_flushes = 0;
+        //unsigned long long read_sum_cycles = 0, write_sum_cycles = 0, flush_sum_cycles = 0;
+
         for (const TraceEntry& entry : *(args->trace_file)) {
+            if (is_sampling && (__builtin_ia32_rdtsc() - latest_sample_time) >= SAMPLE_LENGTH) {
+                is_sampling = false;
+
+                cur_sample->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
+                cur_sample++;
+                ++(stat->num_collected_samples);
+                assert(stat->num_collected_samples < MAX_SAMPLES);
+                
+                latest_sample_time = __builtin_ia32_rdtsc();
+            } else if ((__builtin_ia32_rdtsc() - latest_sample_time) >= SAMPLE_RATE) {
+                is_sampling = true;
+                latest_sample_time = __builtin_ia32_rdtsc();
+            }
+
+            //std::cout << std::dec << (__builtin_ia32_rdtsc() - latest_sample_time) << std::endl;
             dev_addr = entry.dax_addr;
             data = entry.data;
-            if (entry.op == TraceOperation::READ) {
-                // TODO: measure instruction latency using RDTSC counters.
-                switch (entry.op_size)
+
+            switch (entry.op) {
+                case TraceOperation::READ:
                 {
+                    switch (entry.op_size)
+                    {
+                        case 1:
+                        {
+                            if (is_sampling) {
+                                const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+                                *(reinterpret_cast<volatile char*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                                cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+                            } else {
+                                *(reinterpret_cast<volatile char*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                            }
+
+                            break;
+                        }
+                        case 4:
+                        {
+                            if (is_sampling) {
+                                const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                                cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+                            } else {
+                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                            }
+
+                            break;
+                        }
+                        case 8:
+                        {
+                            if (is_sampling) {
+                                const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                                cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+                            } else {
+                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                            }
+
+                            break;
+                        }
+                        default:
+                            std::cerr << "Unsupported op size " << entry.op_size << "!" << std::endl;
+
+                            pthread_exit(NULL);
+                            break;
+                    }
+
+                    if (is_sampling)
+                        ++(cur_sample->num_reads);
+
+                    break;
+                }
+
+                case TraceOperation::WRITE:
+                {
+                    switch (entry.op_size)
+                    {
                     case 1:
-                        *(reinterpret_cast<volatile char*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                    {
+                        if (is_sampling) {
+                            const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_sfence();
+                            #endif
+
+                            *(static_cast<unsigned char*>(dev_addr)) = static_cast<unsigned char>(data);
+
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_clflushopt(static_cast<void*>(dev_addr));
+                            _mm_sfence();
+                            #endif
+
+                            cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+                        } else {
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_sfence();
+                            #endif
+
+                            *(static_cast<unsigned char*>(dev_addr)) = static_cast<unsigned char>(data);
+
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_clflushopt(static_cast<void*>(dev_addr));
+                            _mm_sfence();
+                            #endif
+                        }
 
                         break;
+                    }
                     case 4:
-                        *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                    {
+                        if (is_sampling) {
+                            const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_sfence();
+                            #endif
+
+                            //_mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
+                            _mm_stream_si32(static_cast<int*>(dev_addr), static_cast<int>(data));
+
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_clflushopt(static_cast<void*>(dev_addr));
+                            _mm_sfence();
+                            #endif
+
+                            cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+                        } else {
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_sfence();
+                            #endif
+
+                            //_mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
+                            _mm_stream_si32(static_cast<int*>(dev_addr), static_cast<int>(data));
+
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_clflushopt(static_cast<void*>(dev_addr));
+                            _mm_sfence();
+                            #endif
+                        }
 
                         break;
+                    }
                     case 8:
-                        *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                    {
+                        if (is_sampling) {
+                            const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_sfence();
+                            #endif
+
+                            _mm_stream_pi(static_cast<__m64*>(dev_addr), reinterpret_cast<__m64>(data));
+                            
+
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_clflushopt(static_cast<void*>(dev_addr));
+                            _mm_sfence();
+                            #endif
+
+                            cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+                        } else {
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_sfence();
+                            #endif
+
+                            _mm_stream_pi(static_cast<__m64*>(dev_addr), reinterpret_cast<__m64>(data));
+                            
+
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_clflushopt(static_cast<void*>(dev_addr));
+                            _mm_sfence();
+                            #endif
+                        }
+
                         break;
+                    }
                     default:
                         std::cerr << "Unsupported op size " << entry.op_size << "!" << std::endl;
 
                         pthread_exit(NULL);
                         break;
+                    }
+
+                    if (is_sampling)
+                        ++(cur_sample->num_writes);
+
+                    break;
                 }
 
-                total_bytes += entry.op_size;
-            } else if (entry.op == TraceOperation::WRITE) {
-                // TODO: measure instruction latency using RDTSC counters.
-                switch (entry.op_size)
+                case TraceOperation::CLFLUSH:
                 {
-                case 1:
-                    #ifdef STRICT_CONSISTENCY
-                    _mm_sfence();
-                    #endif
+                    if (is_sampling) {
+                        unsigned long long start_ticks = __builtin_ia32_rdtsc();
+                        _mm_sfence();
+                        _mm_clflushopt(dev_addr);
+                        _mm_sfence();
+                        cur_sample->flush_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+                        ++(cur_sample->num_flushes);
+                    } else {
+                        _mm_sfence();
+                        _mm_clflushopt(dev_addr);
+                        _mm_sfence();
+                    }
 
-                    *(static_cast<unsigned char*>(dev_addr)) = static_cast<unsigned char>(data);
-
-                    #ifdef STRICT_CONSISTENCY
-                    _mm_clflushopt(static_cast<void*>(dev_addr));
-                    _mm_sfence();
-                    #endif
-
-                    break;
-                case 4:
-                    #ifdef STRICT_CONSISTENCY
-                    _mm_sfence();
-                    #endif
-
-                    //_mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
-                    _mm_stream_si32(static_cast<int*>(dev_addr), static_cast<int>(data));
-
-                    #ifdef STRICT_CONSISTENCY
-                    _mm_clflushopt(static_cast<void*>(dev_addr));
-                    _mm_sfence();
-                    #endif
-                    break;
-                case 8:
-                    #ifdef STRICT_CONSISTENCY
-                    _mm_sfence();
-                    #endif
-
-                    _mm_stream_pi(static_cast<__m64*>(dev_addr), reinterpret_cast<__m64>(data));
-                    
-
-                    #ifdef STRICT_CONSISTENCY
-                    _mm_clflushopt(static_cast<void*>(dev_addr));
-                    _mm_sfence();
-                    #endif
+                    assert(false);
 
                     break;
+                }
 
                 default:
-                    std::cerr << "Unsupported op size " << entry.op_size << "!" << std::endl;
-
-                    pthread_exit(NULL);
+                    std::cerr << "Unknown operation" << std::endl;
+                    assert(false);
                     break;
-                }
-
-                //total_bytes += entry.op_size;
-            } else if (entry.op == TraceOperation::CLFLUSH) {
-                _mm_sfence();
-                _mm_clflushopt(dev_addr);
-                _mm_sfence();
-                //total_bytes += 8;
-            } else {
-                assert(false);
             }
-            (void) temp_var;
+
+            total_bytes += entry.op_size;
         }
     }
 
     const auto time_stop = std::chrono::high_resolution_clock::now();
     
-    struct io_stat *stat = &(args->stat);
+
     stat->latency_sum += std::chrono::duration_cast<std::chrono::nanoseconds>(time_stop - time_start).count();
     
     stat->read_bytes += (args->trace_file->get_total(TraceOperation::READ) * i);
@@ -370,13 +540,29 @@ void BenchSuite::run(const size_t replay_rounds)
 
     this->drop_caches();
 
+    assert(sysconf(_SC_NPROCESSORS_ONLN) > static_cast<long>(this->num_threads));
+
+    pthread_attr_t attr;
+    cpu_set_t cpus;
+    pthread_attr_init(&attr);
+
     int rc;
     for (size_t i = 0; i < this->num_threads; ++i) {
-        // TODO: pin on core!!!!!
+        thread_args[i].init();
+
+        // Pin thread on core
+        CPU_ZERO(&cpus);
+        CPU_SET(i, &cpus);
+
+        if (pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpus)) {
+            std::cerr << "Unable to set core affinity to core " << i << std::endl;
+        }
+        
+
         // https://www.strchr.com/performance_measurements_with_rdtsc
         // !!! We might need to fix CPU frequency, maybe we can set the CPU governor to performance and disable turbo?
         // Disabling hyperthreading will be difficult though.
-        rc = pthread_create(&threads[i], NULL, do_work, static_cast<void*>(&(thread_args[i])));
+        rc = pthread_create(&threads[i], &attr, do_work, static_cast<void*>(&(thread_args[i])));
 
         if (rc) {
             std::cerr << "Unable to create thread" << std::endl;
@@ -389,12 +575,25 @@ void BenchSuite::run(const size_t replay_rounds)
         pthread_join(threads[i], NULL);
     }
 
+    const struct io_stat* thread_stat = nullptr;
+
     for (size_t i = 0; i < this->num_threads; ++i) {
-        std::cout << "Thread " << i << " -> Latency: " << std::dec << thread_args[i].stat.latency_sum << " us (" << (static_cast<double>(thread_args[i].stat.latency_sum) / 1'000'000'000) << " sec)" <<
-            " Read: " << (static_cast<double>(thread_args[i].stat.read_bytes) / Mebibyte) << " MB" <<
-            " Write: " << (static_cast<double>(thread_args[i].stat.write_bytes) / Mebibyte) << " MB" <<
-            " Total bytes: "  << (static_cast<double>(thread_args[i].stat.total_bytes) / Mebibyte) << " MB"
-            " Bandwidth: " << (static_cast<double>(thread_args[i].stat.total_bytes) / Gibibyte / (thread_args[i].stat.latency_sum / 1'000'000'000)) << " GB/s" << std::endl;
+        thread_stat = &(thread_args[i].stat);
+
+        std::cout << "Thread " << i << " -> Latency: " << std::dec << thread_stat->latency_sum << " us (" << (static_cast<double>(thread_stat->latency_sum) / 1'000'000'000) << " sec)" <<
+            " Read: " << (static_cast<double>(thread_stat->read_bytes) / Mebibyte) << " MB" <<
+            " Write: " << (static_cast<double>(thread_stat->write_bytes) / Mebibyte) << " MB" <<
+            " Total bytes: "  << (static_cast<double>(thread_stat->total_bytes) / Mebibyte) << " MB"
+            " Bandwidth: " << (static_cast<double>(thread_stat->total_bytes) / Gibibyte / (thread_stat->latency_sum / 1'000'000'000)) << " GB/s" << std::endl;
+
+        // if (thread_stat->num_reads > 0)
+        //     std::cout << "Avg. read latency: " << (thread_stat->read_inst_cycles / thread_stat->num_reads) << " cycles" <<  std::endl;
+        // if (thread_stat->num_writes > 0)
+        //     std::cout << "Avg. write latency: " << (thread_stat->write_inst_cycles / thread_stat->num_writes) << " cycles" << std::endl;
+        // if (thread_stat->num_flushes > 0)
+        //     std::cout << "Avg. flush latency: " << (thread_stat->flush_inst_cycles / thread_stat->num_flushes) << " cycles" << std::endl;
+
+        std::cout << "Collected " << thread_stat->num_collected_samples << " samples!" << std::endl;
     }
 
     
