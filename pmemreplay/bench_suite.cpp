@@ -6,6 +6,9 @@
 #include <sys/mman.h>
 #include <cassert>
 #include <chrono>
+#include <sys/ioctl.h>
+#include <linux/perf_event.h>
+#include <asm/unistd.h>
 
 #include <immintrin.h>
 
@@ -179,20 +182,71 @@ static void clean_cache_range(void *addr, size_t size)
 }
 */
 
-static double measure_ewr()
+long perf_event_open(struct perf_event_attr* event_attr, pid_t pid, int cpu,
+		     int group_fd, unsigned long flags)
 {
-    return 0.0;
+    return syscall(__NR_perf_event_open, event_attr, pid, cpu, group_fd, flags);
 }
 
-static double measure_ebr()
+int setup_perf_events(const pid_t pid)
 {
-    return 0.0;
+    struct perf_event_attr pe;
+
+    long long count;
+    int fd;
+
+    memset(&pe, 0, sizeof(struct perf_event_attr));
+
+    pe.type = 29;
+    pe.size = sizeof(struct perf_event_attr);
+    pe.config = 0x20ff;
+    pe.sample_type = PERF_SAMPLE_IDENTIFIER;
+    //pe.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
+    pe.disabled = 1;
+    //pe.inherit = 1;
+    pe.exclude_guest = 0;
+    pe.exclude_host = 0;
+    //pe.exclude_kernel = 1;
+    //pe.sample_period = 1000; // FIXME: which unit? https://stackoverflow.com/questions/45299059/how-can-i-sample-at-constant-rate-with-perf-event-open
+    //pe.exclude_hv = 0;
+    
+
+    fd = perf_event_open(&pe, -1, 0, -1, 0);
+
+    if (fd == -1) {
+        std::cerr << "Unable to open perf event monitor for event config: 0x" << std::hex << pe.config << " errno: " << std::dec << errno << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    std::cout << "fd: " << fd << std::endl;
+
+    ioctl(fd, PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
+    ioctl(fd, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
+
+    printf("Hello\n");
+
+    ioctl(fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
+    read(fd, &count, sizeof(long long));
+
+    std::cout << std::dec << count << std::endl;
+
+    return fd;
 }
 
-static double measure_hit_ratio_xpbuffer()
-{
-    return 0.0;
-}
+// static double measure_ewr()
+// {
+//     return 0.0;
+// }
+
+// static double measure_ebr()
+// {
+//     return 0.0;
+// }
+
+// static double measure_hit_ratio_xpbuffer()
+// {
+//     return 0.0;
+// }
 
 
 static __inline__ unsigned long long rdtsc(void)
@@ -555,6 +609,10 @@ void BenchSuite::run(const size_t replay_rounds)
     this->drop_caches();
 
     assert(sysconf(_SC_NPROCESSORS_ONLN) > static_cast<long>(this->num_threads));
+
+    //int fd = setup_perf_events(getpid());
+
+    //return;
 
     pthread_attr_t attr;
     cpu_set_t cpus;
