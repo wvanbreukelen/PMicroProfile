@@ -9,6 +9,9 @@
 
 #include <immintrin.h>
 
+#include "worker.hpp"
+#include "bench_export.hpp"
+
 #define Mebibyte (1024 * 1024)
 #define Gibibyte (1024 * 1024 * 1024)
 
@@ -19,57 +22,7 @@ static constexpr size_t CACHE_LINE_SIZE = 64;
 
 #define SAMPLE_RATE   1000000
 #define SAMPLE_LENGTH 10000
-#define MAX_SAMPLES   1000000
-
-struct io_sample {
-public:
-    std::chrono::duration<long, std::nano> time_since_start;
-
-    size_t num_reads = 0;
-    size_t num_writes = 0;
-    size_t num_flushes = 0;
-
-    unsigned long long read_inst_cycles = 0;
-    unsigned long long write_inst_cycles = 0;
-    unsigned long long flush_inst_cycles = 0;
-};
-
-struct io_stat {
-public:
-    struct io_sample* samples = nullptr;
-    size_t num_collected_samples = 0;
-
-    size_t total_bytes = 0;
-    size_t read_bytes = 0;
-    size_t write_bytes = 0;
-    int64_t latency_sum = 0;
-};
-
-struct WorkerArguments {
-public:
-    WorkerArguments(TraceFile *trace_file, const size_t replay_rounds) :
-        trace_file(trace_file),
-        replay_rounds(replay_rounds)
-    {}
-
-    void init() {
-        stat.samples = new io_sample[MAX_SAMPLES]();
-    }
-
-    WorkerArguments():
-        trace_file(nullptr),
-        replay_rounds(0)
-    {}
-
-    ~WorkerArguments() {
-        if (stat.samples)
-            delete[] stat.samples;
-    }
-
-    TraceFile* trace_file;
-    const size_t replay_rounds;
-    io_stat stat;
-};
+#define ENABLE_DCOLLECTION
 
 
 // from: https://github.com/hpides/perma-bench/blob/75b6e3ceea6895fdb779b4981aa43a2ff6185104/src/read_write_ops.hpp
@@ -103,18 +56,6 @@ inline void flush_clflushopt(char* addr, const size_t len) {
         _mm_clflushopt(current_cl);
     }
 }
-
-// static inline void dax_write(char* addr, uint8_t* data, const size_t data_len) {
-//   // Write 512 Bit (64 Byte)
-// //   __m512i* data = (__m512i*)(WRITE_DATA);
-// //   WRITE_SIMD_512(addr, 0, *data);
-//     memcpy(addr, data, data_len);
-
-//     flush_clflushopt(addr, data_len);
-//     //barrier();
-//     _mm_sfence();
-// }
-
 
 void BenchSuite::drop_caches()
 {
@@ -283,15 +224,19 @@ static void* do_work(void *arg)
     for (; i < args->replay_rounds + 1; ++i) {
         //prev_op = (*args->trace_file)[0].op;
 
-        void* dev_addr = nullptr;
-        uint64_t data;
+        //void* dev_addr = nullptr;
+        //uint64_t data;
         bool is_sampling = false;
+        unsigned long long cur_time;
 
         //size_t num_reads = 0, num_writes = 0, num_flushes = 0;
         //unsigned long long read_sum_cycles = 0, write_sum_cycles = 0, flush_sum_cycles = 0;
 
         for (const TraceEntry& entry : *(args->trace_file)) {
-            if (is_sampling && (__builtin_ia32_rdtsc() - latest_sample_time) >= SAMPLE_LENGTH) {
+            #ifdef ENABLE_DCOLLECTION
+            // FIXME: calling rdtsc each iteration is quite expensive; it takes +/- 30 cycles.
+            cur_time = __builtin_ia32_rdtsc();
+            if (is_sampling && (cur_time - latest_sample_time) >= SAMPLE_LENGTH) {
                 is_sampling = false;
 
                 cur_sample->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
@@ -299,15 +244,16 @@ static void* do_work(void *arg)
                 ++(stat->num_collected_samples);
                 assert(stat->num_collected_samples < MAX_SAMPLES);
                 
-                latest_sample_time = __builtin_ia32_rdtsc();
-            } else if ((__builtin_ia32_rdtsc() - latest_sample_time) >= SAMPLE_RATE) {
+                latest_sample_time = cur_time;
+            } else if ((cur_time - latest_sample_time) >= SAMPLE_RATE) {
                 is_sampling = true;
-                latest_sample_time = __builtin_ia32_rdtsc();
+                latest_sample_time = cur_time;
             }
+            #endif
 
             //std::cout << std::dec << (__builtin_ia32_rdtsc() - latest_sample_time) << std::endl;
-            dev_addr = entry.dax_addr;
-            data = entry.data;
+            //dev_addr = entry.dax_addr;
+            //data = entry.data;
 
             switch (entry.op) {
                 case TraceOperation::READ:
@@ -316,37 +262,49 @@ static void* do_work(void *arg)
                     {
                         case 1:
                         {
+                            #ifdef ENABLE_DCOLLECTION
                             if (is_sampling) {
                                 const unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                                *(reinterpret_cast<volatile char*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                                *(reinterpret_cast<volatile char*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
                                 cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
                             } else {
-                                *(reinterpret_cast<volatile char*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                                *(reinterpret_cast<volatile char*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
                             }
+                            #else
+                                *(reinterpret_cast<volatile char*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
+                            #endif
 
                             break;
                         }
                         case 4:
                         {
+                            #ifdef ENABLE_DCOLLECTION
                             if (is_sampling) {
                                 const unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
                                 cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
                             } else {
-                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
                             }
+                            #else
+                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
+                            #endif
 
                             break;
                         }
                         case 8:
                         {
+                            #ifdef ENABLE_DCOLLECTION
                             if (is_sampling) {
                                 const unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
                                 cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
                             } else {
-                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<char*>(dev_addr));
+                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
                             }
+                            #else
+                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
+                            #endif
 
                             break;
                         }
@@ -357,8 +315,12 @@ static void* do_work(void *arg)
                             break;
                     }
 
-                    if (is_sampling)
+                    #ifdef ENABLE_DCOLLECTION
+                    if (is_sampling) {
                         ++(cur_sample->num_reads);
+                        cur_sample->bytes_read += entry.op_size;
+                    }
+                    #endif
 
                     break;
                 }
@@ -369,13 +331,14 @@ static void* do_work(void *arg)
                     {
                     case 1:
                     {
+                        #ifdef ENABLE_DCOLLECTION
                         if (is_sampling) {
                             const unsigned long long start_ticks = __builtin_ia32_rdtsc();
                             #ifdef STRICT_CONSISTENCY
                             _mm_sfence();
                             #endif
 
-                            *(static_cast<unsigned char*>(dev_addr)) = static_cast<unsigned char>(data);
+                            *(static_cast<unsigned char*>(entry.dax_addr)) = static_cast<unsigned char>(entry.data);
 
                             #ifdef STRICT_CONSISTENCY
                             _mm_clflushopt(static_cast<void*>(dev_addr));
@@ -388,18 +351,22 @@ static void* do_work(void *arg)
                             _mm_sfence();
                             #endif
 
-                            *(static_cast<unsigned char*>(dev_addr)) = static_cast<unsigned char>(data);
+                            *(static_cast<unsigned char*>(entry.dax_addr)) = static_cast<unsigned char>(entry.data);
 
                             #ifdef STRICT_CONSISTENCY
                             _mm_clflushopt(static_cast<void*>(dev_addr));
                             _mm_sfence();
                             #endif
                         }
+                        #else
+                            *(static_cast<unsigned char*>(entry.dax_addr)) = static_cast<unsigned char>(entry.data);
+                        #endif
 
                         break;
                     }
                     case 4:
                     {
+                        #ifdef ENABLE_DCOLLECTION
                         if (is_sampling) {
                             const unsigned long long start_ticks = __builtin_ia32_rdtsc();
                             #ifdef STRICT_CONSISTENCY
@@ -407,10 +374,10 @@ static void* do_work(void *arg)
                             #endif
 
                             //_mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
-                            _mm_stream_si32(static_cast<int*>(dev_addr), static_cast<int>(data));
+                            _mm_stream_si32(static_cast<int*>(entry.dax_addr), static_cast<int>(entry.data));
 
                             #ifdef STRICT_CONSISTENCY
-                            _mm_clflushopt(static_cast<void*>(dev_addr));
+                            _mm_clflushopt(static_cast<void*>(entry.dax_addr));
                             _mm_sfence();
                             #endif
 
@@ -421,25 +388,39 @@ static void* do_work(void *arg)
                             #endif
 
                             //_mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
-                            _mm_stream_si32(static_cast<int*>(dev_addr), static_cast<int>(data));
+                            _mm_stream_si32(static_cast<int*>(entry.dax_addr), static_cast<int>(entry.data));
 
                             #ifdef STRICT_CONSISTENCY
-                            _mm_clflushopt(static_cast<void*>(dev_addr));
+                            _mm_clflushopt(static_cast<void*>(entry.dax_addr));
                             _mm_sfence();
                             #endif
                         }
+                        #else
+                            #ifdef STRICT_CONSISTENCY
+                                _mm_sfence();
+                                #endif
+
+                                //_mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
+                                _mm_stream_si32(static_cast<int*>(entry.dax_addr), static_cast<int>(entry.data));
+
+                                #ifdef STRICT_CONSISTENCY
+                                _mm_clflushopt(static_cast<void*>(dev_addr));
+                                _mm_sfence();
+                                #endif
+                        #endif
 
                         break;
                     }
                     case 8:
                     {
+                        #ifdef ENABLE_DCOLLECTION
                         if (is_sampling) {
                             const unsigned long long start_ticks = __builtin_ia32_rdtsc();
                             #ifdef STRICT_CONSISTENCY
                             _mm_sfence();
                             #endif
 
-                            _mm_stream_pi(static_cast<__m64*>(dev_addr), reinterpret_cast<__m64>(data));
+                            _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), reinterpret_cast<__m64>(entry.data));
                             
 
                             #ifdef STRICT_CONSISTENCY
@@ -453,7 +434,7 @@ static void* do_work(void *arg)
                             _mm_sfence();
                             #endif
 
-                            _mm_stream_pi(static_cast<__m64*>(dev_addr), reinterpret_cast<__m64>(data));
+                            _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), reinterpret_cast<__m64>(entry.data));
                             
 
                             #ifdef STRICT_CONSISTENCY
@@ -461,6 +442,18 @@ static void* do_work(void *arg)
                             _mm_sfence();
                             #endif
                         }
+                        #else
+                             #ifdef STRICT_CONSISTENCY
+                            _mm_sfence();
+                            #endif
+
+                            _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), reinterpret_cast<__m64>(entry.data));
+                            
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_clflushopt(static_cast<void*>(dev_addr));
+                            _mm_sfence();
+                            #endif
+                        #endif
 
                         break;
                     }
@@ -471,26 +464,36 @@ static void* do_work(void *arg)
                         break;
                     }
 
-                    if (is_sampling)
+                    #ifdef ENABLE_DCOLLECTION
+                    if (is_sampling) {
                         ++(cur_sample->num_writes);
+                        cur_sample->bytes_written += entry.op_size;
+                    }
+                    #endif
 
                     break;
                 }
 
                 case TraceOperation::CLFLUSH:
                 {
-                    if (is_sampling) {
-                        unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                        _mm_sfence();
-                        _mm_clflushopt(dev_addr);
-                        _mm_sfence();
-                        cur_sample->flush_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
-                        ++(cur_sample->num_flushes);
-                    } else {
-                        _mm_sfence();
-                        _mm_clflushopt(dev_addr);
-                        _mm_sfence();
-                    }
+                    #ifdef ENABLE_DCOLLECTION
+                        if (is_sampling) {
+                            unsigned long long start_ticks = __builtin_ia32_rdtsc();
+                            _mm_sfence();
+                            _mm_clflushopt(entry.dax_addr);
+                            _mm_sfence();
+                            cur_sample->flush_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+                            ++(cur_sample->num_flushes);
+                        } else {
+                            _mm_sfence();
+                            _mm_clflushopt(entry.dax_addr);
+                            _mm_sfence();
+                        }
+                    #else
+                    _mm_sfence();
+                    _mm_clflushopt(entry.dax_addr);
+                    _mm_sfence();
+                    #endif
 
                     assert(false);
 
@@ -506,7 +509,9 @@ static void* do_work(void *arg)
             total_bytes += entry.op_size;
         }
     }
-
+    
+    // Do a simple addition to make sure the compiler does not optimize 'temp_var' away.
+    temp_var++;
     const auto time_stop = std::chrono::high_resolution_clock::now();
     
 
@@ -597,20 +602,11 @@ void BenchSuite::run(const size_t replay_rounds)
     }
 
     
+    for (size_t i = 0; i < this->num_threads; ++i) {
+        BenchExport bench_export(thread_args[i]);
 
-    // unsigned int z = 0;
-
-    // for (const auto &trace_entry : trace_file) {
-    //     std::cout << ((trace_entry.op == TraceOperation::READ) ? "R" : "W") << " 0x" << std::hex << trace_entry.addr << " ";
-
-    //     for (size_t i = 0; i < trace_entry.data.size(); ++i) {
-    //         std::cout << std::hex << static_cast<unsigned int>(trace_entry.data[i]);
-    //     }
-
-    //     std::cout << std::endl;
-
-    //     if ((z++) >= 100)
-    //         break;
-    // }
+        bench_export.export_io_stat("test.csv");
+    }
+    
 }
 
