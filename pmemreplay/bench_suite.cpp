@@ -216,7 +216,7 @@ static long perf_event_open(struct perf_event_attr* event_attr, pid_t pid, int c
 }
 
 
-static int attach_imc_probe(const unsigned imc_id, const unsigned int event_id)
+static int attach_imc_probe(const unsigned int imc_id, const unsigned int event_id)
 {
     struct perf_event_attr pe;
 
@@ -227,14 +227,14 @@ static int attach_imc_probe(const unsigned imc_id, const unsigned int event_id)
 
     pe.type = imc_id;
     pe.size = sizeof(struct perf_event_attr);
-    pe.config = 0xe7;
+    pe.config = event_id;
     pe.sample_type = PERF_SAMPLE_IDENTIFIER;
     //pe.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
     pe.disabled = 1;
     pe.exclude_guest = 0;
     pe.exclude_host = 0;
 
-    fd = perf_event_open(&pe, -1, -1, -1, 0);
+    fd = perf_event_open(&pe, -1, 0, -1, 0);
 
     if (fd == -1) {
         std::cerr << "Unable to open perf event monitor for event config: 0x" << std::hex << pe.config << " errno: " << std::dec << errno << std::endl;
