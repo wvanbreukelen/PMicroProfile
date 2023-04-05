@@ -12,6 +12,10 @@
 #include "worker.hpp"
 #include "bench_export.hpp"
 
+
+#define likely(x)    __builtin_expect (!!(x), 1)
+#define unlikely(x)  __builtin_expect (!!(x), 0)
+
 #define Mebibyte (1024 * 1024)
 #define Gibibyte (1024 * 1024 * 1024)
 
@@ -228,27 +232,32 @@ static void* do_work(void *arg)
         //uint64_t data;
         bool is_sampling = false;
         unsigned long long cur_time;
+        size_t z = 0;
 
         //size_t num_reads = 0, num_writes = 0, num_flushes = 0;
         //unsigned long long read_sum_cycles = 0, write_sum_cycles = 0, flush_sum_cycles = 0;
 
         for (const TraceEntry& entry : *(args->trace_file)) {
             #ifdef ENABLE_DCOLLECTION
-            // FIXME: calling rdtsc each iteration is quite expensive; it takes +/- 30 cycles.
-            cur_time = __builtin_ia32_rdtsc();
-            if (is_sampling && (cur_time - latest_sample_time) >= SAMPLE_LENGTH) {
-                is_sampling = false;
+            // Calling rdtsc each iteration is quite expensive; it takes +/- 30 cycles, therefore, we only
+            // check the rdtsc counter every 8 iterations (i.e. (z % 8) == 0))
+            if (((z & 0x08) == 0)) {
+                cur_time = __builtin_ia32_rdtsc();
+                if (is_sampling && (cur_time - latest_sample_time) >= SAMPLE_LENGTH) {
+                    is_sampling = false;
 
-                cur_sample->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
-                cur_sample++;
-                ++(stat->num_collected_samples);
-                assert(stat->num_collected_samples < MAX_SAMPLES);
-                
-                latest_sample_time = cur_time;
-            } else if ((cur_time - latest_sample_time) >= SAMPLE_RATE) {
-                is_sampling = true;
-                latest_sample_time = cur_time;
+                    cur_sample->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
+                    cur_sample++;
+                    ++(stat->num_collected_samples);
+                    assert(stat->num_collected_samples < MAX_SAMPLES);
+                    
+                    latest_sample_time = cur_time;
+                } else if ((cur_time - latest_sample_time) >= SAMPLE_RATE) {
+                    is_sampling = true;
+                    latest_sample_time = cur_time;
+                }
             }
+            ++z;
             #endif
 
             //std::cout << std::dec << (__builtin_ia32_rdtsc() - latest_sample_time) << std::endl;
