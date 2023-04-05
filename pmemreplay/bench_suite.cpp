@@ -684,6 +684,16 @@ void BenchSuite::run(const size_t replay_rounds)
         close(fd);
     }
 
+    for (size_t i = 0; i < num_imcs; ++i) {
+        int fd = attach_imc_probe(imc_ids[i], EVENT_UNC_M_PMM_RPQ_INSERTS);
+        close(fd);
+    }
+
+    for (size_t i = 0; i < num_imcs; ++i) {
+        int fd = attach_imc_probe(imc_ids[i], EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL);
+        close(fd);
+    }
+
     // TODO: for each of the iMC's, capture unc_m_pmm_wpq_inserts and unc_m_pmm_rpq_inserts
 
     //int fd = setup_perf_events(getpid());
