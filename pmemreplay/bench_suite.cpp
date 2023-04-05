@@ -31,7 +31,9 @@ static constexpr size_t CACHE_LINE_SIZE = 64;
 #define SAMPLE_LENGTH 10000
 #define ENABLE_DCOLLECTION
 
-#define EVENT_UNC_M_PMM_WPQ_INSERTS 0x7e
+#define EVENT_UNC_M_PMM_WPQ_INSERTS 0x7E
+#define EVENT_UNC_M_PMM_RPQ_INSERTS 0xE3
+#define EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL 0x1E0 // umask=0x1,event=0xE0
 
 
 // from: https://github.com/hpides/perma-bench/blob/75b6e3ceea6895fdb779b4981aa43a2ff6185104/src/read_write_ops.hpp
