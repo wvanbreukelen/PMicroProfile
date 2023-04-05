@@ -31,6 +31,8 @@ static constexpr size_t CACHE_LINE_SIZE = 64;
 #define SAMPLE_LENGTH 10000
 #define ENABLE_DCOLLECTION
 
+#define EVENT_UNC_M_PMM_WPQ_INSERTS 0x7e
+
 
 // from: https://github.com/hpides/perma-bench/blob/75b6e3ceea6895fdb779b4981aa43a2ff6185104/src/read_write_ops.hpp
 #define READ_SIMD_512(mem_addr, offset) _mm512_load_si512((void*)((mem_addr) + ((offset)*CACHE_LINE_SIZE)))
@@ -182,11 +184,68 @@ static void clean_cache_range(void *addr, size_t size)
 }
 */
 
-long perf_event_open(struct perf_event_attr* event_attr, pid_t pid, int cpu,
+static size_t extract_imc_ids(std::array<unsigned int, 32>& ids)
+{
+    const std::regex pattern("^uncore_imc_[[:xdigit:]]$");
+    const std::filesystem::path bus_dir("/sys/bus/event_source/devices");
+
+    size_t i = 0;
+
+    for (const auto &entry : std::filesystem::directory_iterator(bus_dir))
+    {
+        const auto& path = entry.path();
+        if (std::filesystem::is_directory(path) && std::regex_match(path.filename().string(), pattern)) {
+            const std::filesystem::path& id_file = path / "type";
+
+            std::ifstream file_handle(id_file);
+
+            unsigned int id;
+            if (file_handle >> id)
+                ids[i] = id;
+            ++i;
+        }
+    }
+
+    return i;
+}
+
+static long perf_event_open(struct perf_event_attr* event_attr, pid_t pid, int cpu,
 		     int group_fd, unsigned long flags)
 {
     return syscall(__NR_perf_event_open, event_attr, pid, cpu, group_fd, flags);
 }
+
+
+static int attach_imc_probe(const unsigned imc_id, const unsigned int event_id)
+{
+    struct perf_event_attr pe;
+
+    long long count;
+    int fd;
+
+    memset(&pe, 0, sizeof(struct perf_event_attr));
+
+    pe.type = imc_id;
+    pe.size = sizeof(struct perf_event_attr);
+    pe.config = 0xe7;
+    pe.sample_type = PERF_SAMPLE_IDENTIFIER;
+    //pe.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
+    pe.disabled = 1;
+    pe.exclude_guest = 0;
+    pe.exclude_host = 0;
+
+    fd = perf_event_open(&pe, -1, -1, -1, 0);
+
+    if (fd == -1) {
+        std::cerr << "Unable to open perf event monitor for event config: 0x" << std::hex << pe.config << " errno: " << std::dec << errno << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    std::cout << "fd: " << fd << std::endl;
+
+    return fd;
+}
+
 
 int setup_perf_events(const pid_t pid)
 {
@@ -270,7 +329,6 @@ static void* do_work(void *arg)
     // TraceOperation prev_op = TraceOperation::UNKNOWN;
     // char *prev_addr = nullptr;
     // size_t stride_write_size = 0;
-
 
     struct io_sample *cur_sample;
     size_t sample_pos = 0;
@@ -609,6 +667,19 @@ void BenchSuite::run(const size_t replay_rounds)
     this->drop_caches();
 
     assert(sysconf(_SC_NPROCESSORS_ONLN) > static_cast<long>(this->num_threads));
+
+    std::array<unsigned int, 32> imc_ids;
+
+    const size_t num_imcs = extract_imc_ids(imc_ids);
+    std::cout << "Got " << num_imcs << " iMC's. Numbers: ";
+    for (size_t i = 0; i < num_imcs; ++i)
+        std::cout << std::dec << imc_ids[i] << " ";
+    std::cout << std::endl;
+
+    for (size_t i = 0; i < num_imcs; ++i)
+        (void) attach_imc_probe(i, EVENT_UNC_M_PMM_WPQ_INSERTS);
+
+    // TODO: for each of the iMC's, capture unc_m_pmm_wpq_inserts and unc_m_pmm_rpq_inserts
 
     //int fd = setup_perf_events(getpid());
 
