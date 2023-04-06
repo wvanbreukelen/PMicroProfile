@@ -333,6 +333,8 @@ static void* do_work(void *arg)
                     is_sampling = true;
                     latest_sample_time = cur_time;
 
+                    probe_reset(wpq_probe);
+                    probe_reset(rpq_probe);
                     probe_enable(rpq_probe);
                     probe_enable(wpq_probe);
                 }
