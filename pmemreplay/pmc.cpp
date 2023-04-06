@@ -4,11 +4,7 @@
 #include <regex>
 #include <fstream>
 
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
-#include <linux/perf_event.h>
-#include <sys/syscall.h>
+
 
 #define PMC_VERBOSE
 
@@ -135,3 +131,5 @@ bool PMC::remove_imc_probe(const iMCProbe& imc_probe) const
 
     return res;
 }
+
+

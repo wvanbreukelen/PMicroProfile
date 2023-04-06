@@ -274,7 +274,7 @@ static void* do_work(void *arg)
         std::cerr << "Unable to remove iMC probes!" << std::endl;
     }
 
-    pthread_exit(NULL);
+    probe_reset(wpq_probe);
 
     size_t count = 0;
     volatile unsigned long long temp_var = 0;
@@ -287,6 +287,7 @@ static void* do_work(void *arg)
 
     struct io_sample *cur_sample;
     size_t sample_pos = 0;
+    unsigned long long total_wpq_count = 0;
 
     cur_sample = &(stat->samples[0]);
 
@@ -304,6 +305,8 @@ static void* do_work(void *arg)
         //size_t num_reads = 0, num_writes = 0, num_flushes = 0;
         //unsigned long long read_sum_cycles = 0, write_sum_cycles = 0, flush_sum_cycles = 0;
 
+        probe_enable(wpq_probe);
+
         for (const TraceEntry& entry : *(args->trace_file)) {
             #ifdef ENABLE_DCOLLECTION
             // Calling rdtsc each iteration is quite expensive; it takes +/- 30 cycles, therefore, we only
@@ -311,6 +314,9 @@ static void* do_work(void *arg)
             if (((z & 0x08) == 0)) {
                 cur_time = __builtin_ia32_rdtsc();
                 if (is_sampling && (cur_time - latest_sample_time) >= SAMPLE_LENGTH) {
+                    //probe_disable(wpq_probe);
+                    //probe_count(wpq_probe, &total_wpq_count);
+
                     is_sampling = false;
 
                     cur_sample->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
@@ -322,6 +328,8 @@ static void* do_work(void *arg)
                 } else if ((cur_time - latest_sample_time) >= SAMPLE_RATE) {
                     is_sampling = true;
                     latest_sample_time = cur_time;
+
+                    //probe_enable(wpq_probe);
                 }
             }
             ++z;
@@ -589,13 +597,17 @@ static void* do_work(void *arg)
     // Do a simple addition to make sure the compiler does not optimize 'temp_var' away.
     temp_var++;
     const auto time_stop = std::chrono::high_resolution_clock::now();
-    
+
+    probe_disable(wpq_probe);
+    probe_count(wpq_probe, &total_wpq_count);
 
     stat->latency_sum += std::chrono::duration_cast<std::chrono::nanoseconds>(time_stop - time_start).count();
     
     stat->read_bytes += (args->trace_file->get_total(TraceOperation::READ) * i);
     stat->write_bytes += (args->trace_file->get_total(TraceOperation::WRITE) * i);
     stat->total_bytes += (stat->read_bytes + stat->write_bytes);
+
+    std::cout << "WPQ count: " << std::dec << total_wpq_count << std::endl;
 
 
     pthread_exit(NULL);

@@ -3,12 +3,20 @@
 #include <array>
 #include <cstddef>
 #include <iostream>
+#include <linux/perf_event.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+
+#include <sys/syscall.h>
 
 struct iMCProbe {
 public:
     size_t num_probes;
     std::array<unsigned int, 16> fd_probes;
 };
+
+
 
 class PMC {
 public:
@@ -22,6 +30,10 @@ public:
     bool remove_probe(const int fd) const;
     bool remove_imc_probe(const struct iMCProbe& imc_probe) const;
 
+    // inline void probe_reset(const struct iMCProbe& iMCProbe) const;
+    // inline void probe_enable(const struct iMCProbe& iMCProbe) const;
+    // inline void probe_disable(const struct iMCProbe& iMCProbe) const;
+
 private:
     void find_imcs();
 
@@ -29,3 +41,35 @@ private:
     std::array<unsigned int, 16> imc_ids;
     size_t num_imcs = 0;
 };
+
+
+inline void probe_reset(const struct iMCProbe& iMCProbe)
+{
+    for (size_t i = 0; i < iMCProbe.num_probes; ++i) {
+        ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
+    }
+}
+
+inline void probe_enable(const struct iMCProbe& iMCProbe)
+{
+    for (size_t i = 0; i < iMCProbe.num_probes; ++i) {
+        ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
+    }
+}
+
+inline void probe_disable(const struct iMCProbe& iMCProbe)
+{
+    for (size_t i = 0; i < iMCProbe.num_probes; ++i) {
+        ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
+    }
+}
+
+inline void probe_count(const struct iMCProbe& iMCProbe, unsigned long long *count)
+{
+    long long local_count = 0;
+
+    for (size_t i = 0; i < iMCProbe.num_probes; ++i) {
+        read(iMCProbe.fd_probes[i], &local_count, sizeof(local_count));
+        *(count) += local_count;
+    }
+}
