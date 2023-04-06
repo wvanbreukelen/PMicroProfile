@@ -32,7 +32,7 @@ static constexpr size_t CACHE_LINE_SIZE = 64;
 #define SAMPLE_LENGTH 10000
 #define ENABLE_DCOLLECTION
 
-#define EVENT_UNC_M_PMM_WPQ_INSERTS 0x7E
+#define EVENT_UNC_M_PMM_WPQ_INSERTS 0xE7
 #define EVENT_UNC_M_PMM_RPQ_INSERTS 0xE3
 #define EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL 0x1E0 // umask=0x1,event=0xE0
 
@@ -257,23 +257,32 @@ static void* do_work(void *arg)
     struct WorkerArguments *args = static_cast<struct WorkerArguments*>(arg);
     struct io_stat *stat = &(args->stat);
 
-   
-    //probe_reset(wpq_probe);
-
     size_t count = 0;
     volatile unsigned long long temp_var = 0;
     
     const auto time_start = std::chrono::high_resolution_clock::now();
     size_t total_bytes = 0;
-    // TraceOperation prev_op = TraceOperation::UNKNOWN;
-    // char *prev_addr = nullptr;
-    // size_t stride_write_size = 0;
 
     struct io_sample *cur_sample;
     size_t sample_pos = 0;
     unsigned long long total_wpq_count = 0;
 
 
+    PMC pmc;
+
+    if (!pmc.init()) {
+        std::cerr << "Failed to initialize PMC!" << std::endl;
+        pthread_exit(NULL);
+    }
+
+    struct iMCProbe wpq_probe{};
+    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS, wpq_probe)) {
+        std::cerr << "Unable to add probe!" << std::endl;
+        pthread_exit(NULL);
+    }
+
+    probe_reset(wpq_probe);
+    probe_enable(wpq_probe);
 
     cur_sample = &(stat->samples[0]);
 
@@ -584,7 +593,9 @@ static void* do_work(void *arg)
     temp_var++;
     const auto time_stop = std::chrono::high_resolution_clock::now();
 
-   
+    probe_disable(wpq_probe);
+    probe_count(wpq_probe, &total_wpq_count);
+    pmc.remove_imc_probe(wpq_probe);
 
     stat->latency_sum += std::chrono::duration_cast<std::chrono::nanoseconds>(time_stop - time_start).count();
     
@@ -592,7 +603,7 @@ static void* do_work(void *arg)
     stat->write_bytes += (args->trace_file->get_total(TraceOperation::WRITE) * i);
     stat->total_bytes += (stat->read_bytes + stat->write_bytes);
 
-    //std::cout << "WPQ count: " << std::dec << total_wpq_count << std::endl;
+    std::cout << "WPQ count: " << std::dec << total_wpq_count << std::endl;
 
 
     pthread_exit(NULL);
@@ -643,50 +654,7 @@ void BenchSuite::run(const size_t replay_rounds)
 
     //return;
 
-    // PMC pmc;
 
-    // if (!pmc.init()) {
-    //     std::cerr << "Failed to initialize PMC!" << std::endl;
-    //     pthread_exit(NULL);
-    // }
-
-    // struct iMCProbe wpq_probe{};
-    // if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS, wpq_probe)) {
-    //     std::cerr << "Unable to add probe!" << std::endl;
-    //     pthread_exit(NULL);
-    // }
-
-    // probe_reset(wpq_probe);
-    // probe_enable(wpq_probe);
-
-    struct perf_event_attr pe;
-    long long count;
-    int fd;
-
-    memset(&pe, 0, sizeof(pe));
-    pe.type = 13;
-    pe.size = sizeof(pe);
-    pe.config = 0xe7;
-    //pe.sample_type = PERF_SAMPLE_RAW;
-    pe.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
-    //pe.sample_period = 1000;
-    pe.disabled = 1;
-    pe.inherit = 1;
-    pe.exclude_kernel = 0;
-    pe.exclude_guest = 0;
-    //pe.exclude_hv = 1;
-
-    fd = perf_event_open(&pe, -1, 0, -1, 0);
-    if (fd == -1) {
-        fprintf(stderr, "Error opening leader %llx\n", pe.config);
-        exit(EXIT_FAILURE);
-    }
-
-    ioctl(fd, PERF_EVENT_IOC_RESET, 0);
-    ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
-        //read(fd, &count, sizeof(count));
-
-    //std::cout << "Count: " << std::dec << count << std::endl;
 
     pthread_attr_t attr;
     cpu_set_t cpus;
@@ -698,7 +666,7 @@ void BenchSuite::run(const size_t replay_rounds)
 
         // Pin thread on core
         CPU_ZERO(&cpus);
-        CPU_SET(0, &cpus);
+        CPU_SET(i, &cpus);
 
         if (pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpus)) {
             std::cerr << "Unable to set core affinity to core " << i << std::endl;
@@ -727,15 +695,6 @@ void BenchSuite::run(const size_t replay_rounds)
                  uint64_t time_running;  /* if PERF_FORMAT_TOTAL_TIME_RUNNING */
 	};
 
-
-	sync();
-	sleep(5);
-
-	struct read_format data;
-    ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
-    read(fd, &data, sizeof(read_format));
-
-    std::cout << "Count: " << std::dec << data.value << " Enabled: " << data.time_enabled << " Running: " << data.time_running << std::endl;
 
     // probe_disable(wpq_probe);
     // probe_count(wpq_probe, &total_count);
