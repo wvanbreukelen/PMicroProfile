@@ -270,7 +270,7 @@ static void* do_work(void *arg)
         pthread_exit(NULL);
     }
 
-    probe_reset(wpq_probe);
+    //probe_reset(wpq_probe);
 
     size_t count = 0;
     volatile unsigned long long temp_var = 0;
@@ -284,6 +284,9 @@ static void* do_work(void *arg)
     struct io_sample *cur_sample;
     size_t sample_pos = 0;
     unsigned long long total_wpq_count = 0;
+
+    probe_reset(wpq_probe);
+    probe_enable(wpq_probe);
 
     cur_sample = &(stat->samples[0]);
 
@@ -301,7 +304,7 @@ static void* do_work(void *arg)
         //size_t num_reads = 0, num_writes = 0, num_flushes = 0;
         //unsigned long long read_sum_cycles = 0, write_sum_cycles = 0, flush_sum_cycles = 0;
 
-        probe_enable(wpq_probe);
+        //probe_enable(wpq_probe);
 
         for (const TraceEntry& entry : *(args->trace_file)) {
             #ifdef ENABLE_DCOLLECTION

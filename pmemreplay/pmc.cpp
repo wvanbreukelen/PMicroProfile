@@ -56,7 +56,7 @@ void PMC::print_imcs(std::ostream &os) const
         os << std::dec << this->imc_ids[i] << " ";
 }
 
-int PMC::add_probe(const unsigned int imc_id, const unsigned int event_id) const
+int PMC::add_probe(const int imc_id, const unsigned int event_id) const
 {
     struct perf_event_attr pe;
     int fd;
@@ -67,13 +67,13 @@ int PMC::add_probe(const unsigned int imc_id, const unsigned int event_id) const
     pe.size = sizeof(struct perf_event_attr);
     pe.config = event_id;
     pe.sample_type = PERF_SAMPLE_IDENTIFIER;
-    //pe.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
+   // pe.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID;
     pe.disabled = 1;
     pe.inherit = 1;
     pe.exclude_guest = 0;
     pe.exclude_host = 0;
 
-    fd = static_cast<int>(perf_event_open(&pe, -1, 0, -1, 0));
+    fd = perf_event_open(&pe, -1, 0, -1, 0);
 
     if (fd == -1) {
         #ifdef PMC_VERBOSE
@@ -82,6 +82,17 @@ int PMC::add_probe(const unsigned int imc_id, const unsigned int event_id) const
 
         return -1;
         //exit(EXIT_FAILURE);
+    } else {
+	#ifdef PMC_VERBOSE
+	std::cout << "[iMC " << imc_id << "] Added probe for event 0x" << std::hex << event_id << " type " << std::dec << imc_id << std::endl;
+	#endif
+    }
+
+    int flags = fcntl(fd, F_GETFD);
+    flags &= ~FD_CLOEXEC;
+    if (fcntl(fd, F_SETFD, flags) < 0) {
+	std::cerr << "error!" << std::endl;
+	return -1;
     }
 
     return fd;
@@ -98,10 +109,13 @@ bool PMC::add_imc_probe(const unsigned int event_id, struct iMCProbe &imc_probe)
 
         ++(imc_probe.num_probes);
         imc_probe.fd_probes[i] = fd;
+	#ifdef PMC_VERBOSE
+	std::cout << std::dec << fd << " ";
+	#endif
     }
 
     #ifdef PMC_VERBOSE
-    std::cout << "Num probes: " << imc_probe.num_probes << std::endl;
+    std::cout << "\nNum probes: " << imc_probe.num_probes << std::endl;
     #endif
 
     return true;
@@ -112,7 +126,7 @@ bool PMC::remove_probe(const int fd) const
     if (fd < 0)
         return false;
 
-    if (ioctl(fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP) < 0)
+    if (ioctl(fd, PERF_EVENT_IOC_DISABLE, 0) < 0)
         return false;
 
     if (close(fd) < 0)

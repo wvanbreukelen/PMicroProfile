@@ -25,7 +25,7 @@ public:
     bool init();
     void print_imcs(std::ostream &os) const;
     
-    int add_probe(const unsigned int imc_id, const unsigned int event_id) const;
+    int add_probe(const int imc_id, const unsigned int event_id) const;
     bool add_imc_probe(const unsigned int event_id, struct iMCProbe &imc_probe) const;
     bool remove_probe(const int fd) const;
     bool remove_imc_probe(const struct iMCProbe& imc_probe) const;
@@ -46,22 +46,26 @@ private:
 inline void probe_reset(const struct iMCProbe& iMCProbe)
 {
     for (size_t i = 0; i < iMCProbe.num_probes; ++i) {
-        ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
+        ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_RESET, 0);
     }
 }
 
 inline void probe_enable(const struct iMCProbe& iMCProbe)
 {
     for (size_t i = 0; i < iMCProbe.num_probes; ++i) {
-        ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
+        int res = ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_ENABLE, 0);
+	std::cout << std::dec << res << " ";
     }
+    std::cout << std::endl;
 }
 
 inline void probe_disable(const struct iMCProbe& iMCProbe)
 {
     for (size_t i = 0; i < iMCProbe.num_probes; ++i) {
-        ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
+        int res = ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_DISABLE, 0);
+	std::cout << std::dec << res << " ";
     }
+    std::cout << std::endl;
 }
 
 inline void probe_count(const struct iMCProbe& iMCProbe, unsigned long long *count)
@@ -69,7 +73,8 @@ inline void probe_count(const struct iMCProbe& iMCProbe, unsigned long long *cou
     long long local_count = 0;
 
     for (size_t i = 0; i < iMCProbe.num_probes; ++i) {
-        read(iMCProbe.fd_probes[i], &local_count, sizeof(local_count));
+        std::cout << "Num read: " << std::dec << read(iMCProbe.fd_probes[i], &local_count, sizeof(long long));
+	std::cout << " Count: " << local_count << std::endl;
         *(count) += local_count;
     }
 }
