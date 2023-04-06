@@ -207,7 +207,7 @@ static int attach_imc_probe(const unsigned int imc_id, const unsigned int event_
     pe.type = imc_id;
     pe.size = sizeof(struct perf_event_attr);
     pe.config = event_id;
-    pe.sample_type = PERF_SAMPLE_IDENTIFIER;
+   // pe.sample_type = PERF_SAMPLE_IDENTIFIER;
     //pe.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
     pe.disabled = 1;
     pe.inherit = 1;
@@ -666,15 +666,17 @@ void BenchSuite::run(const size_t replay_rounds)
     memset(&pe, 0, sizeof(pe));
     pe.type = 13;
     pe.size = sizeof(pe);
-    pe.config = 0x7E;
-    pe.sample_type = PERF_SAMPLE_IDENTIFIER;
+    pe.config = 0xe7;
+    //pe.sample_type = PERF_SAMPLE_RAW;
+    pe.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
+    //pe.sample_period = 1000;
     pe.disabled = 1;
     pe.inherit = 1;
     pe.exclude_kernel = 0;
-    pe.exclude_host = 0;
-    pe.exclude_hv = 1;
+    pe.exclude_guest = 0;
+    //pe.exclude_hv = 1;
 
-    fd = perf_event_open(&pe, 0, -1, -1, 0);
+    fd = perf_event_open(&pe, -1, 0, -1, 0);
     if (fd == -1) {
         fprintf(stderr, "Error opening leader %llx\n", pe.config);
         exit(EXIT_FAILURE);
@@ -682,7 +684,9 @@ void BenchSuite::run(const size_t replay_rounds)
 
     ioctl(fd, PERF_EVENT_IOC_RESET, 0);
     ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+        //read(fd, &count, sizeof(count));
 
+    //std::cout << "Count: " << std::dec << count << std::endl;
 
     pthread_attr_t attr;
     cpu_set_t cpus;
@@ -694,7 +698,7 @@ void BenchSuite::run(const size_t replay_rounds)
 
         // Pin thread on core
         CPU_ZERO(&cpus);
-        CPU_SET(i, &cpus);
+        CPU_SET(0, &cpus);
 
         if (pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpus)) {
             std::cerr << "Unable to set core affinity to core " << i << std::endl;
@@ -717,10 +721,21 @@ void BenchSuite::run(const size_t replay_rounds)
         pthread_join(threads[i], NULL);
     }
 
-    ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
-    read(fd, &count, sizeof(count));
+	struct read_format {
+                 uint64_t value;         /* The value of the event */
+                 uint64_t time_enabled;  /* if PERF_FORMAT_TOTAL_TIME_ENABLED */
+                 uint64_t time_running;  /* if PERF_FORMAT_TOTAL_TIME_RUNNING */
+	};
 
-    std::cout << "Count: " << std::dec << count << std::endl;
+
+	sync();
+	sleep(5);
+
+	struct read_format data;
+    ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+    read(fd, &data, sizeof(read_format));
+
+    std::cout << "Count: " << std::dec << data.value << " Enabled: " << data.time_enabled << " Running: " << data.time_running << std::endl;
 
     // probe_disable(wpq_probe);
     // probe_count(wpq_probe, &total_count);
