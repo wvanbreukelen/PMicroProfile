@@ -643,21 +643,45 @@ void BenchSuite::run(const size_t replay_rounds)
 
     //return;
 
-    PMC pmc;
+    // PMC pmc;
 
-    if (!pmc.init()) {
-        std::cerr << "Failed to initialize PMC!" << std::endl;
-        pthread_exit(NULL);
+    // if (!pmc.init()) {
+    //     std::cerr << "Failed to initialize PMC!" << std::endl;
+    //     pthread_exit(NULL);
+    // }
+
+    // struct iMCProbe wpq_probe{};
+    // if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS, wpq_probe)) {
+    //     std::cerr << "Unable to add probe!" << std::endl;
+    //     pthread_exit(NULL);
+    // }
+
+    // probe_reset(wpq_probe);
+    // probe_enable(wpq_probe);
+
+    struct perf_event_attr pe;
+    long long count;
+    int fd;
+
+    memset(&pe, 0, sizeof(pe));
+    pe.type = 13;
+    pe.size = sizeof(pe);
+    pe.config = 0x7E;
+    pe.sample_type = PERF_SAMPLE_IDENTIFIER;
+    pe.disabled = 1;
+    pe.inherit = 1;
+    pe.exclude_kernel = 0;
+    pe.exclude_host = 0;
+    pe.exclude_hv = 1;
+
+    fd = perf_event_open(&pe, 0, -1, -1, 0);
+    if (fd == -1) {
+        fprintf(stderr, "Error opening leader %llx\n", pe.config);
+        exit(EXIT_FAILURE);
     }
 
-    struct iMCProbe wpq_probe{};
-    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS, wpq_probe)) {
-        std::cerr << "Unable to add probe!" << std::endl;
-        pthread_exit(NULL);
-    }
-
-    probe_reset(wpq_probe);
-    probe_enable(wpq_probe);
+    ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+    ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
 
 
     pthread_attr_t attr;
@@ -693,14 +717,17 @@ void BenchSuite::run(const size_t replay_rounds)
         pthread_join(threads[i], NULL);
     }
 
-    long long total_count;
+    ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+    read(fd, &count, sizeof(count));
 
-    probe_disable(wpq_probe);
-    probe_count(wpq_probe, &total_count);
+    std::cout << "Count: " << std::dec << count << std::endl;
 
-    if (!pmc.remove_imc_probe(wpq_probe)) {
-        std::cerr << "Unable to remove iMC probes!" << std::endl;
-    }
+    // probe_disable(wpq_probe);
+    // probe_count(wpq_probe, &total_count);
+
+    // if (!pmc.remove_imc_probe(wpq_probe)) {
+    //     std::cerr << "Unable to remove iMC probes!" << std::endl;
+    // }
 
     const struct io_stat* thread_stat = nullptr;
 
