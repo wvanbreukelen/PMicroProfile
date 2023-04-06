@@ -18,7 +18,7 @@ bool BenchExport::export_io_stat(const std::string &filename) const {
     }
 
     // Write CSV header.
-    file_handle << "timestamp,num_reads,read_cycles,num_writes,write_cycles,num_flushes,flush_cycles,bytes_read,bytes_written" << std::endl;
+    file_handle << "timestamp,num_reads,read_cycles,num_writes,write_cycles,num_flushes,flush_cycles,bytes_read,bytes_written,wpq_insert,rpq_inserts" << std::endl;
 
     const struct io_sample *samples = this->worker_args.stat.samples;
 
@@ -27,7 +27,8 @@ bool BenchExport::export_io_stat(const std::string &filename) const {
                     samples[i].num_reads << "," << samples[i].read_inst_cycles << "," <<
                     samples[i].num_writes << "," << samples[i].write_inst_cycles << "," <<
                     samples[i].num_flushes << "," << samples[i].flush_inst_cycles << "," <<
-                    samples[i].bytes_read << "," << samples[i].bytes_written << std::endl;
+                    samples[i].bytes_read << "," << samples[i].bytes_written << "," <<
+                    samples[i].wpq_inserts << "," << samples[i].rpq_inserts << std::endl;
     }
     
     file_handle.close();

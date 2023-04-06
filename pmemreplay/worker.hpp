@@ -18,6 +18,9 @@ public:
     unsigned long long read_inst_cycles = 0;
     unsigned long long write_inst_cycles = 0;
     unsigned long long flush_inst_cycles = 0;
+
+    unsigned long long wpq_inserts = 0;
+    unsigned long long rpq_inserts = 0;
 };
 
 struct io_stat {

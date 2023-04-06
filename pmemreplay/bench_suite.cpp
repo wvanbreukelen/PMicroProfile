@@ -265,7 +265,7 @@ static void* do_work(void *arg)
 
     struct io_sample *cur_sample;
     size_t sample_pos = 0;
-    unsigned long long total_wpq_count = 0;
+    //unsigned long long total_wpq_count = 0;
 
 
     PMC pmc;
@@ -275,14 +275,20 @@ static void* do_work(void *arg)
         pthread_exit(NULL);
     }
 
-    struct iMCProbe wpq_probe{};
+    struct iMCProbe wpq_probe{}, rpq_probe{};
     if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS, wpq_probe)) {
         std::cerr << "Unable to add probe!" << std::endl;
         pthread_exit(NULL);
     }
 
+    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_INSERTS, rpq_probe)) {
+        std::cerr << "Unable to add probe!" << std::endl;
+        pthread_exit(NULL);
+    }
+
     probe_reset(wpq_probe);
-    probe_enable(wpq_probe);
+    probe_reset(rpq_probe);
+    //probe_enable(wpq_probe);
 
     cur_sample = &(stat->samples[0]);
 
@@ -309,12 +315,15 @@ static void* do_work(void *arg)
             if (((z & 0x08) == 0)) {
                 cur_time = __builtin_ia32_rdtsc();
                 if (is_sampling && (cur_time - latest_sample_time) >= SAMPLE_LENGTH) {
-                    //probe_disable(wpq_probe);
-                    //probe_count(wpq_probe, &total_wpq_count);
-
                     is_sampling = false;
 
                     cur_sample->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
+                    probe_disable(rpq_probe);
+                    probe_disable(wpq_probe);
+
+                    probe_count(rpq_probe, &(cur_sample->rpq_inserts));
+                    probe_count(wpq_probe, &(cur_sample->wpq_inserts));
+
                     cur_sample++;
                     ++(stat->num_collected_samples);
                     assert(stat->num_collected_samples < MAX_SAMPLES);
@@ -324,7 +333,8 @@ static void* do_work(void *arg)
                     is_sampling = true;
                     latest_sample_time = cur_time;
 
-                    //probe_enable(wpq_probe);
+                    probe_enable(rpq_probe);
+                    probe_enable(wpq_probe);
                 }
             }
             ++z;
@@ -593,8 +603,10 @@ static void* do_work(void *arg)
     temp_var++;
     const auto time_stop = std::chrono::high_resolution_clock::now();
 
+    probe_disable(rpq_probe);
+    pmc.remove_imc_probe(rpq_probe);
+
     probe_disable(wpq_probe);
-    probe_count(wpq_probe, &total_wpq_count);
     pmc.remove_imc_probe(wpq_probe);
 
     stat->latency_sum += std::chrono::duration_cast<std::chrono::nanoseconds>(time_stop - time_start).count();
@@ -602,8 +614,6 @@ static void* do_work(void *arg)
     stat->read_bytes += (args->trace_file->get_total(TraceOperation::READ) * i);
     stat->write_bytes += (args->trace_file->get_total(TraceOperation::WRITE) * i);
     stat->total_bytes += (stat->read_bytes + stat->write_bytes);
-
-    std::cout << "WPQ count: " << std::dec << total_wpq_count << std::endl;
 
 
     pthread_exit(NULL);
