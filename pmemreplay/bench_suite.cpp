@@ -270,10 +270,6 @@ static void* do_work(void *arg)
         pthread_exit(NULL);
     }
 
-    if (!pmc.remove_imc_probe(wpq_probe)) {
-        std::cerr << "Unable to remove iMC probes!" << std::endl;
-    }
-
     probe_reset(wpq_probe);
 
     size_t count = 0;
@@ -600,6 +596,10 @@ static void* do_work(void *arg)
 
     probe_disable(wpq_probe);
     probe_count(wpq_probe, &total_wpq_count);
+
+    if (!pmc.remove_imc_probe(wpq_probe)) {
+        std::cerr << "Unable to remove iMC probes!" << std::endl;
+    }
 
     stat->latency_sum += std::chrono::duration_cast<std::chrono::nanoseconds>(time_stop - time_start).count();
     
