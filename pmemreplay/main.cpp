@@ -49,10 +49,10 @@ int main(int argc, char** argv)
 
     TraceFile trace;
 
-    // if (!(parse_trace(trace_file, trace))) {
-    //     std::cout << "Unable to parse trace " << trace_file << ", exiting..." << std::endl;
-    //     return 1;
-    // }
+    if (!(parse_trace(trace_file, trace))) {
+        std::cout << "Unable to parse trace " << trace_file << ", exiting..." << std::endl;
+        return 1;
+    }
 
     std::cout << "Trace -> #R: " << trace.get_total(TraceOperation::READ) << " #W: " << trace.get_total(TraceOperation::WRITE) << " #FLUSH: " << trace.get_total(TraceOperation::CLFLUSH) << std::endl;
 
