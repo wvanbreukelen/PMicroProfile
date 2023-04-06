@@ -10,6 +10,8 @@
 
 #include <sys/syscall.h>
 
+//#define PMC_VERBOSE
+
 struct iMCProbe {
 public:
     size_t num_probes;
@@ -46,26 +48,22 @@ private:
 inline void probe_reset(const struct iMCProbe& iMCProbe)
 {
     for (size_t i = 0; i < iMCProbe.num_probes; ++i) {
-        ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_RESET, 0);
+        (void) ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_RESET, 0);
     }
 }
 
 inline void probe_enable(const struct iMCProbe& iMCProbe)
 {
     for (size_t i = 0; i < iMCProbe.num_probes; ++i) {
-        int res = ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_ENABLE, 0);
-	std::cout << std::dec << res << " ";
+        (void) ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_ENABLE, 0);
     }
-    std::cout << std::endl;
 }
 
 inline void probe_disable(const struct iMCProbe& iMCProbe)
 {
     for (size_t i = 0; i < iMCProbe.num_probes; ++i) {
-        int res = ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_DISABLE, 0);
-	std::cout << std::dec << res << " ";
+       	(void) ioctl(iMCProbe.fd_probes[i], PERF_EVENT_IOC_DISABLE, 0);
     }
-    std::cout << std::endl;
 }
 
 inline void probe_count(const struct iMCProbe& iMCProbe, unsigned long long *count)
@@ -73,8 +71,6 @@ inline void probe_count(const struct iMCProbe& iMCProbe, unsigned long long *cou
     long long local_count = 0;
 
     for (size_t i = 0; i < iMCProbe.num_probes; ++i) {
-        std::cout << "Num read: " << std::dec << read(iMCProbe.fd_probes[i], &local_count, sizeof(long long));
-	std::cout << " Count: " << local_count << std::endl;
         *(count) += local_count;
     }
 }

@@ -6,7 +6,7 @@
 
 
 
-#define PMC_VERBOSE
+//#define PMC_VERBOSE
 
 
 static long perf_event_open(struct perf_event_attr* event_attr, pid_t pid, int cpu,
