@@ -14,6 +14,7 @@
 
 #include "worker.hpp"
 #include "bench_export.hpp"
+#include "pmc.hpp"
 
 
 #define likely(x)    __builtin_expect (!!(x), 1)
@@ -186,30 +187,6 @@ static void clean_cache_range(void *addr, size_t size)
 }
 */
 
-static size_t extract_imc_ids(std::array<unsigned int, 32>& ids)
-{
-    const std::regex pattern("^uncore_imc_[[:xdigit:]]$");
-    const std::filesystem::path bus_dir("/sys/bus/event_source/devices");
-
-    size_t i = 0;
-
-    for (const auto &entry : std::filesystem::directory_iterator(bus_dir))
-    {
-        const auto& path = entry.path();
-        if (std::filesystem::is_directory(path) && std::regex_match(path.filename().string(), pattern)) {
-            const std::filesystem::path& id_file = path / "type";
-
-            std::ifstream file_handle(id_file);
-
-            unsigned int id;
-            if (file_handle >> id)
-                ids[i] = id;
-            ++i;
-        }
-    }
-
-    return i;
-}
 
 static long perf_event_open(struct perf_event_attr* event_attr, pid_t pid, int cpu,
 		     int group_fd, unsigned long flags)
@@ -250,55 +227,11 @@ static int attach_imc_probe(const unsigned int imc_id, const unsigned int event_
 }
 
 
-int setup_perf_events(const pid_t pid)
-{
-    struct perf_event_attr pe;
-
-    long long count;
-    int fd;
-
-    memset(&pe, 0, sizeof(struct perf_event_attr));
-
-    pe.type = 29;
-    pe.size = sizeof(struct perf_event_attr);
-    pe.config = 0x20ff;
-    pe.sample_type = PERF_SAMPLE_IDENTIFIER;
-    //pe.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
-    pe.disabled = 1;
-    //pe.inherit = 1;
-    pe.exclude_guest = 0;
-    pe.exclude_host = 0;
-    //pe.exclude_kernel = 1;
-    //pe.sample_period = 1000; // FIXME: which unit? https://stackoverflow.com/questions/45299059/how-can-i-sample-at-constant-rate-with-perf-event-open
-    //pe.exclude_hv = 0;
-    
-
-    fd = perf_event_open(&pe, -1, 0, -1, 0);
-
-    if (fd == -1) {
-        std::cerr << "Unable to open perf event monitor for event config: 0x" << std::hex << pe.config << " errno: " << std::dec << errno << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    std::cout << "fd: " << fd << std::endl;
-
-    ioctl(fd, PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
-    ioctl(fd, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
-
-    printf("Hello\n");
-
-    ioctl(fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
-    read(fd, &count, sizeof(long long));
-
-    std::cout << std::dec << count << std::endl;
-
-    return fd;
-}
-
 // static double measure_ewr()
 // {
 //     return 0.0;
-// }
+// }//pe.sample_period = 1000; // FIXME: which unit? https://stackoverflow.com/questions/45299059/how-can-i-sample-at-constant-rate-with-perf-event-open
+//  
 
 // static double measure_ebr()
 // {
@@ -323,6 +256,25 @@ static void* do_work(void *arg)
 {
     struct WorkerArguments *args = static_cast<struct WorkerArguments*>(arg);
     struct io_stat *stat = &(args->stat);
+
+    PMC pmc;
+
+    if (!pmc.init()) {
+        std::cerr << "Failed to initialize PMC!" << std::endl;
+        pthread_exit(NULL);
+    }
+
+    struct iMCProbe wpq_probe{};
+    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS, wpq_probe)) {
+        std::cerr << "Unable to add probe!" << std::endl;
+        pthread_exit(NULL);
+    }
+
+    if (!pmc.remove_imc_probe(wpq_probe)) {
+        std::cerr << "Unable to remove iMC probes!" << std::endl;
+    }
+
+    pthread_exit(NULL);
 
     size_t count = 0;
     volatile unsigned long long temp_var = 0;
@@ -671,28 +623,22 @@ void BenchSuite::run(const size_t replay_rounds)
 
     assert(sysconf(_SC_NPROCESSORS_ONLN) > static_cast<long>(this->num_threads));
 
-    std::array<unsigned int, 32> imc_ids;
+    
 
-    const size_t num_imcs = extract_imc_ids(imc_ids);
-    std::cout << "Got " << num_imcs << " iMC's. Numbers: ";
-    for (size_t i = 0; i < num_imcs; ++i)
-        std::cout << std::dec << imc_ids[i] << " ";
-    std::cout << std::endl;
+    // for (size_t i = 0; i < num_imcs; ++i) {
+    //     int fd = attach_imc_probe(imc_ids[i], EVENT_UNC_M_PMM_WPQ_INSERTS);
+    //     close(fd);
+    // }
 
-    for (size_t i = 0; i < num_imcs; ++i) {
-        int fd = attach_imc_probe(imc_ids[i], EVENT_UNC_M_PMM_WPQ_INSERTS);
-        close(fd);
-    }
+    // for (size_t i = 0; i < num_imcs; ++i) {
+    //     int fd = attach_imc_probe(imc_ids[i], EVENT_UNC_M_PMM_RPQ_INSERTS);
+    //     close(fd);
+    // }
 
-    for (size_t i = 0; i < num_imcs; ++i) {
-        int fd = attach_imc_probe(imc_ids[i], EVENT_UNC_M_PMM_RPQ_INSERTS);
-        close(fd);
-    }
-
-    for (size_t i = 0; i < num_imcs; ++i) {
-        int fd = attach_imc_probe(imc_ids[i], EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL);
-        close(fd);
-    }
+    // for (size_t i = 0; i < num_imcs; ++i) {
+    //     int fd = attach_imc_probe(imc_ids[i], EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL);
+    //     close(fd);
+    // }
 
     // TODO: for each of the iMC's, capture unc_m_pmm_wpq_inserts and unc_m_pmm_rpq_inserts
 
