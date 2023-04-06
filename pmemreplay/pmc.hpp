@@ -68,7 +68,7 @@ inline void probe_disable(const struct iMCProbe& iMCProbe)
     std::cout << std::endl;
 }
 
-inline void probe_count(const struct iMCProbe& iMCProbe, unsigned long long *count)
+inline void probe_count(const struct iMCProbe& iMCProbe, long long *count)
 {
     long long local_count = 0;
 

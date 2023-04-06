@@ -257,19 +257,7 @@ static void* do_work(void *arg)
     struct WorkerArguments *args = static_cast<struct WorkerArguments*>(arg);
     struct io_stat *stat = &(args->stat);
 
-    PMC pmc;
-
-    if (!pmc.init()) {
-        std::cerr << "Failed to initialize PMC!" << std::endl;
-        pthread_exit(NULL);
-    }
-
-    struct iMCProbe wpq_probe{};
-    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS, wpq_probe)) {
-        std::cerr << "Unable to add probe!" << std::endl;
-        pthread_exit(NULL);
-    }
-
+   
     //probe_reset(wpq_probe);
 
     size_t count = 0;
@@ -285,8 +273,7 @@ static void* do_work(void *arg)
     size_t sample_pos = 0;
     unsigned long long total_wpq_count = 0;
 
-    probe_reset(wpq_probe);
-    probe_enable(wpq_probe);
+
 
     cur_sample = &(stat->samples[0]);
 
@@ -597,12 +584,7 @@ static void* do_work(void *arg)
     temp_var++;
     const auto time_stop = std::chrono::high_resolution_clock::now();
 
-    probe_disable(wpq_probe);
-    probe_count(wpq_probe, &total_wpq_count);
-
-    if (!pmc.remove_imc_probe(wpq_probe)) {
-        std::cerr << "Unable to remove iMC probes!" << std::endl;
-    }
+   
 
     stat->latency_sum += std::chrono::duration_cast<std::chrono::nanoseconds>(time_stop - time_start).count();
     
@@ -610,7 +592,7 @@ static void* do_work(void *arg)
     stat->write_bytes += (args->trace_file->get_total(TraceOperation::WRITE) * i);
     stat->total_bytes += (stat->read_bytes + stat->write_bytes);
 
-    std::cout << "WPQ count: " << std::dec << total_wpq_count << std::endl;
+    //std::cout << "WPQ count: " << std::dec << total_wpq_count << std::endl;
 
 
     pthread_exit(NULL);
@@ -661,6 +643,23 @@ void BenchSuite::run(const size_t replay_rounds)
 
     //return;
 
+    PMC pmc;
+
+    if (!pmc.init()) {
+        std::cerr << "Failed to initialize PMC!" << std::endl;
+        pthread_exit(NULL);
+    }
+
+    struct iMCProbe wpq_probe{};
+    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS, wpq_probe)) {
+        std::cerr << "Unable to add probe!" << std::endl;
+        pthread_exit(NULL);
+    }
+
+    probe_reset(wpq_probe);
+    probe_enable(wpq_probe);
+
+
     pthread_attr_t attr;
     cpu_set_t cpus;
     pthread_attr_init(&attr);
@@ -692,6 +691,15 @@ void BenchSuite::run(const size_t replay_rounds)
 
     for (size_t i = 0; i < this->num_threads; ++i) {
         pthread_join(threads[i], NULL);
+    }
+
+    long long total_count;
+
+    probe_disable(wpq_probe);
+    probe_count(wpq_probe, &total_count);
+
+    if (!pmc.remove_imc_probe(wpq_probe)) {
+        std::cerr << "Unable to remove iMC probes!" << std::endl;
     }
 
     const struct io_stat* thread_stat = nullptr;
