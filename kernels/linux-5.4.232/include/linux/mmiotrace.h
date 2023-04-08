@@ -20,6 +20,9 @@ struct kmmio_probe {
 	unsigned long		addr;
 	/* length of the probe region: */
 	unsigned long		len;
+	/* is user space probe */
+	unsigned int		is_user;
+	
 	/* Called before addr is executed: */
 	kmmio_pre_handler_t	pre_handler;
 	/* Called after addr is executed: */

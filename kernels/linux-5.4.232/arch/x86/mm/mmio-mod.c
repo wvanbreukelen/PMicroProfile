@@ -140,10 +140,11 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 	struct trap_reason *my_reason = &get_cpu_var(pf_reason);
 	struct mmiotrace_rw *my_trace = &get_cpu_var(cpu_trace);
 	const unsigned long instptr = instruction_pointer(regs);
+	//pr_info("pre faulting address: 0x%lx instptr: 0x%lx\n", addr, instptr);
 	const enum reason_type type = get_ins_type(instptr);
+	//const enum reason_type type = OTHERS;
 	struct remap_trace *trace = p->private;
 	unsigned char *ip;
-
 
 	/* it doesn't make sense to have more than one active trace per cpu */
 	if (my_reason->active_traces)
@@ -190,7 +191,8 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 	} else if (type == INS_CACHE_OP) {
 		my_trace->opcode = MMIO_CLFLUSH;
 	} else { // (hw_error_code & X86_PF_WRITE) 
-		pr_info("Unknown instruction: %x\n", my_trace->opcode_cpu);
+		//pr_info("Unknown instruction: %x\n", my_trace->opcode_cpu);
+		pr_info("Unknown instruction\n");
 	}
 	// 	my_trace->opcode = MMIO_WRITE;
 	// 	my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
@@ -303,8 +305,12 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 
 	mmio_trace_mapping(&map);
 	list_add_tail(&trace->list, &trace_list);
-	if (!nommiotrace)
-		register_kmmio_probe(&trace->probe);
+	if (!nommiotrace) {
+		int ret;
+		if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
+			pr_warn("Unable to map probe at address 0x%lx!, errcode: %d\n", addr, ret);
+		}
+	}
 
 not_enabled:
 	spin_unlock_irq(&trace_lock);

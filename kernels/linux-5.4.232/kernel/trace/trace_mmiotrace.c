@@ -272,8 +272,8 @@ static enum print_line_t mmio_print_line(struct trace_iterator *iter)
 	switch (iter->ent->type) {
 	case TRACE_MMIO_RW:
 		return mmio_print_rw(iter);
-	// case TRACE_MMIO_MAP:
-	// 	return mmio_print_map(iter);
+	case TRACE_MMIO_MAP:
+		return mmio_print_map(iter);
 	case TRACE_PRINT:
 		return mmio_print_mark(iter);
 	default:

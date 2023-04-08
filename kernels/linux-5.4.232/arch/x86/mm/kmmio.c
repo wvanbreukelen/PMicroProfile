@@ -71,13 +71,63 @@ unsigned int kmmio_count;
 static struct list_head kmmio_page_table[KMMIO_PAGE_TABLE_SIZE];
 static LIST_HEAD(kmmio_probes);
 
+static pte_t *lookup_user_address(unsigned long addr, unsigned int* level)
+{
+	pgd_t *pgd;
+	p4d_t *p4d;
+	pud_t *pud;
+	pmd_t *pmd;
+
+	*level = PG_LEVEL_NONE;
+
+	pgd = pgd_offset(current->mm, addr);
+
+	if (pgd_none(*pgd))
+		return NULL;
+
+	p4d = p4d_offset(pgd, addr);
+	if (p4d_none(*p4d))
+		return NULL;
+
+	*level = PG_LEVEL_512G;
+	if (p4d_large(*p4d) || !p4d_present(*p4d))
+		return (pte_t *)p4d;
+
+	pud = pud_offset(p4d, addr);
+	if (pud_none(*pud))
+		return NULL;
+
+	*level = PG_LEVEL_1G;
+	if (pud_large(*pud) || !pud_present(*pud))
+		return (pte_t *)pud;
+
+	pmd = pmd_offset(pud, addr);
+	if (pmd_none(*pmd))
+		return NULL;
+
+	*level = PG_LEVEL_2M;
+	if (pmd_large(*pmd) || !pmd_present(*pmd))
+		return (pte_t *)pmd;
+
+	*level = PG_LEVEL_4K;
+
+	return pte_offset_kernel(pmd, addr);
+}
+
 static struct list_head *kmmio_page_list(unsigned long addr)
 {
 	unsigned int l;
 	pte_t *pte = lookup_address(addr, &l);
 
-	if (!pte)
-		return NULL;
+	if (!pte) {
+		pte = lookup_user_address(addr, &l);
+
+		if (!pte)
+			return NULL;
+
+		//pr_info("kmmio_page_list: found user page\n");
+	}
+		
 	addr &= page_level_mask(l);
 
 	return &kmmio_page_table[hash_long(addr, KMMIO_PAGE_HASH_BITS)];
@@ -113,8 +163,15 @@ static struct kmmio_fault_page *get_kmmio_fault_page(unsigned long addr)
 	unsigned int l;
 	pte_t *pte = lookup_address(addr, &l);
 
-	if (!pte)
-		return NULL;
+	if (!pte) {
+		pte = lookup_user_address(addr, &l);
+
+		if (!pte) {
+			return NULL;
+		}
+		//pr_info("get_kmmio_fault_page: found user page\n");
+	}
+		
 	addr &= page_level_mask(l);
 	head = kmmio_page_list(addr);
 	list_for_each_entry_rcu(f, head, list) {
@@ -171,8 +228,12 @@ static int clear_page_presence(struct kmmio_fault_page *f, bool clear)
 	pte_t *pte = lookup_address(f->addr, &level);
 
 	if (!pte) {
-		pr_err("no pte for addr 0x%08lx\n", f->addr);
-		return -1;
+		pte = lookup_user_address(f->addr, &level);
+
+		if (!pte) {
+			pr_err("no pte for addr 0x%08lx\n", f->addr);
+			return -1;
+		}
 	}
 
 	switch (level) {
@@ -253,8 +314,15 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	unsigned long page_base = addr;
 	unsigned int l;
 	pte_t *pte = lookup_address(addr, &l);
-	if (!pte)
-		return -EINVAL;
+	if (!pte) {
+		pte = lookup_user_address(addr, &l);
+
+		if (!pte) {
+			pr_warn("Lookup address failed in kmmio_handler!!!!\n");
+			return -EINVAL;
+		}
+	}
+		
 	page_base &= page_level_mask(l);
 
 	/*
@@ -275,6 +343,9 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 		 * another CPU just pulled the kmmio probe from under
 		 * our feet. The latter case should not be possible.
 		 */
+
+		//pr_warn("kmmio_handler: unable to get fauling page. Lock still held?\n");
+
 		goto no_kmmio;
 	}
 
@@ -446,6 +517,8 @@ static void release_kmmio_fault_page(unsigned long addr,
 	}
 }
 
+
+
 /*
  * With page-unaligned ioremaps, one or two armed pages may contain
  * addresses from outside the intended mapping. Events for these addresses
@@ -469,11 +542,23 @@ int register_kmmio_probe(struct kmmio_probe *p)
 		goto out;
 	}
 
+	pr_info("register_kmmio_probe: looking up info for address 0x%lx\n", addr);
+
 	pte = lookup_address(addr, &l);
+
 	if (!pte) {
-		ret = -EINVAL;
-		goto out;
+		// Check if the address can be found in the user space area.
+		pte = lookup_user_address(addr, &l);
+
+		if (!pte) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		pr_info("PTE user found!\n");		
 	}
+
+	//pr_info("pte for address %p: %p\n", addr, pte);
 
 	kmmio_count++;
 	list_add_rcu(&p->list, &kmmio_probes);
@@ -623,9 +708,36 @@ void unregister_kmmio_probe(struct kmmio_probe *p)
 	pte_t *pte;
 
 	pte = lookup_address(addr, &l);
-	if (!pte)
-		return;
+	if (!pte) {
+		pte = lookup_user_address(addr, &l);
 
+		if (!pte) {
+			pr_warn("Removing user space program probe, dangerous...\n");
+
+			spin_lock_irqsave(&kmmio_lock, flags);
+			if ((&p->list))
+				list_del_rcu(&p->list);
+			kmmio_count--;
+			spin_unlock_irqrestore(&kmmio_lock, flags);
+			
+
+
+			if (!release_list)
+				return;
+
+			drelease = kmalloc(sizeof(*drelease), GFP_ATOMIC);
+			if (!drelease) {
+				pr_crit("leaking kmmio_fault_page objects.\n");
+				return;
+			}
+			drelease->release_list = release_list;
+
+			call_rcu(&drelease->rcu, remove_kmmio_fault_pages);
+
+			return;
+		}
+	}
+		
 	spin_lock_irqsave(&kmmio_lock, flags);
 	while (size < size_lim) {
 		release_kmmio_fault_page(addr + size, &release_list);
