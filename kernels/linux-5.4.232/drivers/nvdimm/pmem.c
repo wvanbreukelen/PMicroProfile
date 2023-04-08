@@ -534,7 +534,7 @@ static int pmem_attach_disk(struct device *dev,
 	if (!pmem->bb_state)
 		dev_warn(dev, "'badblocks' notification disabled\n");
 
-	mmiotrace_ioremap(pmem->phys_addr, pmem->size, (unsigned long) pmem->virt_addr);
+	mmiotrace_ioremap(pmem->phys_addr, pmem->size, (unsigned long) pmem->virt_addr, NULL);
 
 	return 0;
 }
@@ -624,7 +624,7 @@ static void nd_pmem_notify(struct device *dev, enum nvdimm_event event)
 		struct pmem_device *pmem = dev_get_drvdata(dev);
 		//pr_info("Tracing PMEM accesses at [%p %p] (size: %lu, virt_addr: %p)\n", pmem->phys_addr, pmem->phys_addr + pmem->size, pmem->size, pmem->virt_addr);
 
-		mmiotrace_ioremap(pmem->phys_addr, pmem->size, (unsigned long) pmem->virt_addr);
+		mmiotrace_ioremap(pmem->phys_addr, pmem->size, (unsigned long) pmem->virt_addr, NULL);
 
 		return;
 	}

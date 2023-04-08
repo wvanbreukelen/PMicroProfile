@@ -21,8 +21,7 @@ struct kmmio_probe {
 	/* length of the probe region: */
 	unsigned long		len;
 	/* is user space probe */
-	unsigned int		is_user;
-	
+	struct task_struct* 		user_task;
 	/* Called before addr is executed: */
 	kmmio_pre_handler_t	pre_handler;
 	/* Called after addr is executed: */
@@ -49,7 +48,7 @@ extern int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long
 
 /* Called from ioremap.c */
 extern void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
-							void __iomem *addr);
+							void __iomem *addr, struct task_struct* user_task);
 extern void mmiotrace_iounmap(volatile void __iomem *addr);
 
 extern void mmiotrace_disarm_trace_probe(volatile void __iomem *addr);

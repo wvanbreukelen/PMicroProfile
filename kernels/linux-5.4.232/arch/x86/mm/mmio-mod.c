@@ -259,7 +259,7 @@ static void post(struct kmmio_probe *p, unsigned long condition,
 }
 
 static void ioremap_trace_core(resource_size_t offset, unsigned long size,
-							void __iomem *addr)
+							void __iomem *addr, struct task_struct* _user_task)
 {
 	static atomic_t next_id;
 	struct remap_trace *trace_in_list;
@@ -281,6 +281,7 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 		.probe = {
 			.addr = (unsigned long)addr,
 			.len = size,
+			.user_task = _user_task,
 			.pre_handler = pre,
 			.post_handler = post,
 			.private = trace
@@ -317,7 +318,7 @@ not_enabled:
 }
 
 void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
-						void __iomem *addr)
+						void __iomem *addr, struct task_struct* user_task)
 {
 	if (!is_enabled()) /* recheck and proper locking in *_core() */
 		return;
@@ -329,7 +330,7 @@ void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
 		return;
 	}
 		
-	ioremap_trace_core(offset, size, addr);
+	ioremap_trace_core(offset, size, addr, user_task);
 }
 
 void mmiotrace_disarm_trace_probe(volatile void __iomem *addr)

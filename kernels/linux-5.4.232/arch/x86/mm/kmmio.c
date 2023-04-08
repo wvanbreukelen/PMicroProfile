@@ -27,6 +27,8 @@
 #include <linux/errno.h>
 #include <asm/debugreg.h>
 #include <linux/mmiotrace.h>
+#include <asm/mmu_context.h>
+
 
 #define KMMIO_PAGE_HASH_BITS 4
 #define KMMIO_PAGE_TABLE_SIZE (1 << KMMIO_PAGE_HASH_BITS)
@@ -57,6 +59,7 @@ struct kmmio_delayed_release {
 struct kmmio_context {
 	struct kmmio_fault_page *fpage;
 	struct kmmio_probe *probe;
+	struct mm_struct *old_mm;
 	unsigned long saved_flags;
 	unsigned long addr;
 	int active;
@@ -71,7 +74,7 @@ unsigned int kmmio_count;
 static struct list_head kmmio_page_table[KMMIO_PAGE_TABLE_SIZE];
 static LIST_HEAD(kmmio_probes);
 
-static pte_t *lookup_user_address(unsigned long addr, unsigned int* level)
+static pte_t *lookup_user_address(unsigned long addr, unsigned int* level, struct mm_struct *mm)
 {
 	pgd_t *pgd;
 	p4d_t *p4d;
@@ -80,7 +83,7 @@ static pte_t *lookup_user_address(unsigned long addr, unsigned int* level)
 
 	*level = PG_LEVEL_NONE;
 
-	pgd = pgd_offset(current->mm, addr);
+	pgd = pgd_offset(mm, addr);
 
 	if (pgd_none(*pgd))
 		return NULL;
@@ -120,7 +123,7 @@ static struct list_head *kmmio_page_list(unsigned long addr)
 	pte_t *pte = lookup_address(addr, &l);
 
 	if (!pte) {
-		pte = lookup_user_address(addr, &l);
+		pte = lookup_user_address(addr, &l, current->mm);
 
 		if (!pte)
 			return NULL;
@@ -164,7 +167,7 @@ static struct kmmio_fault_page *get_kmmio_fault_page(unsigned long addr)
 	pte_t *pte = lookup_address(addr, &l);
 
 	if (!pte) {
-		pte = lookup_user_address(addr, &l);
+		pte = lookup_user_address(addr, &l, current->mm);
 
 		if (!pte) {
 			return NULL;
@@ -228,7 +231,7 @@ static int clear_page_presence(struct kmmio_fault_page *f, bool clear)
 	pte_t *pte = lookup_address(f->addr, &level);
 
 	if (!pte) {
-		pte = lookup_user_address(f->addr, &level);
+		pte = lookup_user_address(f->addr, &level, current->mm);
 
 		if (!pte) {
 			pr_err("no pte for addr 0x%08lx\n", f->addr);
@@ -313,17 +316,9 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	int ret = 0; /* default to fault not handled */
 	unsigned long page_base = addr;
 	unsigned int l;
-	pte_t *pte = lookup_address(addr, &l);
-	if (!pte) {
-		pte = lookup_user_address(addr, &l);
-
-		if (!pte) {
-			pr_warn("Lookup address failed in kmmio_handler!!!!\n");
-			return -EINVAL;
-		}
-	}
-		
-	page_base &= page_level_mask(l);
+	struct mm_struct *old_mm = NULL;
+	struct kmmio_probe *p = NULL;
+	unsigned long flags;
 
 	/*
 	 * Preemption is now disabled to prevent process switch during
@@ -333,8 +328,33 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	 * stepping to avoid looking up the probe and kmmio_fault_page
 	 * again.
 	 */
+
 	preempt_disable();
 	rcu_read_lock();
+
+	pte_t *pte = lookup_address(addr, &l);
+	if (!pte) {
+		
+		p = get_kmmio_probe(page_base);
+
+		if (p && p->user_task) {
+			old_mm = current->active_mm;
+			switch_mm(old_mm, p->user_task->mm, current);
+
+			pte = lookup_user_address(addr, &l, p->user_task->mm);
+		}
+
+		if (!pte) {
+			//pr_warn("Lookup address failed in kmmio_handler!!!!\n");
+			ret = -EINVAL;
+			
+			goto no_kmmio;
+		}
+	}
+		
+	page_base &= page_level_mask(l);
+
+
 
 	faultpage = get_kmmio_fault_page(page_base);
 	if (!faultpage) {
@@ -346,7 +366,7 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 
 		//pr_warn("kmmio_handler: unable to get fauling page. Lock still held?\n");
 
-		goto no_kmmio;
+		goto no_kmmio_switch_mm;
 	}
 
 	ctx = &get_cpu_var(kmmio_ctx);
@@ -383,6 +403,8 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	ctx->saved_flags = (regs->flags & (X86_EFLAGS_TF | X86_EFLAGS_IF));
 	ctx->addr = page_base;
 
+	ctx->old_mm = (old_mm) ? old_mm : NULL;
+
 	if (ctx->probe && ctx->probe->pre_handler)
 		ctx->probe->pre_handler(ctx->probe, regs, addr, hw_error_code);
 
@@ -403,11 +425,26 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	 * the user should drop to single cpu before tracing.
 	 */
 
+	if (p && p->user_task && old_mm) {
+		struct mm_struct* prev_temp;
+
+		switch_mm(prev_temp, old_mm, current);
+	}
+		
+
 	put_cpu_var(kmmio_ctx);
+	
 	return 1; /* fault handled */
 
 no_kmmio_ctx:
 	put_cpu_var(kmmio_ctx);
+no_kmmio_switch_mm:
+	if (p && p->user_task && old_mm) {
+		struct mm_struct* prev_temp;
+
+		switch_mm(prev_temp, old_mm, current);
+		old_mm = NULL;
+	}
 no_kmmio:
 	rcu_read_unlock();
 	preempt_enable_no_resched();
@@ -450,6 +487,13 @@ static int post_kmmio_handler(unsigned long condition, struct pt_regs *regs)
 	/* These were acquired in kmmio_handler(). */
 	ctx->active--;
 	BUG_ON(ctx->active);
+	
+	if (ctx->old_mm) {
+		struct mm_struct* prev_temp;
+
+		switch_mm(prev_temp, ctx->old_mm, current);
+	}
+
 	rcu_read_unlock();
 	preempt_enable_no_resched();
 
@@ -497,13 +541,22 @@ static int add_kmmio_fault_page(unsigned long addr)
 
 /* You must be holding kmmio_lock. */
 static void release_kmmio_fault_page(unsigned long addr,
-				struct kmmio_fault_page **release_list)
+				struct kmmio_fault_page **release_list, int is_user)
 {
 	struct kmmio_fault_page *f;
 
+
 	f = get_kmmio_fault_page(addr);
-	if (!f)
-		return;
+
+	if (!f) {
+		if (is_user) {
+			// ISSUE: We might be unable to disarm kmmio pages in case the process is already killed.
+			return;
+		} else {
+			return;
+		}
+	}
+		
 
 	f->count--;
 	BUG_ON(f->count < 0);
@@ -547,15 +600,16 @@ int register_kmmio_probe(struct kmmio_probe *p)
 	pte = lookup_address(addr, &l);
 
 	if (!pte) {
-		// Check if the address can be found in the user space area.
-		pte = lookup_user_address(addr, &l);
+		if (p->user_task) {
+			// Check if the address can be found in the user space area.
+			
+			pte = lookup_user_address(addr, &l, current->mm);
+		}
 
 		if (!pte) {
 			ret = -EINVAL;
 			goto out;
 		}
-
-		pr_info("PTE user found!\n");		
 	}
 
 	//pr_info("pte for address %p: %p\n", addr, pte);
@@ -709,18 +763,18 @@ void unregister_kmmio_probe(struct kmmio_probe *p)
 
 	pte = lookup_address(addr, &l);
 	if (!pte) {
-		pte = lookup_user_address(addr, &l);
-
-		if (!pte) {
-			pr_warn("Removing user space program probe, dangerous...\n");
-
+		if (p->user_task) {
 			spin_lock_irqsave(&kmmio_lock, flags);
+
+			while (size < size_lim) {
+				release_kmmio_fault_page(addr + size, &release_list, true);
+				size += page_level_size(l);
+			}
+
 			if ((&p->list))
 				list_del_rcu(&p->list);
 			kmmio_count--;
 			spin_unlock_irqrestore(&kmmio_lock, flags);
-			
-
 
 			if (!release_list)
 				return;
@@ -735,12 +789,18 @@ void unregister_kmmio_probe(struct kmmio_probe *p)
 			call_rcu(&drelease->rcu, remove_kmmio_fault_pages);
 
 			return;
+			//pte = lookup_user_address(addr, &l, current->mm);
 		}
+
+		if (!pte)
+			return;
+
+
 	}
 		
 	spin_lock_irqsave(&kmmio_lock, flags);
 	while (size < size_lim) {
-		release_kmmio_fault_page(addr + size, &release_list);
+		release_kmmio_fault_page(addr + size, &release_list, false);
 		size += page_level_size(l);
 	}
 
