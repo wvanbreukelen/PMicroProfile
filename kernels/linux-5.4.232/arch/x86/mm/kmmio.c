@@ -167,7 +167,8 @@ static struct kmmio_fault_page *get_kmmio_fault_page(unsigned long addr)
 	pte_t *pte = lookup_address(addr, &l);
 
 	if (!pte) {
-		pte = lookup_user_address(addr, &l, current->mm);
+		if (current && current->mm)
+			pte = lookup_user_address(addr, &l, current->mm);
 
 		if (!pte) {
 			return NULL;
@@ -429,6 +430,10 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 		struct mm_struct* prev_temp;
 
 		switch_mm(prev_temp, old_mm, current);
+
+		// We are still holding the rcu read lock. To avoid locking errors while in single stepping mode we manually decrease the lock count by one.
+		// if (current->lockdep_depth > 0)
+		// 	current->lockdep_depth--;
 	}
 		
 
@@ -446,6 +451,7 @@ no_kmmio_switch_mm:
 		old_mm = NULL;
 	}
 no_kmmio:
+	//pr_info("releasing rcu_read_lock\n");
 	rcu_read_unlock();
 	preempt_enable_no_resched();
 	return ret;
@@ -492,8 +498,12 @@ static int post_kmmio_handler(unsigned long condition, struct pt_regs *regs)
 		struct mm_struct* prev_temp;
 
 		switch_mm(prev_temp, ctx->old_mm, current);
+		// We are still holding the rcu read lock. To avoid locking errors while in single stepping mode we manually decrease the lock count by one.
+		//current->lockdep_depth++;
 	}
 
+	//pr_info("releasing rcu_read_lock\n");
+	
 	rcu_read_unlock();
 	preempt_enable_no_resched();
 
@@ -541,22 +551,15 @@ static int add_kmmio_fault_page(unsigned long addr)
 
 /* You must be holding kmmio_lock. */
 static void release_kmmio_fault_page(unsigned long addr,
-				struct kmmio_fault_page **release_list, int is_user)
+				struct kmmio_fault_page **release_list)
 {
 	struct kmmio_fault_page *f;
 
 
 	f = get_kmmio_fault_page(addr);
 
-	if (!f) {
-		if (is_user) {
-			// ISSUE: We might be unable to disarm kmmio pages in case the process is already killed.
-			return;
-		} else {
-			return;
-		}
-	}
-		
+	if (!f)
+		return;
 
 	f->count--;
 	BUG_ON(f->count < 0);
@@ -767,7 +770,7 @@ void unregister_kmmio_probe(struct kmmio_probe *p)
 			spin_lock_irqsave(&kmmio_lock, flags);
 
 			while (size < size_lim) {
-				release_kmmio_fault_page(addr + size, &release_list, true);
+				release_kmmio_fault_page(addr + size, &release_list);
 				size += page_level_size(l);
 			}
 
@@ -800,7 +803,7 @@ void unregister_kmmio_probe(struct kmmio_probe *p)
 		
 	spin_lock_irqsave(&kmmio_lock, flags);
 	while (size < size_lim) {
-		release_kmmio_fault_page(addr + size, &release_list, false);
+		release_kmmio_fault_page(addr + size, &release_list);
 		size += page_level_size(l);
 	}
 
