@@ -57,7 +57,7 @@ enum class TraceOperation {
 
 
 unsigned int SAMPLE_RATE = 10; // was 60 hz for ext4-dax
-double DUTY_CYCLE = 1; // was 2 for ext4-dax
+double DUTY_CYCLE = 0.5;
 
 volatile bool is_stopped = false;
 pthread_mutex_t stopMutex;
@@ -205,6 +205,8 @@ void* pmem_sampler(void *arg)
 	const struct sample_thread_args* thread_args = (const struct sample_thread_args* ) arg;
 
 	const int period = 1000000 / thread_args->sample_rate;
+	const float period_on = period * thread_args->duty_cycle;
+	const float period_off = period * (1.0 - thread_args->duty_cycle);
 	bool is_enabled = true;
 
 	cpu_set_t cpuset;
@@ -216,27 +218,34 @@ void* pmem_sampler(void *arg)
         sp.sched_priority = sched_get_priority_max(SCHED_FIFO);
 
 	if (sched_setscheduler(getpid(), SCHED_FIFO, &sp) < 0) {
-              fprintf(stderr, "Error setting SCHED_FIFO policy, errno: %d.\n", errno);
-              exit(EXIT_FAILURE);
-        }
+        fprintf(stderr, "Error setting SCHED_FIFO policy, errno: %d.\n", errno);
+        exit(EXIT_FAILURE);
+    }
+
+	if (thread_args->duty_cycle < 0.0 || thread_args->duty_cycle > 1.0) {
+		fprintf(stderr, "Duty cycle is not between 0.0 and 1.0");
+		exit(EXIT_FAILURE);
+	}
 
 
-	printf("Thread running...\n");
+	printf("Thread running... %f %f\n", period_on, period_off);
 
 	while (!getStopIssued()) {
-		if (is_enabled) {
-			usleep(period * thread_args->duty_cycle);
-			#ifndef DEBUG
-			ioctl(thread_args->fd, ND_CMD_TRACE_DISABLE);
-			#endif
-		} else {
-			usleep(period);
-			#ifndef DEBUG
-			ioctl(thread_args->fd, ND_CMD_TRACE_ENABLE);
-			#endif
-		}
+		if (period_off > 0.0) { 
+			if (is_enabled) {
+				usleep(period_on);
+				#ifndef DEBUG
+				ioctl(thread_args->fd, ND_CMD_TRACE_DISABLE);
+				#endif
+			} else {
+				usleep(period_off);
+				#ifndef DEBUG
+				ioctl(thread_args->fd, ND_CMD_TRACE_ENABLE);
+				#endif
+			}
 
-		is_enabled = !(is_enabled);
+			is_enabled = !(is_enabled);
+		}
 	}
 
 	#ifndef DEBUG
@@ -581,7 +590,7 @@ int main(int argc, char** argv)
 	app.add_option("-s, --sample-rate", SAMPLE_RATE, "Sample rate")
         ->default_val(SAMPLE_RATE);
 	app.add_option("--duty-cycle", DUTY_CYCLE, "Duty cycle")
-		->default_val(DUTY_CYCLE);
+		->default_val(DUTY_CYCLE)->check(CLI::Range(0.0, 1.0, "Duty cycle must be between 0.0 and 1.0"));
 	
 	app.allow_extras();
 
