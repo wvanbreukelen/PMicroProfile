@@ -638,7 +638,7 @@ int main(int argc, char** argv)
 		fprintf(stderr, "mmiotrace is not enabled, enabling...\n");
 
 		toggle_mmiotrace(true);
-		sleep(2);
+		sleep(1);
 
 		//exit(EXIT_FAILURE);
   	}
@@ -646,7 +646,7 @@ int main(int argc, char** argv)
 	if (get_trace_buf_size() < TRACER_BUF_SIZE) {
 		printf("Increasing tracing buffer size to %u bytes...\n", TRACER_BUF_SIZE);
 		set_trace_buf_size(TRACER_BUF_SIZE);
-		sleep(2);
+		sleep(1);
 	}
 
 	//printf("Current trace buffer size: %u\n", get_trace_buf_size());
@@ -698,7 +698,7 @@ int main(int argc, char** argv)
 	}
 	pthread_detach(tid_rd);
 
-	sleep(3);
+	sleep(1);
 
 	printf("Running command...\n\f");
 
@@ -729,7 +729,7 @@ int main(int argc, char** argv)
 
 	close(fd);
 	sync();
-	sleep(2);
+	sleep(1);
 
 	toggle_mmiotrace(false);
 
