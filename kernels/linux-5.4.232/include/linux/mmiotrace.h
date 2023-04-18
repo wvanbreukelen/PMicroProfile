@@ -4,6 +4,7 @@
 
 #include <linux/types.h>
 #include <linux/list.h>
+#include <linux/atomic.h>
 
 struct kmmio_probe;
 struct pt_regs;
@@ -36,13 +37,13 @@ extern void unregister_kmmio_probe(struct kmmio_probe *p);
 extern int kmmio_init(void);
 extern void kmmio_cleanup(void);
 
-#ifdef CONFIG_MMIOTRACE
-/* kmmio is active by some kmmio_probes? */
-static inline int is_kmmio_active(void)
-{
-	return kmmio_count;
-}
 
+
+#define KMMIO_HERTZ 50
+
+#ifdef CONFIG_MMIOTRACE
+
+extern atomic_t kmmio_miss_counter;
 /* Called from page fault handler. */
 extern int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_error_code);
 
@@ -117,5 +118,10 @@ extern void disable_mmiotrace(void);
 extern void mmio_trace_rw(struct mmiotrace_rw *rw);
 extern void mmio_trace_mapping(struct mmiotrace_map *map);
 extern __printf(1, 0) int mmio_trace_printk(const char *fmt, va_list args);
+
+#ifdef CONFIG_MMIOTRACE
+inline int is_kmmio_active(void);
+
+#endif
 
 #endif /* _LINUX_MMIOTRACE_H */

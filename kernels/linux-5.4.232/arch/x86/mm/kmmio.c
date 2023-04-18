@@ -30,8 +30,12 @@
 #include <asm/mmu_context.h>
 
 
+
+
 #define KMMIO_PAGE_HASH_BITS 4
 #define KMMIO_PAGE_TABLE_SIZE (1 << KMMIO_PAGE_HASH_BITS)
+
+
 
 struct kmmio_fault_page {
 	struct list_head list;
@@ -321,6 +325,8 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	struct kmmio_probe *p = NULL;
 	unsigned long flags;
 
+	
+
 	/*
 	 * Preemption is now disabled to prevent process switch during
 	 * single stepping. We can only handle one active kmmio trace
@@ -598,7 +604,7 @@ int register_kmmio_probe(struct kmmio_probe *p)
 		goto out;
 	}
 
-	pr_info("register_kmmio_probe: looking up info for address 0x%lx\n", addr);
+	;//pr_info("register_kmmio_probe: looking up info for address 0x%lx\n", addr);
 
 	pte = lookup_address(addr, &l);
 
@@ -869,6 +875,8 @@ int kmmio_init(void)
 
 	for (i = 0; i < KMMIO_PAGE_TABLE_SIZE; i++)
 		INIT_LIST_HEAD(&kmmio_page_table[i]);
+
+	atomic_set(&kmmio_miss_counter, 0);
 
 	return register_die_notifier(&nb_die);
 }

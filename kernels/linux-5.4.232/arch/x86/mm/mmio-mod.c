@@ -24,6 +24,8 @@
 #include <linux/atomic.h>
 #include <linux/percpu.h>
 #include <linux/cpu.h>
+#include <linux/kthread.h>
+#include <linux/delay.h>
 #include <asm/traps.h>			/* dotraplinkage, ...		*/
 
 #include "pf_in.h"
@@ -40,6 +42,7 @@ struct remap_trace {
 	struct kmmio_probe probe;
 	resource_size_t phys;
 	unsigned long id;
+	unsigned int enabled;
 };
 
 /* Accessed per-cpu. */
@@ -50,6 +53,10 @@ static DEFINE_MUTEX(mmiotrace_mutex);
 static DEFINE_SPINLOCK(trace_lock);
 static atomic_t mmiotrace_enabled;
 static LIST_HEAD(trace_list);		/* struct remap_trace */
+static LIST_HEAD(trace_list_soft);
+
+struct task_struct *kth;
+static const unsigned int period_hz = 5;
 
 /*
  * Locking in this file:
@@ -66,6 +73,7 @@ static LIST_HEAD(trace_list);		/* struct remap_trace */
 static unsigned long	filter_offset;
 static bool		nommiotrace;
 static bool		trace_pc;
+atomic_t kmmio_miss_counter;
 
 module_param(filter_offset, ulong, 0);
 module_param(nommiotrace, bool, 0);
@@ -311,6 +319,7 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 		if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
 			pr_warn("Unable to map probe at address 0x%lx!, errcode: %d\n", addr, ret);
 		}
+		trace->enabled = 1;
 	}
 
 not_enabled:
@@ -345,7 +354,7 @@ void mmiotrace_disarm_trace_probe(volatile void __iomem *addr)
 
 	list_for_each_entry_safe(trace, tmp, &trace_list, list) {
 		if ((unsigned long)addr == trace->probe.addr) {
-			if (!nommiotrace) {
+			if (!nommiotrace && trace->enabled) {
 				//pr_debug("Unmapping %p.\n", addr);
 				unregister_kmmio_probe(&trace->probe);
 			}
@@ -383,7 +392,7 @@ static void iounmap_trace_core(volatile void __iomem *addr)
 
 	list_for_each_entry_safe(trace, tmp, &trace_list, list) {
 		if ((unsigned long)addr == trace->probe.addr) {
-			if (!nommiotrace)
+			if (!nommiotrace && trace->enabled)
 				unregister_kmmio_probe(&trace->probe);
 			list_del(&trace->list);
 			found_trace = trace;
@@ -441,8 +450,10 @@ static void clear_trace_list(void)
 	list_for_each_entry(trace, &trace_list, list) {
 		pr_notice("purging non-iounmapped trace @0x%08lx, size 0x%lx.\n",
 			  trace->probe.addr, trace->probe.len);
-		if (!nommiotrace)
+		if (!nommiotrace && trace->enabled) {
 			unregister_kmmio_probe(&trace->probe);
+			trace->enabled = 0;
+		}
 	}
 	synchronize_rcu(); /* unregister_kmmio_probe() requirement */
 
@@ -515,8 +526,104 @@ static void leave_uniprocessor(void)
 }
 #endif
 
+static void enable_mmiotrace_soft(void)
+{
+	mutex_lock(&mmiotrace_mutex);
+	spin_lock_irq(&trace_lock);
+	if (!is_enabled())
+		goto out;
+
+	if (nommiotrace)
+		pr_info("MMIO tracing disabled.\n");
+	//enter_uniprocessor();
+
+	struct remap_trace *trace;
+	struct remap_trace *tmp;
+	int ret;
+
+	list_for_each_entry(trace, &trace_list, list) {
+		if (!nommiotrace) {
+			if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
+				pr_warn("Unable to map probe!\n");
+			}
+			trace->enabled = 1;
+		}
+	}
+
+	pr_info("enabled soft.\n");
+out:
+	spin_unlock_irq(&trace_lock);
+	mutex_unlock(&mmiotrace_mutex);
+}
+
+static void disable_mmiotrace_soft(void)
+{
+	struct remap_trace *trace;
+	struct remap_trace *tmp;
+
+	mutex_lock(&mmiotrace_mutex);
+	spin_lock_irq(&trace_lock);
+
+	if (!is_enabled())
+		goto out;
+
+	/*
+	 * No locking required, because the caller ensures we are in a
+	 * critical section via mutex, and is_enabled() is false,
+	 * i.e. nothing can traverse or modify this list.
+	 * Caller also ensures is_enabled() cannot change.
+	 */
+	list_for_each_entry_safe(trace, tmp, &trace_list, list) {
+		pr_notice("purging non-iounmapped trace @0x%08lx, size 0x%lx.\n",
+			  trace->probe.addr, trace->probe.len);
+		if (!nommiotrace) {
+			unregister_kmmio_probe(&trace->probe);
+			trace->enabled = 0;
+			//list_del(&trace->list);
+		}
+	}
+	synchronize_rcu(); /* unregister_kmmio_probe() requirement */
+
+	//leave_uniprocessor();
+	//kmmio_cleanup();
+	pr_info("disabled soft.\n");
+out:
+	spin_unlock_irq(&trace_lock);
+	mutex_unlock(&mmiotrace_mutex);
+}
+
+/* kmmio is active by some kmmio_probes? */
+inline int is_kmmio_active(void)
+{	
+	return kmmio_count;
+}
+
+static int pmemtrace_sampler(void *idx)
+{
+	unsigned int _period_hz = *(unsigned int*) idx;
+	unsigned int toggle = 1;
+	pr_info("period_hz: %u\n", _period_hz);
+	const unsigned int period = 1000 / _period_hz;
+
+	while (!kthread_should_stop()) {
+		if (toggle) {
+			enable_mmiotrace_soft();
+		} else if (kmmio_count) {
+			disable_mmiotrace_soft();
+		}
+
+		toggle = !(toggle);
+
+		pr_info("sleeping: %u ms\n", period);
+		msleep_interruptible(period);
+	}
+
+	return 0;
+}
+
 void enable_mmiotrace(void)
 {
+
 	mutex_lock(&mmiotrace_mutex);
 	if (is_enabled())
 		goto out;
@@ -528,6 +635,17 @@ void enable_mmiotrace(void)
 	spin_lock_irq(&trace_lock);
 	atomic_inc(&mmiotrace_enabled);
 	spin_unlock_irq(&trace_lock);
+
+
+	kth = kthread_create_on_cpu(pmemtrace_sampler, &period_hz, get_cpu(), "pmemtrace_sampler");
+
+	if (kth != NULL) {
+		wake_up_process(kth);
+		pr_info("pmemtrace sampler enabled.\n");
+	} else {
+		pr_info("pmemtrace sampler not enabled.\n");
+	}
+
 	pr_info("enabled.\n");
 out:
 	mutex_unlock(&mmiotrace_mutex);
@@ -535,6 +653,14 @@ out:
 
 void disable_mmiotrace(void)
 {
+	if (kth) {
+		if (kthread_stop(kth) < 0) {
+			pr_info("cannot stop sampler.\n");
+		} else {
+			pr_info("sampler disabled.\n");
+		}
+	}
+
 	mutex_lock(&mmiotrace_mutex);
 	if (!is_enabled())
 		goto out;

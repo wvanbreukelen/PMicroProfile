@@ -825,6 +825,10 @@ static const struct nd_cmd_desc __nd_cmd_bus_descs[] = {
 		.out_num = 1,
 		.out_sizes = { 4, },
 	},
+	[ND_CMD_TRACE_HERTZ] = {
+		.in_num = 1,
+		.in_sizes = { UINT_MAX, },
+	},
 };
 
 const struct nd_cmd_desc *nd_cmd_bus_desc(int cmd)
@@ -1074,6 +1078,47 @@ static int set_pmem_trace_disable(struct device *dev, void *data)
 	return 0;
 }
 
+static int set_pmem_trace_hertz(struct device *dev, void *data)
+{
+	struct nd_btt *nd_btt = is_nd_btt(dev) ? to_nd_btt(dev) : NULL;
+	struct nd_pfn *nd_pfn = is_nd_pfn(dev) ? to_nd_pfn(dev) : NULL;
+	struct nd_dax *nd_dax = is_nd_dax(dev) ? to_nd_dax(dev) : NULL;
+	struct nd_namespace_common *ndns = NULL;
+	struct nd_namespace_io *nsio;
+	struct nd_device_driver *nd_drv;
+	
+	resource_size_t offset = 0, end_trunc = 0, pstart, pend;
+
+	if (nd_dax || !dev->driver)
+		return 0;
+
+	if (nd_btt || nd_pfn || nd_dax) {
+		if (nd_btt)
+			ndns = nd_btt->ndns;
+		else if (nd_pfn)
+			ndns = nd_pfn->ndns;
+		else if (nd_dax)
+			ndns = nd_dax->nd_pfn.ndns;
+
+		if (!ndns)
+			return 0;
+	} else
+		ndns = to_ndns(dev);
+
+	nsio = to_nd_namespace_io(&ndns->dev);
+	pstart = nsio->res.start + offset;
+	pend = nsio->res.end - end_trunc;
+
+	
+	nd_drv = to_nd_device_driver(dev->driver);
+
+	if (nd_drv && nd_drv->notify)
+			nd_drv->notify(dev, NVDIMM_TRACE_HERTZ);
+
+	return 0;
+}
+
+
 static int __nd_ioctl(struct nvdimm_bus *nvdimm_bus, struct nvdimm *nvdimm,
 		int read_only, unsigned int ioctl_cmd, unsigned long arg)
 {
@@ -1118,6 +1163,15 @@ static int __nd_ioctl(struct nvdimm_bus *nvdimm_bus, struct nvdimm *nvdimm,
 		nd_device_lock(dev);
 		rc = 0;
 		device_for_each_child(dev, NULL, set_pmem_trace_disable);
+		nd_device_unlock(dev);
+
+		return 0;
+	}
+
+	if (cmd == ND_CMD_TRACE_HERTZ) {
+		nd_device_lock(dev);
+		rc = 0;
+		device_for_each_child(dev, NULL, set_pmem_trace_hertz);
 		nd_device_unlock(dev);
 
 		return 0;
