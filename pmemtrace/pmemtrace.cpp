@@ -48,6 +48,8 @@ enum class TraceOperation {
 //#define DEBUG
 #define ND_CMD_TRACE_ENABLE 11
 #define ND_CMD_TRACE_DISABLE 12
+#define ND_CMD_TRACE_FREQ _IOWR('N', 13, unsigned int*)
+//#define ND_CMD_TRACE_FREQ 13
 
 #define CURRENT_TRACER "/sys/kernel/debug/tracing/current_tracer"
 
@@ -56,8 +58,8 @@ enum class TraceOperation {
 #define TRACER_OUTPUT_PIPE "/sys/kernel/debug/tracing/trace_pipe"
 
 
-unsigned int SAMPLE_RATE = 10; // was 60 hz for ext4-dax
-double DUTY_CYCLE = 1; // was 2 for ext4-dax
+unsigned int SAMPLE_RATE = 0; // was 60 hz for ext4-dax
+double DUTY_CYCLE = 0.5;
 
 volatile bool is_stopped = false;
 pthread_mutex_t stopMutex;
@@ -205,6 +207,8 @@ void* pmem_sampler(void *arg)
 	const struct sample_thread_args* thread_args = (const struct sample_thread_args* ) arg;
 
 	const int period = 1000000 / thread_args->sample_rate;
+	const float period_on = period * thread_args->duty_cycle;
+	const float period_off = period * (1.0 - thread_args->duty_cycle);
 	bool is_enabled = true;
 
 	cpu_set_t cpuset;
@@ -216,27 +220,34 @@ void* pmem_sampler(void *arg)
         sp.sched_priority = sched_get_priority_max(SCHED_FIFO);
 
 	if (sched_setscheduler(getpid(), SCHED_FIFO, &sp) < 0) {
-              fprintf(stderr, "Error setting SCHED_FIFO policy, errno: %d.\n", errno);
-              exit(EXIT_FAILURE);
-        }
+        fprintf(stderr, "Error setting SCHED_FIFO policy, errno: %d.\n", errno);
+        exit(EXIT_FAILURE);
+    }
+
+	if (thread_args->duty_cycle < 0.0 || thread_args->duty_cycle > 1.0) {
+		fprintf(stderr, "Duty cycle is not between 0.0 and 1.0");
+		exit(EXIT_FAILURE);
+	}
 
 
-	printf("Thread running...\n");
+	printf("Thread running... %f %f\n", period_on, period_off);
 
 	while (!getStopIssued()) {
-		if (is_enabled) {
-			usleep(period * thread_args->duty_cycle);
-			#ifndef DEBUG
-			ioctl(thread_args->fd, ND_CMD_TRACE_DISABLE);
-			#endif
-		} else {
-			usleep(period);
-			#ifndef DEBUG
-			ioctl(thread_args->fd, ND_CMD_TRACE_ENABLE);
-			#endif
-		}
+		if (period_off > 0.0) { 
+			if (is_enabled) {
+				usleep(period_on);
+				#ifndef DEBUG
+				ioctl(thread_args->fd, ND_CMD_TRACE_DISABLE);
+				#endif
+			} else {
+				usleep(period_off);
+				#ifndef DEBUG
+				ioctl(thread_args->fd, ND_CMD_TRACE_ENABLE);
+				#endif
+			}
 
-		is_enabled = !(is_enabled);
+			is_enabled = !(is_enabled);
+		}
 	}
 
 	#ifndef DEBUG
@@ -336,7 +347,6 @@ void* pmemtrace_output_thread(void *arg)
 
 	char buffer[4096];
 	size_t n;
-	char *line_start = buffer;
 	std::string temp_str;
 
 	nice(19);
@@ -579,9 +589,9 @@ int main(int argc, char** argv)
 	app.add_flag("--disable-sampling", disable_sampling, "Disable sampling; use a 100\% duty cycle")
 		->default_val(false);
 	app.add_option("-s, --sample-rate", SAMPLE_RATE, "Sample rate")
-        ->default_val(SAMPLE_RATE);
+        ->default_val(SAMPLE_RATE)->check(CLI::Range(0, 240, "Sample rate must be between 0 and 240 Hz"));;
 	app.add_option("--duty-cycle", DUTY_CYCLE, "Duty cycle")
-		->default_val(DUTY_CYCLE);
+		->default_val(DUTY_CYCLE)->check(CLI::Range(0.0, 1.0, "Duty cycle must be between 0.0 and 1.0"));
 	
 	app.allow_extras();
 
@@ -677,6 +687,12 @@ int main(int argc, char** argv)
 	
 
 	enable_pmemtrace(fd);
+
+	#ifndef DEBUG
+	ioctl(fd, ND_CMD_TRACE_FREQ, &SAMPLE_RATE);
+	#endif
+
+	// exit(EXIT_SUCCESS);
 	
 	pthread_t tid_rd;
 	pthread_t tid_smpl;	
@@ -686,16 +702,16 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	if (!disable_sampling) {
-		struct sample_thread_args smpl_thread_args = {SAMPLE_RATE, DUTY_CYCLE, fd};
+	// if (!disable_sampling) {
+	// 	struct sample_thread_args smpl_thread_args = {SAMPLE_RATE, DUTY_CYCLE, fd};
 
-		if (pthread_create(&tid_smpl, NULL, pmem_sampler, (void*) &smpl_thread_args) < 0) {
-			fprintf(stderr, "Error: pthread_create failed!\n");
-			exit(EXIT_FAILURE);
-		}
+	// 	if (pthread_create(&tid_smpl, NULL, pmem_sampler, (void*) &smpl_thread_args) < 0) {
+	// 		fprintf(stderr, "Error: pthread_create failed!\n");
+	// 		exit(EXIT_FAILURE);
+	// 	}
 
-		pthread_detach(tid_smpl);
-	}
+	// 	pthread_detach(tid_smpl);
+	// }
 	pthread_detach(tid_rd);
 
 	sleep(1);
@@ -717,9 +733,9 @@ int main(int argc, char** argv)
 	setStopIssued(true);
 	
 	pthread_join(tid_rd, NULL);
-	if (!disable_sampling) {
-		pthread_join(tid_smpl, NULL);
-	}
+	// if (!disable_sampling) {
+	// 	pthread_join(tid_smpl, NULL);
+	// }
 
 	sleep(1);
 
