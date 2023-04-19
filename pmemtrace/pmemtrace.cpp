@@ -48,7 +48,7 @@ enum class TraceOperation {
 //#define DEBUG
 #define ND_CMD_TRACE_ENABLE 11
 #define ND_CMD_TRACE_DISABLE 12
-#define ND_CMD_TRACE_FREQ _IOWR('N', 13, unsigned int*)
+#define ND_CMD_TRACE_FREQ _IOWR('N', 13, unsigned int[2])
 //#define ND_CMD_TRACE_FREQ 13
 
 #define CURRENT_TRACER "/sys/kernel/debug/tracing/current_tracer"
@@ -689,7 +689,14 @@ int main(int argc, char** argv)
 	enable_pmemtrace(fd);
 
 	#ifndef DEBUG
-	ioctl(fd, ND_CMD_TRACE_FREQ, &SAMPLE_RATE);
+	unsigned int ioctl_payload[2] = {0};
+	
+	if (!disable_sampling) {
+		ioctl_payload[0] = SAMPLE_RATE;
+		ioctl_payload[1] = static_cast<unsigned int>(DUTY_CYCLE * 100);
+	}
+
+	ioctl(fd, ND_CMD_TRACE_FREQ, &ioctl_payload);
 	#endif
 
 	// exit(EXIT_SUCCESS);
