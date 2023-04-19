@@ -48,6 +48,8 @@ enum class TraceOperation {
 //#define DEBUG
 #define ND_CMD_TRACE_ENABLE 11
 #define ND_CMD_TRACE_DISABLE 12
+#define ND_CMD_TRACE_FREQ _IOWR('N', 13, unsigned int*)
+//#define ND_CMD_TRACE_FREQ 13
 
 #define CURRENT_TRACER "/sys/kernel/debug/tracing/current_tracer"
 
@@ -56,7 +58,7 @@ enum class TraceOperation {
 #define TRACER_OUTPUT_PIPE "/sys/kernel/debug/tracing/trace_pipe"
 
 
-unsigned int SAMPLE_RATE = 10; // was 60 hz for ext4-dax
+unsigned int SAMPLE_RATE = 0; // was 60 hz for ext4-dax
 double DUTY_CYCLE = 0.5;
 
 volatile bool is_stopped = false;
@@ -345,7 +347,6 @@ void* pmemtrace_output_thread(void *arg)
 
 	char buffer[4096];
 	size_t n;
-	char *line_start = buffer;
 	std::string temp_str;
 
 	nice(19);
@@ -588,7 +589,7 @@ int main(int argc, char** argv)
 	app.add_flag("--disable-sampling", disable_sampling, "Disable sampling; use a 100\% duty cycle")
 		->default_val(false);
 	app.add_option("-s, --sample-rate", SAMPLE_RATE, "Sample rate")
-        ->default_val(SAMPLE_RATE);
+        ->default_val(SAMPLE_RATE)->check(CLI::Range(0, 240, "Sample rate must be between 0 and 240 Hz"));;
 	app.add_option("--duty-cycle", DUTY_CYCLE, "Duty cycle")
 		->default_val(DUTY_CYCLE)->check(CLI::Range(0.0, 1.0, "Duty cycle must be between 0.0 and 1.0"));
 	
@@ -686,6 +687,12 @@ int main(int argc, char** argv)
 	
 
 	enable_pmemtrace(fd);
+
+	#ifndef DEBUG
+	ioctl(fd, ND_CMD_TRACE_FREQ, &SAMPLE_RATE);
+	#endif
+
+	// exit(EXIT_SUCCESS);
 	
 	pthread_t tid_rd;
 	pthread_t tid_smpl;	
@@ -695,16 +702,16 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	if (!disable_sampling) {
-		struct sample_thread_args smpl_thread_args = {SAMPLE_RATE, DUTY_CYCLE, fd};
+	// if (!disable_sampling) {
+	// 	struct sample_thread_args smpl_thread_args = {SAMPLE_RATE, DUTY_CYCLE, fd};
 
-		if (pthread_create(&tid_smpl, NULL, pmem_sampler, (void*) &smpl_thread_args) < 0) {
-			fprintf(stderr, "Error: pthread_create failed!\n");
-			exit(EXIT_FAILURE);
-		}
+	// 	if (pthread_create(&tid_smpl, NULL, pmem_sampler, (void*) &smpl_thread_args) < 0) {
+	// 		fprintf(stderr, "Error: pthread_create failed!\n");
+	// 		exit(EXIT_FAILURE);
+	// 	}
 
-		pthread_detach(tid_smpl);
-	}
+	// 	pthread_detach(tid_smpl);
+	// }
 	pthread_detach(tid_rd);
 
 	sleep(1);
@@ -726,9 +733,9 @@ int main(int argc, char** argv)
 	setStopIssued(true);
 	
 	pthread_join(tid_rd, NULL);
-	if (!disable_sampling) {
-		pthread_join(tid_smpl, NULL);
-	}
+	// if (!disable_sampling) {
+	// 	pthread_join(tid_smpl, NULL);
+	// }
 
 	sleep(1);
 
