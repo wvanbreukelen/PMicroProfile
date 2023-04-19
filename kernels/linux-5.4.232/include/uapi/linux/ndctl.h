@@ -119,7 +119,7 @@ enum {
 	ND_CMD_CALL = 10,
 	ND_CMD_TRACE_ENABLE = 11,
 	ND_CMD_TRACE_DISABLE = 12,
-	ND_CMD_TRACE_HERTZ = 13,
+	ND_CMD_TRACE_FREQ = 13,
 };
 
 enum {
@@ -155,6 +155,8 @@ static inline const char *nvdimm_cmd_name(unsigned cmd)
 	case ND_CMD_VENDOR:			return "vendor";
 	case ND_CMD_CALL:			return "cmd_call";
 	case ND_CMD_TRACE_ENABLE: 			return "cmd_trace_enable";
+	case ND_CMD_TRACE_DISABLE: 			return "cmd_trace_disable";
+	case ND_CMD_TRACE_FREQ: 			return "cmd_trace_freq";
 	default:				return "unknown";
 	}
 }
