@@ -47,6 +47,7 @@ struct remap_trace {
 
 struct sampling_thread_data {
 	unsigned int freq;
+	unsigned int duty_cycle;
 	//unsigned int period_off;
 };
 
@@ -62,7 +63,7 @@ static LIST_HEAD(trace_list_soft);
 
 struct task_struct *kth = NULL;
 static struct sampling_thread_data sampling_thread_da = {0};
-
+static atomic_t is_pmemtrace_multicore = {0};
 /*
  * Locking in this file:
  * - mmiotrace_mutex enforces enable/disable_mmiotrace() critical sections.
@@ -533,18 +534,19 @@ static void leave_uniprocessor(void)
 
 static void enable_mmiotrace_soft(void)
 {
+	struct remap_trace *trace;
+	struct remap_trace *tmp;
+	int ret;
+	unsigned long flags;
+
 	mutex_lock(&mmiotrace_mutex);
-	spin_lock_irq(&trace_lock);
+	spin_lock_irqsave(&trace_lock, flags);
 	if (!is_enabled())
 		goto out;
 
 	if (nommiotrace)
 		pr_info("MMIO tracing disabled.\n");
 	//enter_uniprocessor();
-
-	struct remap_trace *trace;
-	struct remap_trace *tmp;
-	int ret;
 
 	list_for_each_entry(trace, &trace_list, list) {
 		if (!nommiotrace && !trace->enabled) {
@@ -557,7 +559,7 @@ static void enable_mmiotrace_soft(void)
 
 	//pr_info("enabled soft.\n");
 out:
-	spin_unlock_irq(&trace_lock);
+	spin_unlock_irqrestore(&trace_lock, flags);
 	mutex_unlock(&mmiotrace_mutex);
 }
 
@@ -565,9 +567,10 @@ static void disable_mmiotrace_soft(void)
 {
 	struct remap_trace *trace;
 	struct remap_trace *tmp;
+	unsigned long flags;
 
 	mutex_lock(&mmiotrace_mutex);
-	spin_lock_irq(&trace_lock);
+	spin_lock_irqsave(&trace_lock, flags);
 
 	if (!is_enabled())
 		goto out;
@@ -579,22 +582,23 @@ static void disable_mmiotrace_soft(void)
 	 * Caller also ensures is_enabled() cannot change.
 	 */
 	list_for_each_entry_safe(trace, tmp, &trace_list, list) {
-		pr_notice("purging non-iounmapped trace @0x%08lx, size 0x%lx.\n",
-			  trace->probe.addr, trace->probe.len);
+		// pr_notice("purging non-iounmapped trace @0x%08lx, size 0x%lx.\n",
+		// 	  trace->probe.addr, trace->probe.len);
 		if (!nommiotrace && trace->enabled) {
 			unregister_kmmio_probe(&trace->probe);
 			trace->enabled = 0;
 			//list_del(&trace->list);
 		}
 	}
-	synchronize_rcu(); /* unregister_kmmio_probe() requirement */
 
 	//leave_uniprocessor();
 	//kmmio_cleanup();
 	//pr_info("disabled soft.\n");
 out:
-	spin_unlock_irq(&trace_lock);
+	spin_unlock_irqrestore(&trace_lock, flags);
 	mutex_unlock(&mmiotrace_mutex);
+	
+	synchronize_rcu(); /* unregister_kmmio_probe() requirement */
 }
 
 static int pmemtrace_sampler(void *data)
@@ -602,32 +606,36 @@ static int pmemtrace_sampler(void *data)
 	struct sampling_thread_data* thread_data = (struct sampling_thread_data*) data;
 	unsigned int toggle = 1;
 
-	// const unsigned int period_on = ((float)(1000.0f / thread_data->freq)) * (float) (thread_data->duty_cycle / 100.0f);
-	// const unsigned int period_off = ((float)(1000.0f / thread_data->freq)) * (float) ((100 - thread_data->duty_cycle) / 100.0f);
 
 	if (thread_data->freq == 0)
 		return -1;
+	const unsigned int period = 1000000 / thread_data->freq;
+	const unsigned int period_on = (period * (thread_data->duty_cycle)) / 100;
+	const unsigned int period_off = (period * ((100 - thread_data->duty_cycle))) / 100;
 
-	const unsigned int period = 1000 / thread_data->freq;
+	//const unsigned int period = 1000 / thread_data->freq;
 
-	pr_info("period: %u\n", period);
+	pr_info("period on: %u period off: %u\n", period_on, period_off);
 
 
 	while (!kthread_should_stop()) {
 		if (toggle) {
 			enable_mmiotrace_soft();
+			usleep_range(period_on, period_on + 50);
+			//msleep(period_on);	
 		} else if (kmmio_count) {
 			disable_mmiotrace_soft();
+			usleep_range(period_off, period_off + 50);
+			//msleep(period_off);
 		}
 
 		toggle = !(toggle);
-		msleep_interruptible(period);
 	}
 
 	return 0;
 }
 
-int enable_sampler(unsigned int freq)
+int enable_pmemtrace_sampler(unsigned int freq, unsigned int duty_cycle)
 {
 	if (kth) {
 		pr_warn("kth pointer is not null!\n");
@@ -639,6 +647,7 @@ int enable_sampler(unsigned int freq)
 	// sampling_thread_da.period_on = period_on;
 	// sampling_thread_da.duty_cycle = period_off;
 	sampling_thread_da.freq = freq;
+	sampling_thread_da.duty_cycle = duty_cycle;
 	
 
 	if (is_enabled() && sampling_thread_da.freq > 0) {
@@ -657,7 +666,7 @@ int enable_sampler(unsigned int freq)
 	return 0;
 }
 
-int disable_sampler(void)
+int disable_pmemtrace_sampler(void)
 {
 	int ret;
 	if (!kth) {
@@ -670,6 +679,15 @@ int disable_sampler(void)
 	return ret;
 }
 
+int set_pmemtrace_multicore(unsigned int is_on)
+{
+	if (is_enabled())
+		return -EFAULT;
+	atomic_set(&is_pmemtrace_multicore, (is_on > 0) ? 1 : 0);
+
+	return 0;
+}
+
 void enable_mmiotrace(void)
 {
 
@@ -680,15 +698,18 @@ void enable_mmiotrace(void)
 	if (nommiotrace)
 		pr_info("MMIO tracing disabled.\n");
 	kmmio_init();
-	enter_uniprocessor();
+
+	if (atomic_read(&is_pmemtrace_multicore) == 0)
+		enter_uniprocessor();
+	
 	spin_lock_irq(&trace_lock);
 	atomic_inc(&mmiotrace_enabled);
 	spin_unlock_irq(&trace_lock);
 
 	// The sampler might still be running, kill it just to be sure.
-	disable_sampler();
+	disable_pmemtrace_sampler();
 
-	enable_sampler(0);
+	enable_pmemtrace_sampler(0, 0);
 
 	pr_info("enabled.\n");
 out:
@@ -697,7 +718,7 @@ out:
 
 void disable_mmiotrace(void)
 {
-	if (disable_sampler() < 0)
+	if (disable_pmemtrace_sampler() < 0)
 		pr_warn("Could not stop sampler!\n");
 
 	mutex_lock(&mmiotrace_mutex);
@@ -710,7 +731,9 @@ void disable_mmiotrace(void)
 	spin_unlock_irq(&trace_lock);
 
 	clear_trace_list(); /* guarantees: no more kmmio callbacks */
-	leave_uniprocessor();
+
+	if (atomic_read(&is_pmemtrace_multicore) == 0)
+		leave_uniprocessor();
 	kmmio_cleanup();
 	pr_info("disabled.\n");
 out:
