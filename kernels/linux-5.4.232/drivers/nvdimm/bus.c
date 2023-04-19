@@ -829,8 +829,8 @@ static const struct nd_cmd_desc __nd_cmd_bus_descs[] = {
 		.out_sizes = { 4, },
 	},
 	[ND_CMD_TRACE_FREQ] = {
-		.in_num = 2,
-		.in_sizes = { sizeof(unsigned int), sizeof(unsigned int) },
+		.in_num = 3,
+		.in_sizes = { sizeof(unsigned int), sizeof(unsigned int), sizeof(unsigned int) },
 		.out_num = 1,
 		.out_sizes = { 4, },
 	},
@@ -1151,7 +1151,7 @@ static int __nd_ioctl(struct nvdimm_bus *nvdimm_bus, struct nvdimm *nvdimm,
 		#ifdef CONFIG_MMIOTRACE
 		if (disable_pmemtrace_sampler() < 0)
 			pr_warn("Could not stop sampler!\n");
-		if (enable_pmemtrace_sampler(data[0], data[1]) < 0)
+		if (enable_pmemtrace_sampler(data[0], data[1], data[2]) < 0)
 			pr_warn("Could not start sampler!\n");
 		#endif
 		nd_device_unlock(dev);

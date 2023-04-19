@@ -116,7 +116,7 @@ struct mmiotrace_map {
 extern void enable_mmiotrace(void);
 extern void disable_mmiotrace(void);
 
-extern int enable_pmemtrace_sampler(unsigned int freq, unsigned int duty_cycle);
+extern int enable_pmemtrace_sampler(unsigned int freq, unsigned int duty_cycle, unsigned int is_time_triggered);
 extern int disable_pmemtrace_sampler(void);
 extern int set_pmemtrace_multicore(unsigned int is_on);
 
@@ -124,9 +124,13 @@ extern void mmio_trace_rw(struct mmiotrace_rw *rw);
 extern void mmio_trace_mapping(struct mmiotrace_map *map);
 extern __printf(1, 0) int mmio_trace_printk(const char *fmt, va_list args);
 
+extern atomic_t fault_counter;
+
 #ifdef CONFIG_MMIOTRACE
 static inline int is_kmmio_active(void)
 {
+	atomic_inc(&fault_counter);
+
 	return kmmio_count;
 }
 
