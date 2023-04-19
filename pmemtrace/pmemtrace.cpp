@@ -48,7 +48,7 @@ enum class TraceOperation {
 //#define DEBUG
 #define ND_CMD_TRACE_ENABLE 11
 #define ND_CMD_TRACE_DISABLE 12
-#define ND_CMD_TRACE_FREQ _IOWR('N', 13, unsigned int[2])
+#define ND_CMD_TRACE_FREQ _IOWR('N', 13, unsigned int[3])
 #define ND_CMD_TRACE_IS_MULTICORE _IOWR('N', 14, unsigned int*)
 //#define ND_CMD_TRACE_FREQ 13
 
@@ -203,6 +203,7 @@ void set_trace_buf_size(const unsigned int buf_size) {
     close(fd);
 }
 
+/*
 void* pmem_sampler(void *arg)
 {
 	const struct sample_thread_args* thread_args = (const struct sample_thread_args* ) arg;
@@ -263,26 +264,11 @@ void* pmem_sampler(void *arg)
         }
 
 	pthread_exit(NULL);
-}
+}*/
 
 void* pmemtrace_output_thread(void *arg)
 {
 	const struct read_thread_args* thread_args = (const struct read_thread_args* ) arg;
-
-	//cpu_set_t cpuset;
-        //CPU_ZERO(&cpuset);
-        //CPU_SET(0, &cpuset);
-        //pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-
-
-	//struct sched_param sp;
-        //sp.sched_priority = sched_get_priority_min(SCHED_FIFO);
-
-        //if (sched_setscheduler(getpid(), SCHED_FIFO, &sp) < 0) {
-              //fprintf(stderr, "Error setting SCHED_FIFO policy, errno: %d.\n", errno);
-              //exit(EXIT_FAILURE);
-        //}
-
 
 	int in = open(TRACER_OUTPUT_PIPE, O_RDONLY);
 	int out = open(thread_args->output_file, O_WRONLY | O_CREAT | O_TRUNC, 644);
@@ -312,39 +298,6 @@ void* pmemtrace_output_thread(void *arg)
 	write(out, header_str, strnlen(header_str, sizeof(header_str)));
 	write(out, cmd_str, strnlen(cmd_str, sizeof(cmd_str)));
 
-	// std::shared_ptr<WriterProperties> props =
-    //     WriterProperties::Builder().compression(arrow::Compression::GZIP)->build();
-
-    // std::shared_ptr<arrow::io::FileOutputStream> outfile;
-
-    // // path = path.replace_extension(".parquet");
-
-    // PARQUET_ASSIGN_OR_THROW(
-    //     outfile,
-    //     arrow::io::FileOutputStream::Open("test.parquet"));
-
-    // parquet::WriterProperties::Builder builder;
-    // std::shared_ptr<parquet::schema::GroupNode> schema;
-    
-    
-    // // https://arrow.apache.org/docs/cpp/parquet.html
-    // schema = std::static_pointer_cast<parquet::schema::GroupNode>(parquet::schema::GroupNode::Make(
-    //     "test", parquet::Repetition::REQUIRED, {
-    //         parquet::schema::PrimitiveNode::Make("timestamp", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE),
-    //         parquet::schema::PrimitiveNode::Make("op", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
-    //         parquet::schema::PrimitiveNode::Make("opcode", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
-    //         parquet::schema::PrimitiveNode::Make("op_size", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
-    //         parquet::schema::PrimitiveNode::Make("abs_addr", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
-    //         parquet::schema::PrimitiveNode::Make("rel_addr", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
-    //         parquet::schema::PrimitiveNode::Make("data", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
-    //     }
-    // ));
-
-	// std::regex pattern(R"((R|W|F)\s+(\d+)\s+(0x[\da-fA-F]+)\s+([\d.]+)\s+\d+\s+(0x[\da-fA-F]+)\s+(0x[\da-fA-F]+))");
-	// std::smatch matches;
-    
-    // parquet::StreamWriter os{
-    //     parquet::ParquetFileWriter::Open(outfile, schema, props)};
 
 	char buffer[4096];
 	size_t n;
@@ -360,64 +313,11 @@ void* pmemtrace_output_thread(void *arg)
 
 		if (n > 0)
  		 	(void) write(out, buffer, n);
-		
-		//usleep(1000);
-
-		// char *p = buffer;
-		// while (p < buffer + n) {
-		// 	if (*p == '\n') {
-		// 		*p = '\0';
-		// 		//printf("%s\n", line_start);
-		// 		temp_str = std::string(line_start);
-		// 		std::cout << temp_str << std::endl;
-
-		// 		if (std::regex_search(temp_str, matches, pattern)) {
-		// 			TraceOperation op;
-
-		// 			if (matches[1] == "R") {
-		// 				op = TraceOperation::READ;
-		// 			} else if (matches[1] == "W") {
-		// 				op = TraceOperation::WRITE;
-		// 			} else if (matches[1] == "F") {
-		// 				op = TraceOperation::CLFLUSH;
-		// 			} else {
-		// 				std::cerr << "Unknown trace operation: " << matches[1] << std::endl;
-
-		// 				pthread_exit(NULL);
-		// 			}
-
-		// 			const double timestamp_sec = std::stod(matches[4]);
-		// 			const unsigned int opcode = std::stoi(matches[3], nullptr, 16);
-		// 			const size_t opcode_size = std::stoul(matches[2], nullptr, 16);
-		// 			const unsigned long abs_addr = std::stoul(matches[5], nullptr, 16);
-		// 			#ifdef ENABLE_ASSERTS
-		// 			assert(abs_addr > pmem_range_strawnameart);
-		// 			assert(abs_addr < pmem_range_end);
-		// 			#endif
-		// 			const unsigned long rel_addr = abs_addr - device_start;
-		// 			const unsigned long data = std::stoul(matches[6], nullptr, 16);
-
-		// 			os << timestamp_sec << static_cast<uint32_t>(op) << opcode << opcode_size << abs_addr << rel_addr << data << parquet::EndRow;
-		// 		}
-
-		// 		line_start = p + 1;
-		// 	}
-		// 	++p;
-		// }
-
-
 	}
 
 	close(in);
 	close(out);
 
-	//sp.sched_priority = sched_get_priority_min(SCHED_OTHER);
-
-        //if (sched_setscheduler(getpid(), SCHED_OTHER, &sp) < 0) {
-        //      fprintf(stderr, "Error setting SCHED_OTHER policy, errno: %d.\n", errno);
-        //      exit(EXIT_FAILURE);
-        //}
-	
 	pthread_exit(NULL);
 }
 
@@ -592,10 +492,12 @@ int main(int argc, char** argv)
 		->default_val(false);
 	app.add_flag("--enable-multicore", enable_multicore, "Enable multicore support (experimental, unstable)")
 		->default_val(false);
-	app.add_option("-s, --sample-rate", SAMPLE_RATE, "Sample rate")
+	auto smpl_option = app.add_option("-s, --sample-rate", SAMPLE_RATE, "Sample rate")
         ->default_val(SAMPLE_RATE)->check(CLI::Range(0, 240, "Sample rate must be between 0 and 240 Hz"));;
-	app.add_option("--duty-cycle", DUTY_CYCLE, "Duty cycle")
+	auto duty_cycle_option = app.add_option("--duty-cycle", DUTY_CYCLE, "Duty cycle")
 		->default_val(DUTY_CYCLE)->check(CLI::Range(0.0, 1.0, "Duty cycle must be between 0.0 and 1.0"));
+	app.add_option("--sample-rate-pfaults", SAMPLE_RATE, "Toggle probing on/off after a selected number of page faults, e.g. 10")
+		->excludes(smpl_option)->excludes(duty_cycle_option);
 	
 	app.allow_extras();
 
@@ -699,11 +601,12 @@ int main(int argc, char** argv)
 	enable_pmemtrace(fd);
 
 	#ifndef DEBUG
-	unsigned int ioctl_payload[2] = {0};
+	unsigned int ioctl_payload[3] = {0};
 	
 	if (!disable_sampling) {
 		ioctl_payload[0] = SAMPLE_RATE;
 		ioctl_payload[1] = static_cast<unsigned int>(DUTY_CYCLE * 100);
+		ioctl_payload[2] = (app.count("--sample-rate-pfaults")) ? 0 : 1;
 	}
 
 	ioctl(fd, ND_CMD_TRACE_FREQ, &ioctl_payload);
