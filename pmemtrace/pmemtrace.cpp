@@ -48,7 +48,8 @@ enum class TraceOperation {
 //#define DEBUG
 #define ND_CMD_TRACE_ENABLE 11
 #define ND_CMD_TRACE_DISABLE 12
-#define ND_CMD_TRACE_FREQ _IOWR('N', 13, unsigned int*)
+#define ND_CMD_TRACE_FREQ _IOWR('N', 13, unsigned int[2])
+#define ND_CMD_TRACE_IS_MULTICORE _IOWR('N', 14, unsigned int*)
 //#define ND_CMD_TRACE_FREQ 13
 
 #define CURRENT_TRACER "/sys/kernel/debug/tracing/current_tracer"
@@ -579,6 +580,7 @@ int main(int argc, char** argv)
 	std::string pmem_device_loc;
 	std::string trace_name;
 	bool disable_sampling = false;
+	unsigned int enable_multicore = false;
 
  	CLI::App app{"pmemtrace - A Persistent Memory Micro-Architecture Aware Trace Capture Tool"};
 
@@ -587,6 +589,8 @@ int main(int argc, char** argv)
 	app.add_option("--device", pmem_device_loc, "Persistent Memory ndctl device handle")
         ->default_val("/dev/ndctl0");
 	app.add_flag("--disable-sampling", disable_sampling, "Disable sampling; use a 100\% duty cycle")
+		->default_val(false);
+	app.add_flag("--enable-multicore", enable_multicore, "Enable multicore support (experimental, unstable)")
 		->default_val(false);
 	app.add_option("-s, --sample-rate", SAMPLE_RATE, "Sample rate")
         ->default_val(SAMPLE_RATE)->check(CLI::Range(0, 240, "Sample rate must be between 0 and 240 Hz"));;
@@ -642,6 +646,17 @@ int main(int argc, char** argv)
 		cmd += " ";
 	}
 
+	int fd = open(pmem_device_loc.c_str(), O_RDWR);
+	if (fd < 0)
+	{
+		fprintf(stderr, "Failed to open device %s!\n", pmem_device_loc.c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	if (ioctl(fd, ND_CMD_TRACE_IS_MULTICORE, &enable_multicore) < 0) {
+		printf("Warning: failed to set multicore to %u\n", enable_multicore);
+	}
+
 	if (is_mmiotrace_enabled()) {
 		printf("mmiotrace is enabled\n");
    	} else {
@@ -669,12 +684,7 @@ int main(int argc, char** argv)
 	struct read_thread_args rd_thread_args = {temp_trace_loc.c_str(), cmd.c_str()};
 
 
-	int fd = open(pmem_device_loc.c_str(), O_RDWR);
-	if (fd < 0)
-	{
-		fprintf(stderr, "Failed to open device %s!\n", pmem_device_loc.c_str());
-		exit(EXIT_FAILURE);
-	}
+
 	
 	printf("Opened device, enabling pmemtrace...\n");
 	struct sigaction sa;
@@ -689,7 +699,14 @@ int main(int argc, char** argv)
 	enable_pmemtrace(fd);
 
 	#ifndef DEBUG
-	ioctl(fd, ND_CMD_TRACE_FREQ, &SAMPLE_RATE);
+	unsigned int ioctl_payload[2] = {0};
+	
+	if (!disable_sampling) {
+		ioctl_payload[0] = SAMPLE_RATE;
+		ioctl_payload[1] = static_cast<unsigned int>(DUTY_CYCLE * 100);
+	}
+
+	ioctl(fd, ND_CMD_TRACE_FREQ, &ioctl_payload);
 	#endif
 
 	// exit(EXIT_SUCCESS);
