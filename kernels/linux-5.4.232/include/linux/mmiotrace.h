@@ -115,12 +115,17 @@ struct mmiotrace_map {
 /* in kernel/trace/trace_mmiotrace.c */
 extern void enable_mmiotrace(void);
 extern void disable_mmiotrace(void);
+extern int enable_sampler(unsigned int freq);
+extern int disable_sampler(void);
 extern void mmio_trace_rw(struct mmiotrace_rw *rw);
 extern void mmio_trace_mapping(struct mmiotrace_map *map);
 extern __printf(1, 0) int mmio_trace_printk(const char *fmt, va_list args);
 
 #ifdef CONFIG_MMIOTRACE
-inline int is_kmmio_active(void);
+static inline int is_kmmio_active(void)
+{
+	return kmmio_count;
+}
 
 #endif
 

@@ -20,9 +20,12 @@
 #include <linux/io.h>
 #include <linux/mm.h>
 #include <linux/nd.h>
+#include <linux/mmiotrace.h>
 #include "nd-core.h"
 #include "nd.h"
 #include "pfn.h"
+
+
 
 int nvdimm_major;
 static int nvdimm_bus_major;
@@ -825,9 +828,11 @@ static const struct nd_cmd_desc __nd_cmd_bus_descs[] = {
 		.out_num = 1,
 		.out_sizes = { 4, },
 	},
-	[ND_CMD_TRACE_HERTZ] = {
+	[ND_CMD_TRACE_FREQ] = {
 		.in_num = 1,
 		.in_sizes = { UINT_MAX, },
+		.out_num = 1,
+		.out_sizes = { 4, },
 	},
 };
 
@@ -1078,42 +1083,44 @@ static int set_pmem_trace_disable(struct device *dev, void *data)
 	return 0;
 }
 
-static int set_pmem_trace_hertz(struct device *dev, void *data)
+static int set_pmem_trace_freq(struct device *dev, void *data)
 {
-	struct nd_btt *nd_btt = is_nd_btt(dev) ? to_nd_btt(dev) : NULL;
-	struct nd_pfn *nd_pfn = is_nd_pfn(dev) ? to_nd_pfn(dev) : NULL;
-	struct nd_dax *nd_dax = is_nd_dax(dev) ? to_nd_dax(dev) : NULL;
-	struct nd_namespace_common *ndns = NULL;
-	struct nd_namespace_io *nsio;
-	struct nd_device_driver *nd_drv;
+	// struct nd_btt *nd_btt = is_nd_btt(dev) ? to_nd_btt(dev) : NULL;
+	// struct nd_pfn *nd_pfn = is_nd_pfn(dev) ? to_nd_pfn(dev) : NULL;
+	// struct nd_dax *nd_dax = is_nd_dax(dev) ? to_nd_dax(dev) : NULL;
+	// struct nd_namespace_common *ndns = NULL;
+	// struct nd_namespace_io *nsio;
+	// struct nd_device_driver *nd_drv;
 	
-	resource_size_t offset = 0, end_trunc = 0, pstart, pend;
+	// resource_size_t offset = 0, end_trunc = 0, pstart, pend;
 
-	if (nd_dax || !dev->driver)
-		return 0;
+	// if (nd_dax || !dev->driver)
+	// 	return 0;
 
-	if (nd_btt || nd_pfn || nd_dax) {
-		if (nd_btt)
-			ndns = nd_btt->ndns;
-		else if (nd_pfn)
-			ndns = nd_pfn->ndns;
-		else if (nd_dax)
-			ndns = nd_dax->nd_pfn.ndns;
+	// if (nd_btt || nd_pfn || nd_dax) {
+	// 	if (nd_btt)
+	// 		ndns = nd_btt->ndns;
+	// 	else if (nd_pfn)
+	// 		ndns = nd_pfn->ndns;
+	// 	else if (nd_dax)
+	// 		ndns = nd_dax->nd_pfn.ndns;
 
-		if (!ndns)
-			return 0;
-	} else
-		ndns = to_ndns(dev);
+	// 	if (!ndns)
+	// 		return 0;
+	// } else
+	// 	ndns = to_ndns(dev);
 
-	nsio = to_nd_namespace_io(&ndns->dev);
-	pstart = nsio->res.start + offset;
-	pend = nsio->res.end - end_trunc;
+	// nsio = to_nd_namespace_io(&ndns->dev);
+	// pstart = nsio->res.start + offset;
+	// pend = nsio->res.end - end_trunc;
 
 	
-	nd_drv = to_nd_device_driver(dev->driver);
+	// nd_drv = to_nd_device_driver(dev->driver);
 
-	if (nd_drv && nd_drv->notify)
-			nd_drv->notify(dev, NVDIMM_TRACE_HERTZ);
+	// if (nd_drv && nd_drv->notify)
+	// 		nd_drv->notify(dev, NVDIMM_TRACE_FREQ);
+
+
 
 	return 0;
 }
@@ -1168,10 +1175,19 @@ static int __nd_ioctl(struct nvdimm_bus *nvdimm_bus, struct nvdimm *nvdimm,
 		return 0;
 	}
 
-	if (cmd == ND_CMD_TRACE_HERTZ) {
+	if (cmd == ND_CMD_TRACE_FREQ) {
+		if (copy_from_user(&pkg, p, sizeof(pkg)))
+			return -EFAULT;
+
 		nd_device_lock(dev);
 		rc = 0;
-		device_for_each_child(dev, NULL, set_pmem_trace_hertz);
+		//device_for_each_child(dev, (void*) p, set_pmem_trace_freq);
+		#ifdef CONFIG_MMIOTRACE
+		if (disable_sampler() < 0)
+			pr_warn("Could not stop sampler!\n");
+		if (enable_sampler((*(unsigned int*) p)) < 0)
+			pr_warn("Could not start sampler!\n");
+		#endif
 		nd_device_unlock(dev);
 
 		return 0;
