@@ -3,16 +3,17 @@
 import subprocess
 import statistics
 import re
+import os
 
 
 # Define the file sizes to run the commands with
-file_sizes = ["16M", "64M", "128M"]
+file_sizes = ["4M", "8M", "16M", "32M"]
 num_runs = 3
-sample_rate = 15
-duty_cycle = 1.0
+sample_rate = 30
+duty_cycle = 0.5
 
 def run_command_with_pmemtrace(file_size, sample_rate, duty_cycle):
-    command = f"sudo pmemtrace randread sudo bash -c \"time head -c {file_size} </dev/urandom >/mnt/pmem_emul/rand_file.txt\" --sample-rate {sample_rate} --duty-cycle {duty_cycle}"
+    command = f"sudo pmemtrace randwrite sudo bash -c \"time head -c {file_size} </dev/urandom >/mnt/pmem_emul/rand_file.txt\" --sample-rate-pfaults {sample_rate} --duty-cycle {duty_cycle}"
     output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
     
     real_time_pattern = r"real\s+(\d+)m([\d\.,]+)s[\r\n]+"
@@ -55,7 +56,8 @@ def main():
         times = [run_command_with_pmemtrace(file_size, sample_rate, duty_cycle) for i in range(num_runs)]
         avg_time = statistics.mean(times)
         std_dev = statistics.stdev(times)
-        print(f"{file_size:<8} {avg_time:.3f} ({std_dev:.3f} std. dev.)")
+        filesize_real = os.path.getsize("/tmp/randwrite.temp")
+        print(f"{file_size:<8} {avg_time:.3f} ({std_dev:.3f} std. dev.) trace file size: {filesize_real}")
 
     # Run the second command without pmemtrace
     print("\nRunning command without pmemtrace...")
