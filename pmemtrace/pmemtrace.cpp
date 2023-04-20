@@ -303,16 +303,12 @@ void* pmemtrace_output_thread(void *arg)
 	size_t n;
 	std::string temp_str;
 
-	nice(19);
-
 	while (true) {
 		if (getStopIssued())
 			break;
 
 		n = read(in, buffer, sizeof(buffer));
-
-		if (n > 0)
- 		 	(void) write(out, buffer, n);
+ 		write(out, buffer, n);
 	}
 
 	close(in);
