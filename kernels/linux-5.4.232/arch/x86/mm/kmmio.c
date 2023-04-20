@@ -509,6 +509,8 @@ static int post_kmmio_handler(unsigned long condition, struct pt_regs *regs)
 	}
 
 	//pr_info("releasing rcu_read_lock\n");
+
+	atomic_inc(&faults_captured);
 	
 	rcu_read_unlock();
 	preempt_enable_no_resched();
