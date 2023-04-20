@@ -299,20 +299,17 @@ void* pmemtrace_output_thread(void *arg)
 	write(out, cmd_str, strnlen(cmd_str, sizeof(cmd_str)));
 
 
-	char buffer[4096];
+	char buffer[1024];
 	size_t n;
 	std::string temp_str;
-
-	nice(19);
 
 	while (true) {
 		if (getStopIssued())
 			break;
 
 		n = read(in, buffer, sizeof(buffer));
-
-		if (n > 0)
- 		 	(void) write(out, buffer, n);
+ 		if (n)
+			write(out, buffer, n);
 	}
 
 	close(in);
