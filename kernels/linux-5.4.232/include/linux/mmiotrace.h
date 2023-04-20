@@ -124,12 +124,13 @@ extern void mmio_trace_rw(struct mmiotrace_rw *rw);
 extern void mmio_trace_mapping(struct mmiotrace_map *map);
 extern __printf(1, 0) int mmio_trace_printk(const char *fmt, va_list args);
 
-extern atomic_t fault_counter;
+extern atomic_t faults_counter;
+extern atomic_t faults_captured;
 
 #ifdef CONFIG_MMIOTRACE
 static inline int is_kmmio_active(void)
 {
-	atomic_inc(&fault_counter);
+	atomic_inc(&faults_counter);
 
 	return kmmio_count;
 }

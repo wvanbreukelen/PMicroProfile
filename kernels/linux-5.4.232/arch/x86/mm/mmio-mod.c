@@ -65,7 +65,10 @@ static LIST_HEAD(trace_list_soft);
 struct task_struct *kth = NULL;
 static struct sampling_thread_data sampling_thread_da = {0};
 static atomic_t is_pmemtrace_multicore = {0};
-atomic_t fault_counter = {0};
+
+
+atomic_t faults_counter = {0};
+atomic_t faults_captured = {0};
 /*
  * Locking in this file:
  * - mmiotrace_mutex enforces enable/disable_mmiotrace() critical sections.
@@ -605,6 +608,9 @@ out:
 
 static int pmemtrace_sampler(void *data)
 {
+	unsigned int period;
+	unsigned int period_on;
+	unsigned int period_off;
 	struct sampling_thread_data* thread_data = (struct sampling_thread_data*) data;
 	unsigned int toggle = 1;
 
@@ -612,21 +618,20 @@ static int pmemtrace_sampler(void *data)
 	if (thread_data->freq == 0)
 		return -1;
 	
-	const unsigned int period = 1000000 / thread_data->freq;
-	const unsigned int period_on = (period * (thread_data->duty_cycle)) / 100;
-	const unsigned int period_off = (period * ((100 - thread_data->duty_cycle))) / 100;
+
 
 	//const unsigned int period = 1000 / thread_data->freq;
 
 
 	if (thread_data->is_time_triggered) {
-		pr_info("period on: %u period off: %u\n", period_on, period_off);
+		period = 1000000 / thread_data->freq;
+		period_on = (period * (thread_data->duty_cycle)) / 100;
+		period_off = (period * ((100 - thread_data->duty_cycle))) / 100;
+
+		pr_info("pmemtrace_sampler period probes on: %u period probes off: %u.\n", period_on, period_off);
 		while (!kthread_should_stop()) {
 			if (toggle) {
-				//preempt_disable();
 				enable_mmiotrace_soft();
-				//preempt_enable_no_resched();
-				//udelay(period_on);
 				
 				usleep_range(period_on, period_on + 10);
 			} else {
@@ -639,23 +644,24 @@ static int pmemtrace_sampler(void *data)
 			toggle = !(toggle);
 		}
 	} else {
-		pr_info("toggle probes every %u page faults.\n", thread_data->freq);
+		period_on = (thread_data->freq * thread_data->duty_cycle) / 100;
+		period_off = thread_data->freq;
+		pr_info("pmemtrace_sampler toggle probes %u PMEM accesses every %u page faults.\n", period_on, period_off);
+		
 		while (!kthread_should_stop()) {
-			//pr_info("%u\n", atomic_read(&fault_counter));
-			if (atomic_read(&fault_counter) > thread_data->freq) {
-				pr_info("toggle\n");
-				if (toggle) {
+			if (atomic_read(&faults_captured) > period_on) {
+				atomic_set(&faults_captured, 0);
+				if (kmmio_count)
+					disable_mmiotrace_soft();
+			} else if (atomic_read(&faults_counter) > period_off) {
+				if (!kmmio_count)
 					enable_mmiotrace_soft();
-				} else {
-					if (kmmio_count)
-						disable_mmiotrace_soft();
-				}
 
-				atomic_set(&fault_counter, 0);
-				toggle = !(toggle);
+				atomic_set(&faults_counter, 0);
+				//toggle = !(toggle);
 			}
 
-			usleep_range(50, 100);
+			usleep_range(100, 150);
 		}
 	}
 
@@ -665,18 +671,13 @@ static int pmemtrace_sampler(void *data)
 int enable_pmemtrace_sampler(unsigned int freq, unsigned int duty_cycle, unsigned int is_time_triggered)
 {
 	if (kth) {
-		pr_warn("kth pointer is not null!\n");
+		//pr_warn("kth pointer is not null!\n");
 		return -1;
 	}
 
-
-
-	// sampling_thread_da.period_on = period_on;
-	// sampling_thread_da.duty_cycle = period_off;
 	sampling_thread_da.freq = freq;
 	sampling_thread_da.duty_cycle = duty_cycle;
 	sampling_thread_da.is_time_triggered = is_time_triggered;
-	
 
 	if (is_enabled() && sampling_thread_da.freq > 0) {
 		kth = kthread_create_on_cpu(pmemtrace_sampler, &sampling_thread_da, get_cpu(), "pmemtrace_sampler");
@@ -698,7 +699,7 @@ int disable_pmemtrace_sampler(void)
 {
 	int ret;
 	if (!kth) {
-		pr_warn("kth pointer is null!\n");
+		//pr_warn("kth pointer is null!\n");
 		return -1;
 	}
 
@@ -734,10 +735,10 @@ void enable_mmiotrace(void)
 	atomic_inc(&mmiotrace_enabled);
 	spin_unlock_irq(&trace_lock);
 
-	// The sampler might still be running, kill it just to be sure.
-	disable_pmemtrace_sampler();
+	// // The sampler might still be running, kill it just to be sure.
+	// disable_pmemtrace_sampler();
 
-	enable_pmemtrace_sampler(0, 0, 1);
+	// enable_pmemtrace_sampler(0, 0, 1);
 
 	pr_info("enabled.\n");
 out:
@@ -746,8 +747,8 @@ out:
 
 void disable_mmiotrace(void)
 {
-	if (disable_pmemtrace_sampler() < 0)
-		pr_warn("Could not stop sampler!\n");
+	// if (disable_pmemtrace_sampler() < 0)
+	// 	pr_warn("Could not stop sampler!\n");
 
 	mutex_lock(&mmiotrace_mutex);
 	if (!is_enabled())
