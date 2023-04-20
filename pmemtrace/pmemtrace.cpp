@@ -494,10 +494,10 @@ int main(int argc, char** argv)
 		->default_val(false);
 	auto smpl_option = app.add_option("-s, --sample-rate", SAMPLE_RATE, "Sample rate")
         ->default_val(SAMPLE_RATE)->check(CLI::Range(0, 240, "Sample rate must be between 0 and 240 Hz"));;
-	auto duty_cycle_option = app.add_option("--duty-cycle", DUTY_CYCLE, "Duty cycle")
+	app.add_option("--duty-cycle", DUTY_CYCLE, "Duty cycle")
 		->default_val(DUTY_CYCLE)->check(CLI::Range(0.0, 1.0, "Duty cycle must be between 0.0 and 1.0"));
 	app.add_option("--sample-rate-pfaults", SAMPLE_RATE, "Toggle probing on/off after a selected number of page faults, e.g. 10")
-		->excludes(smpl_option)->excludes(duty_cycle_option);
+		->excludes(smpl_option);
 	
 	app.allow_extras();
 
@@ -615,7 +615,6 @@ int main(int argc, char** argv)
 	// exit(EXIT_SUCCESS);
 	
 	pthread_t tid_rd;
-	pthread_t tid_smpl;	
 
 	if (pthread_create(&tid_rd, NULL, pmemtrace_output_thread, (void*) &rd_thread_args) < 0) {
 		fprintf(stderr, "Error: pthread_create failed!\n");
