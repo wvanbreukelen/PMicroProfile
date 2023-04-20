@@ -9,11 +9,11 @@ import os
 # Define the file sizes to run the commands with
 file_sizes = ["4M", "8M", "16M", "32M"]
 num_runs = 3
-sample_rate = 30
-duty_cycle = 0.5
+sample_rate = 60
+duty_cycle = 0.98
 
 def run_command_with_pmemtrace(file_size, sample_rate, duty_cycle):
-    command = f"sudo pmemtrace randwrite sudo bash -c \"time head -c {file_size} </dev/urandom >/mnt/pmem_emul/rand_file.txt\" --sample-rate-pfaults {sample_rate} --duty-cycle {duty_cycle}"
+    command = f"sudo pmemtrace randwrite sudo bash -c \"time head -c {file_size} </dev/urandom >/mnt/pmem_emul/rand_file.txt\" --sample-rate {sample_rate} --duty-cycle {duty_cycle}"
     output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
     
     real_time_pattern = r"real\s+(\d+)m([\d\.,]+)s[\r\n]+"

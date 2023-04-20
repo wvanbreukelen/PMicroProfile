@@ -6,11 +6,11 @@ import re
 
 
 # Define the file sizes to run the commands with
-file_sizes = ["2M", "4M", "8M", "16M"]
-num_runs = 5
+file_sizes = ["4M", "8M", "16M", "32M"]
+num_runs = 3
 
 def run_command_with_pmemtrace(file_size):
-    command = f"sudo pmemtrace randread sudo bash -c \"time head -c {file_size} </dev/urandom >/mnt/pmem_emul/rand_file.txt\" --disable-sampling"
+    command = f"sudo pmemtrace randread sudo bash -c \"time head -c {file_size} </dev/urandom >/mnt/pmem_emul/rand_file.txt\" --disable-sampling --enable-multicore"
     output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
     
     real_time_pattern = r"real\s+(\d+)m([\d\.,]+)s[\r\n]+"
