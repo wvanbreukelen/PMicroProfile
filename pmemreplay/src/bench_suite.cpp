@@ -347,7 +347,7 @@ static void* do_work(void *arg)
                     probe_disable(wpq_occupancy_probe);
                     probe_disable(rpq_occupancy_probe);
 
-                    probe_count(unc_ticks_probe, &(cur_sample->unc_ticks));
+                    probe_count_single_imc(unc_ticks_probe, &(cur_sample->unc_ticks));
                     probe_count(rpq_probe, &(cur_sample->rpq_inserts));
                     probe_count(wpq_probe, &(cur_sample->wpq_inserts));
                     probe_count(wpq_occupancy_probe, &(cur_sample->wpq_occupancy));
