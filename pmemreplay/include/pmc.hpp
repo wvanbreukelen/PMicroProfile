@@ -71,7 +71,7 @@ inline void probe_count(const struct iMCProbe& iMCProbe, unsigned long long *cou
     long long local_count = 0;
 
     for (size_t i = 0; i < iMCProbe.num_probes; ++i) {
-	read(iMCProbe.fd_probes[i], &local_count, sizeof(count));
+	    read(iMCProbe.fd_probes[i], &local_count, sizeof(count));
         *(count) += local_count;
     }
 }

@@ -19,9 +19,30 @@ public:
     unsigned long long write_inst_cycles = 0;
     unsigned long long flush_inst_cycles = 0;
 
-    unsigned long long wpq_inserts = 0;
     unsigned long long rpq_inserts = 0;
+    unsigned long long wpq_inserts = 0;
+
+    unsigned long long rpq_occupancy = 0;
+    unsigned long long wpq_occupancy = 0;
 };
+
+template<typename Stream>
+Stream& operator<<(Stream& os, const io_sample& sample) {
+    os << sample.time_since_start.count() << ","
+       << sample.num_reads << ","
+       << sample.read_inst_cycles << ","
+       << sample.num_writes << ","
+       << sample.write_inst_cycles << ","
+       << sample.num_flushes << ","
+       << sample.flush_inst_cycles << ","
+       << sample.bytes_read << ","
+       << sample.bytes_written << ","
+       << sample.wpq_inserts << ","
+       << sample.rpq_inserts << ","
+       << sample.wpq_occupancy << ","
+       << sample.rpq_occupancy << ",";
+    return os;
+}
 
 struct io_stat {
 public:

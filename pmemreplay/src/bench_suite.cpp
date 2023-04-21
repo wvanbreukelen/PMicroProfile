@@ -276,19 +276,32 @@ static void* do_work(void *arg)
         pthread_exit(NULL);
     }
 
-    struct iMCProbe wpq_probe{}, rpq_probe{};
+    struct iMCProbe wpq_probe{}, rpq_probe{}, wpq_occupancy_probe{}, rpq_occupancy_probe{};
     if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS, wpq_probe)) {
-        std::cerr << "Unable to add probe!" << std::endl;
+        std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_INSERTS probe!" << std::endl;
         pthread_exit(NULL);
     }
 
     if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_INSERTS, rpq_probe)) {
-        std::cerr << "Unable to add probe!" << std::endl;
+        std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_INSERTS probe!" << std::endl;
         pthread_exit(NULL);
     }
 
+    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL, wpq_occupancy_probe)) {
+        std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL probe!" << std::endl;
+        pthread_exit(NULL);
+    }
+
+    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL, rpq_occupancy_probe)) {
+        std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL probe!" << std::endl;
+        pthread_exit(NULL);
+    }
+
+
     probe_reset(wpq_probe);
     probe_reset(rpq_probe);
+    probe_reset(wpq_occupancy_probe);
+    probe_reset(rpq_occupancy_probe);
     //probe_enable(wpq_probe);
 
     cur_sample = &(stat->samples[0]);
@@ -321,11 +334,13 @@ static void* do_work(void *arg)
                     cur_sample->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
                     probe_disable(rpq_probe);
                     probe_disable(wpq_probe);
+                    probe_disable(wpq_occupancy_probe);
+                    probe_disable(rpq_occupancy_probe);
 
                     probe_count(rpq_probe, &(cur_sample->rpq_inserts));
                     probe_count(wpq_probe, &(cur_sample->wpq_inserts));
-
-			//std::cout << (cur_sample->wpq_inserts) << std::endl;
+                    probe_count(wpq_occupancy_probe, &(cur_sample->wpq_occupancy));
+                    probe_count(rpq_occupancy_probe, &(cur_sample->rpq_occupancy));
 
                     cur_sample++;
                     ++(stat->num_collected_samples);
@@ -338,8 +353,13 @@ static void* do_work(void *arg)
 
                     probe_reset(wpq_probe);
                     probe_reset(rpq_probe);
+                    probe_reset(wpq_occupancy_probe);
+                    probe_reset(rpq_occupancy_probe);
+
                     probe_enable(rpq_probe);
                     probe_enable(wpq_probe);
+                    probe_enable(wpq_occupancy_probe);
+                    probe_enable(rpq_occupancy_probe);
                 }
             }
             ++z;
@@ -614,6 +634,12 @@ static void* do_work(void *arg)
     probe_disable(wpq_probe);
     pmc.remove_imc_probe(wpq_probe);
 
+    probe_disable(wpq_occupancy_probe);
+    pmc.remove_imc_probe(wpq_occupancy_probe);
+
+    probe_disable(rpq_occupancy_probe);
+    pmc.remove_imc_probe(rpq_occupancy_probe);
+
     stat->latency_sum += std::chrono::duration_cast<std::chrono::nanoseconds>(time_stop - time_start).count();
     
     stat->read_bytes += (args->trace_file->get_total(TraceOperation::READ) * i);
@@ -626,8 +652,6 @@ static void* do_work(void *arg)
 
 void BenchSuite::run(const size_t replay_rounds)
 {
-    
-
     std::cout << "DAX area: [" << std::hex << this->mem_area << '-' << (void*) ((uintptr_t) this->mem_area + this->mem_size) << ']' << std::endl;
 
     // Calculate the DAX addresses based on the offset inside the trace PMEM region.
