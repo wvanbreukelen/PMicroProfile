@@ -80,5 +80,5 @@ inline void probe_count(const struct iMCProbe& iMCProbe, unsigned long long *cou
 inline void probe_count_single_imc(const struct iMCProbe& iMCProbe, unsigned long long *count)
 {
     if (iMCProbe.num_probes > 0)
-        read(iMCProbe.fd_probes[0], &count, sizeof(count));
+        read(iMCProbe.fd_probes[0], count, sizeof(count));
 }
