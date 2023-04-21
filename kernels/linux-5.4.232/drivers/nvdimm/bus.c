@@ -20,9 +20,12 @@
 #include <linux/io.h>
 #include <linux/mm.h>
 #include <linux/nd.h>
+#include <linux/mmiotrace.h>
 #include "nd-core.h"
 #include "nd.h"
 #include "pfn.h"
+
+
 
 int nvdimm_major;
 static int nvdimm_bus_major;
@@ -825,6 +828,18 @@ static const struct nd_cmd_desc __nd_cmd_bus_descs[] = {
 		.out_num = 1,
 		.out_sizes = { 4, },
 	},
+	[ND_CMD_TRACE_FREQ] = {
+		.in_num = 3,
+		.in_sizes = { sizeof(unsigned int), sizeof(unsigned int), sizeof(unsigned int) },
+		.out_num = 1,
+		.out_sizes = { 4, },
+	},
+	[ND_CMD_TRACE_SET_MULTICORE] = {
+		.in_num = 1,
+		.in_sizes = { sizeof(unsigned int) },
+		.out_num = 1,
+		.out_sizes = { 4, },
+	},
 };
 
 const struct nd_cmd_desc *nd_cmd_bus_desc(int cmd)
@@ -1082,6 +1097,7 @@ static int __nd_ioctl(struct nvdimm_bus *nvdimm_bus, struct nvdimm *nvdimm,
 	unsigned int cmd = _IOC_NR(ioctl_cmd);
 	struct device *dev = &nvdimm_bus->dev;
 	void __user *p = (void __user *) arg;
+	unsigned int* data = NULL;
 	char *out_env = NULL, *in_env = NULL;
 	const char *cmd_name, *dimm_name;
 	u32 in_len = 0, out_len = 0;
@@ -1121,6 +1137,41 @@ static int __nd_ioctl(struct nvdimm_bus *nvdimm_bus, struct nvdimm *nvdimm,
 		nd_device_unlock(dev);
 
 		return 0;
+	}
+
+	if (cmd == ND_CMD_TRACE_FREQ) {
+		if (copy_from_user(&pkg, p, sizeof(pkg)))
+			return -EFAULT;
+
+		data = (unsigned int*) p;
+
+		nd_device_lock(dev);
+		rc = 0;
+		//device_for_each_child(dev, (void*) p, set_pmem_trace_freq);
+		#ifdef CONFIG_MMIOTRACE
+		if (disable_pmemtrace_sampler() < 0)
+			pr_warn("Could not stop sampler!\n");
+		if (enable_pmemtrace_sampler(data[0], data[1], data[2]) < 0)
+			pr_warn("Could not start sampler!\n");
+		#endif
+		nd_device_unlock(dev);
+
+		return 0;
+	}
+
+	if (cmd == ND_CMD_TRACE_SET_MULTICORE) {
+		if (copy_from_user(&pkg, p, sizeof(pkg)))
+			return -EFAULT;
+
+		nd_device_lock(dev);
+		rc = 0;
+
+		#ifdef CONFIG_MMIOTRACE
+		rc = set_pmemtrace_multicore(*(unsigned int*) p);
+		#endif
+
+		nd_device_unlock(dev);
+		return rc;
 	}
 
 	if (cmd == ND_CMD_CALL) {

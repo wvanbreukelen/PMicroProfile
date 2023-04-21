@@ -4,6 +4,7 @@
 
 #include <linux/types.h>
 #include <linux/list.h>
+#include <linux/atomic.h>
 
 struct kmmio_probe;
 struct pt_regs;
@@ -20,6 +21,8 @@ struct kmmio_probe {
 	unsigned long		addr;
 	/* length of the probe region: */
 	unsigned long		len;
+	/* is user space probe */
+	struct task_struct* 		user_task;
 	/* Called before addr is executed: */
 	kmmio_pre_handler_t	pre_handler;
 	/* Called after addr is executed: */
@@ -34,19 +37,19 @@ extern void unregister_kmmio_probe(struct kmmio_probe *p);
 extern int kmmio_init(void);
 extern void kmmio_cleanup(void);
 
-#ifdef CONFIG_MMIOTRACE
-/* kmmio is active by some kmmio_probes? */
-static inline int is_kmmio_active(void)
-{
-	return kmmio_count;
-}
 
+
+#define KMMIO_HERTZ 50
+
+#ifdef CONFIG_MMIOTRACE
+
+extern atomic_t kmmio_miss_counter;
 /* Called from page fault handler. */
 extern int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_error_code);
 
 /* Called from ioremap.c */
 extern void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
-							void __iomem *addr);
+							void __iomem *addr, struct task_struct* user_task);
 extern void mmiotrace_iounmap(volatile void __iomem *addr);
 
 extern void mmiotrace_disarm_trace_probe(volatile void __iomem *addr);
@@ -112,8 +115,26 @@ struct mmiotrace_map {
 /* in kernel/trace/trace_mmiotrace.c */
 extern void enable_mmiotrace(void);
 extern void disable_mmiotrace(void);
+
+extern int enable_pmemtrace_sampler(unsigned int freq, unsigned int duty_cycle, unsigned int is_time_triggered);
+extern int disable_pmemtrace_sampler(void);
+extern int set_pmemtrace_multicore(unsigned int is_on);
+
 extern void mmio_trace_rw(struct mmiotrace_rw *rw);
 extern void mmio_trace_mapping(struct mmiotrace_map *map);
 extern __printf(1, 0) int mmio_trace_printk(const char *fmt, va_list args);
+
+extern atomic_t faults_counter;
+extern atomic_t faults_captured;
+
+#ifdef CONFIG_MMIOTRACE
+static inline int is_kmmio_active(void)
+{
+	atomic_inc(&faults_counter);
+
+	return kmmio_count;
+}
+
+#endif
 
 #endif /* _LINUX_MMIOTRACE_H */

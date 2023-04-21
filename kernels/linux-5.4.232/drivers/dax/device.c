@@ -11,6 +11,8 @@
 #include <linux/fs.h>
 #include <linux/mm.h>
 #include <linux/mman.h>
+#include <linux/mmiotrace.h>
+
 #include "dax-private.h"
 #include "bus.h"
 
@@ -104,6 +106,7 @@ static vm_fault_t __dev_dax_pte_fault(struct dev_dax *dev_dax,
 
 	*pfn = phys_to_pfn_t(phys, dax_region->pfn_flags);
 
+	//pr_info("DAX PTE FAULT: (pgoff: 0x%lx) -> Physical Address 0x%llx\n", vmf->pgoff, phys);
 	return vmf_insert_mixed(vmf->vma, vmf->address, *pfn);
 }
 
@@ -152,6 +155,7 @@ static vm_fault_t __dev_dax_pmd_fault(struct dev_dax *dev_dax,
 
 	*pfn = phys_to_pfn_t(phys, dax_region->pfn_flags);
 
+	//pr_info("DAX PMD FAULT: Virtual Address: 0x%lx (pgoff: 0x%lx) -> Physical Address 0x%llx\n", pmd_addr, pgoff, phys);
 	return vmf_insert_pfn_pmd(vmf, *pfn, vmf->flags & FAULT_FLAG_WRITE);
 }
 
@@ -200,8 +204,10 @@ static vm_fault_t __dev_dax_pud_fault(struct dev_dax *dev_dax,
 		return VM_FAULT_SIGBUS;
 	}
 
+
 	*pfn = phys_to_pfn_t(phys, dax_region->pfn_flags);
 
+	//pr_info("DAX PUD FAULT: Virtual Address: 0x%lx (pgoff: 0x%lx) -> Physical Address 0x%llx\n", pud_addr, pgoff, phys);
 	return vmf_insert_pfn_pud(vmf, *pfn, vmf->flags & FAULT_FLAG_WRITE);
 }
 #else
@@ -222,9 +228,10 @@ static vm_fault_t dev_dax_huge_fault(struct vm_fault *vmf,
 	pfn_t pfn;
 	struct dev_dax *dev_dax = filp->private_data;
 
-	dev_dbg(&dev_dax->dev, "%s: %s (%#lx - %#lx) size = %d\n", current->comm,
+	pr_info("%s: %s (%#lx - %#lx) size = %d\n", current->comm,
 			(vmf->flags & FAULT_FLAG_WRITE) ? "write" : "read",
 			vmf->vma->vm_start, vmf->vma->vm_end, pe_size);
+	// FIXME: do mmiotrace magic here...
 
 	id = dax_read_lock();
 	switch (pe_size) {
@@ -248,6 +255,9 @@ static vm_fault_t dev_dax_huge_fault(struct vm_fault *vmf,
 		unsigned long i;
 		pgoff_t pgoff;
 
+		unsigned long dax_faulting_addr =(vmf->address & ~(fault_size - 1));
+		
+
 		/*
 		 * In the device-dax case the only possibility for a
 		 * VM_FAULT_NOPAGE result is when device-dax capacity is
@@ -264,8 +274,34 @@ static vm_fault_t dev_dax_huge_fault(struct vm_fault *vmf,
 				continue;
 			page->mapping = filp->f_mapping;
 			page->index = pgoff + i;
+
+			//mmiotrace_ioremap(page_to_phys(page), PAGE_SIZE, dax_faulting_addr + (i * PAGE_SIZE));
 		}
+
+		#ifdef CONFIG_MMIOTRACE
+		pr_info("No page address virt: 0x%lx phys: 0x%llx\n", dax_faulting_addr, dax_pgoff_to_phys(dev_dax, pgoff, fault_size));
+
+		if (mmiotrace_is_enabled()) {
+
+			// if (pe_size == PE_SIZE_PMD) {
+			// 	pteval_t old_presence;
+			// 	pmd_mknotpresent(*vmf->pmd);
+			// 	__flush_tlb_one_user(dax_faulting_addr);
+			// } else if (pe_size == PE_SIZE_PUD) {
+			// 	pteval_t old_presence;
+			// 	pud_mknotpresent(*vmf->pud);
+			// 	__flush_tlb_one_user(dax_faulting_addr);
+			// }
+			
+			mmiotrace_ioremap(dax_pgoff_to_phys(dev_dax, pgoff, fault_size), fault_size, dax_faulting_addr, current);
+		}
+
+		#endif
+
 	}
+
+	pr_info("Fault code: 0x%x\n", rc);
+
 	dax_read_unlock(id);
 
 	return rc;
@@ -308,6 +344,7 @@ static int dax_mmap(struct file *filp, struct vm_area_struct *vma)
 	struct dev_dax *dev_dax = filp->private_data;
 	int rc, id;
 
+	
 	dev_dbg(&dev_dax->dev, "trace\n");
 
 	/*
@@ -322,6 +359,9 @@ static int dax_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	vma->vm_ops = &dax_vm_ops;
 	vma->vm_flags |= VM_HUGEPAGE;
+
+
+	pr_info("mmapped DAX region: [0x%lx, 0x%lx]\n", vma->vm_start, vma->vm_end);
 	return 0;
 }
 
@@ -357,7 +397,11 @@ static unsigned long dax_get_unmapped_area(struct file *filp,
 		return addr_align;
 	}
  out:
-	return current->mm->get_unmapped_area(filp, addr, len, pgoff, flags);
+	unsigned long ret_area = current->mm->get_unmapped_area(filp, addr, len, pgoff, flags);
+
+	pr_info("addr: %p, len: %lu unmapped area: 0x%lx\n", addr, len, ret_area);
+
+	return ret_area;
 }
 
 static const struct address_space_operations dev_dax_aops = {
@@ -370,6 +414,8 @@ static int dax_open(struct inode *inode, struct file *filp)
 	struct dax_device *dax_dev = inode_dax(inode);
 	struct inode *__dax_inode = dax_inode(dax_dev);
 	struct dev_dax *dev_dax = dax_get_private(dax_dev);
+
+	pr_info("Opening dax device...\n");
 
 	dev_dbg(&dev_dax->dev, "trace\n");
 	inode->i_mapping = __dax_inode->i_mapping;
