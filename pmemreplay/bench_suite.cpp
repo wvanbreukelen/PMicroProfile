@@ -28,8 +28,8 @@
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
-#define SAMPLE_RATE   1000000
-#define SAMPLE_LENGTH 10000
+#define SAMPLE_RATE   4000000
+#define SAMPLE_LENGTH 500000
 #define ENABLE_DCOLLECTION
 
 #define EVENT_UNC_M_PMM_WPQ_INSERTS 0xE7
@@ -323,6 +323,8 @@ static void* do_work(void *arg)
 
                     probe_count(rpq_probe, &(cur_sample->rpq_inserts));
                     probe_count(wpq_probe, &(cur_sample->wpq_inserts));
+
+			//std::cout << (cur_sample->wpq_inserts) << std::endl;
 
                     cur_sample++;
                     ++(stat->num_collected_samples);
