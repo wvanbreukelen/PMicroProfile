@@ -19,6 +19,8 @@ public:
     unsigned long long write_inst_cycles = 0;
     unsigned long long flush_inst_cycles = 0;
 
+    unsigned long long unc_ticks = 0;
+
     unsigned long long rpq_inserts = 0;
     unsigned long long wpq_inserts = 0;
 
@@ -40,7 +42,9 @@ Stream& operator<<(Stream& os, const io_sample& sample) {
        << sample.wpq_inserts << ","
        << sample.rpq_inserts << ","
        << sample.wpq_occupancy << ","
-       << sample.rpq_occupancy << ",";
+       << sample.rpq_occupancy << ","
+       << sample.unc_ticks;
+    
     return os;
 }
 
