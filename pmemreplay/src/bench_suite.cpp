@@ -28,8 +28,8 @@
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
-#define SAMPLE_RATE   4000000
-#define SAMPLE_LENGTH 500000
+#define SAMPLE_RATE  10000000  //4000000
+#define SAMPLE_LENGTH 5000000  //500000
 #define ENABLE_DCOLLECTION
 
 // See: https://perfmon-events.intel.com/
