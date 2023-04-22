@@ -97,15 +97,14 @@ static void clean_cache_range(void *addr, size_t size)
 	void *vend = addr + size;
 	void *p;
 
-	// #ifdef CONFIG_MMIOTRACE
-	// if (unlikely(mmiotrace_is_enabled())) {
-	// 	pr_info(
-	// 		"F 0 0x0 0.0 0 %p 0x%lx 0x00 %d\n",
-	// 		addr, size, smp_processor_id());
-	// }
-	// #endif
+	//#ifdef CONFIG_MMIOTRACE
+	//if (unlikely(mmiotrace_is_enabled())) {
+		pr_info(
+			"F 0 0x0 0.0 0 %p 0x%lx 0x00 %d\n",
+			addr, size, smp_processor_id());
+	//}
+	//#endif
 
-	// clwb(p);
 	for (p = (void *)((unsigned long)addr & ~clflush_mask);
 	     p < vend; p += x86_clflush_size)
 		clflush(p);

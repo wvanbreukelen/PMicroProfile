@@ -1,4 +1,8 @@
-kernels/*
+kernels/linux
+kernels/linux-5.4.232-orig
+kernels/linux-5.10.167
+kernels/linux-5.10.169
+
 qemu/*
 fedora/*
 debian/*

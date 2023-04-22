@@ -556,7 +556,7 @@ static void enable_mmiotrace_soft(void)
 	list_for_each_entry(trace, &trace_list, list) {
 		if (!nommiotrace && !trace->enabled) {
 			if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
-				pr_warn("Unable to map probe!\n");
+				pr_warn("Unable to map probe, err code: %d\n", ret);
 			}
 			trace->enabled = 1;
 		}
