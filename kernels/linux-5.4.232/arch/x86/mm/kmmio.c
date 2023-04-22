@@ -81,58 +81,50 @@ static struct list_head kmmio_page_table[KMMIO_PAGE_TABLE_SIZE];
 static LIST_HEAD(kmmio_probes);
 
 
+
+
 static pte_t *lookup_user_address(unsigned long addr, unsigned int* level, struct mm_struct *mm)
 {
-	pgd_t *pgd;
 	p4d_t *p4d;
 	pud_t *pud;
 	pmd_t *pmd;
+	pte_t *pte;
 
 	*level = PG_LEVEL_NONE;
 
-	pgd = pgd_offset(mm, addr);
-
-	if (pgd_none(*pgd)) {
-		//pr_info("pgd_none\n");
+	pgd_t *pgd = pgd_offset(mm, addr);
+	if (pgd_none(*pgd) || pgd_bad(*pgd))
 		return NULL;
-	}
-		
-
+	
 	p4d = p4d_offset(pgd, addr);
-	if (p4d_none(*p4d)) {
-		//pr_info("p4d_none\n");
+	if (p4d_none(*p4d))
 		return NULL;
-	}
-		
 
 	*level = PG_LEVEL_512G;
-	if (p4d_large(*p4d) || p4d_none(*p4d)) {
+	if (p4d_large(*p4d) || !p4d_present(*p4d))
 		return (pte_t *)p4d;
-	}
 
 	pud = pud_offset(p4d, addr);
-	if (pud_none(*pud)) {
-		//pr_info("pud_none\n");
+	if (pud_none(*pud))
 		return NULL;
-	}
 
 	*level = PG_LEVEL_1G;
-	if (pud_large(*pud) || pud_none(*pud))
+	if (pud_large(*pud) || !pud_present(*pud))
 		return (pte_t *)pud;
 
 	pmd = pmd_offset(pud, addr);
-	if (pmd_none(*pmd)) {
-		//pr_info("pmd_none\n");
+	if (pmd_none(*pmd))
 		return NULL;
-	}
 
 	*level = PG_LEVEL_2M;
-	if (pmd_large(*pmd) || pmd_none(*pmd))
+	if (pmd_large(*pmd) || !pmd_present(*pmd))
 		return (pte_t *)pmd;
 
 	*level = PG_LEVEL_4K;
 
 	return pte_offset_map(pmd, addr);
+
+	return pte;
 }
 
 static struct list_head *kmmio_page_list(unsigned long addr)
@@ -368,16 +360,15 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 			if (user_task) {
 				if ((current->flags & PF_KTHREAD) && current->active_mm != user_task->mm) {
 					old_mm = current->active_mm;
-					kthread_use_mm(user_task->mm);
+					//kthread_use_mm(user_task->mm);
 					//switch_mm(old_mm, user_task->mm, NULL);
-					barrier();
+					//barrier();
 					experienced_vm_switch = 1;
 					pr_info("Switched MM to user thread!\n");
-					pte = lookup_user_address(addr, &l, user_task->mm);
-				} else {
-					pte = lookup_user_address(addr, &l, current->active_mm);
+					//pte = lookup_user_address(addr, &l, user_task->mm);
 				}
 			}
+			pte = lookup_user_address(addr, &l, current->active_mm);
 		}
 
 		if (!pte) {
@@ -462,9 +453,9 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	 */
 
 	if (experienced_vm_switch) {
-		kthread_unuse_mm(user_task->mm);
+		//kthread_unuse_mm(user_task->mm);
 		//current->active_mm = old_mm;
-		barrier();
+		//barrier();
 		//unuse_mm(user_task->mm);
 	}
 
@@ -477,7 +468,7 @@ no_kmmio_ctx:
 no_kmmio_switch_mm:
 no_kmmio:
 	if (experienced_vm_switch) {
-		kthread_unuse_mm(user_task->mm);
+		//kthread_unuse_mm(user_task->mm);
 	}
 
 	//pr_info("releasing rcu_read_lock\n");
@@ -604,7 +595,32 @@ static void release_kmmio_fault_page(unsigned long addr,
 	}
 }
 
+static pte_t* fancy_lookup(struct mm_struct *mm, unsigned long addr)
+{
+	p4d_t *p4d;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
 
+	pgd_t *pgd = pgd_offset(mm, addr);
+	if (pgd_none(*pgd) || pgd_bad(*pgd))
+		return NULL;
+	p4d = p4d_offset(pgd, addr);
+	if (p4d_none(*p4d) || p4d_bad(*p4d))
+		return NULL;
+	pud = pud_offset(p4d, addr);
+	if (pud_large(*pud) || pud_none(*pud))
+		return (pte_t*) pud;
+	pmd = pmd_offset(pud, addr);
+	if (pmd_none(*pmd) || pmd_none(*pmd))
+		return (pte_t*) pmd;
+	if (!(pte = pte_offset_map(pmd, addr)))
+		return NULL;
+	// if (!(page = pte_page(*pte)))
+	// 	return 0;
+
+	return pte;
+}
 
 /*
  * With page-unaligned ioremaps, one or two armed pages may contain
@@ -621,7 +637,7 @@ int register_kmmio_probe(struct kmmio_probe *p)
 	unsigned long addr = p->addr & PAGE_MASK;
 	const unsigned long size_lim = p->len + (p->addr & ~PAGE_MASK);
 	unsigned int l;
-	pte_t *pte;
+	pte_t *pte = NULL;
 	struct task_struct* user_task = NULL;
 	int experienced_vm_switch = 0;
 
@@ -650,14 +666,15 @@ int register_kmmio_probe(struct kmmio_probe *p)
 			if (user_task) {
 				pr_info("[PID: %d] current mm: %p Switching to mm: %p\n", current->pid, current->active_mm, user_task->mm);
 				if ((current->flags & PF_KTHREAD) && current->active_mm != user_task->mm) {
-					kthread_use_mm(user_task->mm);
+					//kthread_use_mm(user_task->mm);
 					experienced_vm_switch = 1;
 					pr_info("Switched MM to user thread (current->active_mm: %p)!\n", current->active_mm);
 				}
-				pr_info("Looking up address 0x%lx...\n", addr);
-				pte = lookup_user_address(addr, &l, current->active_mm);
+
+				pr_info("pte: %p\n", pte);
 
 			}
+			pte = lookup_user_address(addr, &l, current->active_mm);			
 		}
 
 		if (!pte) {
@@ -677,7 +694,7 @@ int register_kmmio_probe(struct kmmio_probe *p)
 	}
 out:
 	if (unlikely(experienced_vm_switch)) {
-		kthread_unuse_mm(user_task->mm);
+		//kthread_unuse_mm(user_task->mm);
 		pr_info("Switched MM back to %p!\n", current->active_mm);
 	}
 
@@ -824,27 +841,36 @@ void unregister_kmmio_probe(struct kmmio_probe *p)
 	struct task_struct *user_task;
 	int experienced_vm_switch = 0;
 
-	rcu_read_lock();
+	
 
 	pte = lookup_address(addr, &l);
 
 	if (!pte) {
 		if (p->user_task_pid) {
 			// Check if the address can be found in the user space area.
+			rcu_read_lock();
 			user_task = find_task_by_vpid(p->user_task_pid);
+			rcu_read_unlock();
 
-			if (user_task) {
+			if (user_task && user_task->mm) {
 				if ((current->flags & PF_KTHREAD) && current->active_mm != user_task->mm) {
-					kthread_use_mm(user_task->mm);
+					//kthread_use_mm(user_task->mm);
 					experienced_vm_switch = 1;
 				}
-
 			}
 			pte = lookup_user_address(addr, &l, current->active_mm);
 		}
 
 		if (!pte) {
 			pr_warn("Failed to find probe..\n");
+
+			// spin_lock_irqsave(&kmmio_lock, flags);
+			// if ((&p->list))
+			// 	list_del_rcu(&p->list);
+			// kmmio_count--;
+			// spin_unlock_irqrestore(&kmmio_lock, flags);
+
+			// goto out;
 		}
 	}
 		
@@ -888,11 +914,11 @@ void unregister_kmmio_probe(struct kmmio_probe *p)
 
 out:
 	if (experienced_vm_switch) {
-		kthread_unuse_mm(user_task->mm);
+		//kthread_unuse_mm(user_task->mm);
 	}
 
 
-	rcu_read_unlock();
+	//rcu_read_unlock();
 }
 EXPORT_SYMBOL(unregister_kmmio_probe);
 

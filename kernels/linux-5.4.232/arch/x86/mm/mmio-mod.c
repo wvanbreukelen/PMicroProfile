@@ -403,8 +403,11 @@ static void iounmap_trace_core(volatile void __iomem *addr)
 
 	list_for_each_entry_safe(trace, tmp, &trace_list, list) {
 		if ((unsigned long)addr == trace->probe.addr) {
-			if (!nommiotrace && trace->enabled)
+			if (!nommiotrace && trace->enabled) {
 				unregister_kmmio_probe(&trace->probe);
+				trace->enabled = 0;
+			}
+				
 			list_del(&trace->list);
 			found_trace = trace;
 			break;
