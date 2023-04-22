@@ -300,7 +300,7 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 		.probe = {
 			.addr = (unsigned long)addr,
 			.len = size,
-			.user_task = _user_task,
+			.user_task_pid = (_user_task) ? _user_task->pid : 0,
 			.pre_handler = pre,
 			.post_handler = post,
 			.private = trace

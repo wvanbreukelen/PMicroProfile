@@ -22,7 +22,7 @@ struct kmmio_probe {
 	/* length of the probe region: */
 	unsigned long		len;
 	/* is user space probe */
-	struct task_struct* 		user_task;
+	int 		user_task_pid;
 	/* Called before addr is executed: */
 	kmmio_pre_handler_t	pre_handler;
 	/* Called after addr is executed: */
