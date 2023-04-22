@@ -27,9 +27,9 @@
 #include <linux/errno.h>
 #include <asm/debugreg.h>
 #include <linux/mmiotrace.h>
-#include <asm/mmu_context.h>
+#include <linux/sched.h>
 #include <linux/kthread.h>
-#include <linux/membarrier.h>
+#include <asm/mmu_context.h>
 
 
 
@@ -129,12 +129,12 @@ static struct list_head *kmmio_page_list(unsigned long addr)
 	pte_t *pte = lookup_address(addr, &l);
 
 	if (!pte) {
-		pte = lookup_user_address(addr, &l, current->mm);
+		pte = lookup_user_address(addr, &l, current->active_mm);
 
-		if (!pte)
+		if (!pte) {
+			pr_err("Cound not find page list for addr: %lx\n", addr);
 			return NULL;
-
-		//pr_info("kmmio_page_list: found user page\n");
+		}
 	}
 		
 	addr &= page_level_mask(l);
@@ -173,12 +173,14 @@ static struct kmmio_fault_page *get_kmmio_fault_page(unsigned long addr)
 	pte_t *pte = lookup_address(addr, &l);
 
 	if (!pte) {
-		if (current && current->mm)
-			pte = lookup_user_address(addr, &l, current->mm);
+		if (current->active_mm)
+			pte = lookup_user_address(addr, &l, current->active_mm);
 
 		if (!pte) {
+			pr_warn("Could not find fault page for address %lx\n", addr);
 			return NULL;
 		}
+
 		//pr_info("get_kmmio_fault_page: found user page\n");
 	}
 		
@@ -238,7 +240,7 @@ static int clear_page_presence(struct kmmio_fault_page *f, bool clear)
 	pte_t *pte = lookup_address(f->addr, &level);
 
 	if (!pte) {
-		pte = lookup_user_address(f->addr, &level, current->mm);
+		pte = lookup_user_address(f->addr, &level, current->active_mm);
 
 		if (!pte) {
 			pr_err("no pte for addr 0x%08lx\n", f->addr);
@@ -325,8 +327,9 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	unsigned int l;
 	struct mm_struct *old_mm = NULL;
 	struct kmmio_probe *p = NULL;
-	unsigned long flags;
 	struct task_struct *user_task = NULL;
+	unsigned long flags;
+	int experienced_vm_switch = 0;
 
 	
 
@@ -351,13 +354,11 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 			user_task = find_task_by_vpid(p->user_task_pid);
 
 			if (user_task) {
-				old_mm = current->active_mm;
-				local_irq_disable();
-				switch_mm(old_mm, user_task->mm, current);
-				barrier();
-				local_irq_enable();
-
-				pte = lookup_user_address(addr, &l, user_task->mm);
+				if ((current->flags & PF_KTHREAD) && current->active_mm != user_task->mm) {
+					kthread_use_mm(user_task->mm);
+					experienced_vm_switch = 1;
+				}
+				pte = lookup_user_address(addr, &l, current->active_mm);
 			}
 		}
 
@@ -420,7 +421,7 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	ctx->saved_flags = (regs->flags & (X86_EFLAGS_TF | X86_EFLAGS_IF));
 	ctx->addr = page_base;
 
-	ctx->old_mm = (old_mm) ? old_mm : NULL;
+	//ctx->old_mm = (experienced_vm_switch) ? current->active_mm : NULL;
 
 	if (ctx->probe && ctx->probe->pre_handler)
 		ctx->probe->pre_handler(ctx->probe, regs, addr, hw_error_code);
@@ -442,19 +443,9 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	 * the user should drop to single cpu before tracing.
 	 */
 
-	if (p && user_task && old_mm) {
-		struct mm_struct* prev_temp;
-
-		local_irq_disable();
-		switch_mm(prev_temp, old_mm, current);
-		barrier();
-		local_irq_enable();
-
-		// We are still holding the rcu read lock. To avoid locking errors while in single stepping mode we manually decrease the lock count by one.
-		// if (current->lockdep_depth > 0)
-		// 	current->lockdep_depth--;
+	if (experienced_vm_switch) {
+		kthread_unuse_mm(user_task->mm);
 	}
-		
 
 	put_cpu_var(kmmio_ctx);
 	
@@ -463,17 +454,11 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 no_kmmio_ctx:
 	put_cpu_var(kmmio_ctx);
 no_kmmio_switch_mm:
-	if (p && user_task && old_mm) {
-		struct mm_struct* prev_temp;
-
-		local_irq_disable();
-		switch_mm(prev_temp, old_mm, current);
-		barrier();
-		local_irq_enable();
-
-		old_mm = NULL;
-	}
 no_kmmio:
+	if (experienced_vm_switch) {
+		kthread_unuse_mm(user_task->mm);
+	}
+
 	//pr_info("releasing rcu_read_lock\n");
 	rcu_read_unlock();
 	preempt_enable_no_resched();
@@ -517,16 +502,13 @@ static int post_kmmio_handler(unsigned long condition, struct pt_regs *regs)
 	ctx->active--;
 	BUG_ON(ctx->active);
 	
-	if (ctx->old_mm) {
-		struct mm_struct* prev_temp;
+	//if (ctx->old_mm) {
+	// 	struct mm_struct* prev_temp;
 
-		local_irq_disable();
-		switch_mm(prev_temp, ctx->old_mm, current);
-		barrier();
-		local_irq_enable();
-		// We are still holding the rcu read lock. To avoid locking errors while in single stepping mode we manually decrease the lock count by one.
-		//current->lockdep_depth++;
-	}
+	 	//kthread_unuse_mm(ctx->old_mm);
+	// 	// We are still holding the rcu read lock. To avoid locking errors while in single stepping mode we manually decrease the lock count by one.
+	// 	//current->lockdep_depth++;
+	//}
 
 	//pr_info("releasing rcu_read_lock\n");
 
@@ -603,7 +585,6 @@ static void release_kmmio_fault_page(unsigned long addr,
 
 
 
-
 /*
  * With page-unaligned ioremaps, one or two armed pages may contain
  * addresses from outside the intended mapping. Events for these addresses
@@ -620,8 +601,8 @@ int register_kmmio_probe(struct kmmio_probe *p)
 	const unsigned long size_lim = p->len + (p->addr & ~PAGE_MASK);
 	unsigned int l;
 	pte_t *pte;
-	struct task_struct *user_task = NULL;
-	struct mm_struct *old_mm = NULL;
+	struct task_struct* user_task = NULL;
+	int experienced_vm_switch = 0;
 
 	spin_lock_irqsave(&kmmio_lock, flags);
 	if (get_kmmio_probe(addr)) {
@@ -629,8 +610,7 @@ int register_kmmio_probe(struct kmmio_probe *p)
 		goto out;
 	}
 
-	preempt_disable();
-	rcu_read_lock();
+	
 
 	//pr_info("register_kmmio_probe: looking up info for address 0x%lx\n", addr);
 
@@ -638,21 +618,18 @@ int register_kmmio_probe(struct kmmio_probe *p)
 
 	if (!pte) {
 		if (p->user_task_pid) {
+			// Check if the address can be found in the user space area.
+			rcu_read_lock();
 			user_task = find_task_by_vpid(p->user_task_pid);
+			rcu_read_unlock();
 
 			if (user_task) {
-				old_mm = current->active_mm;
-				
-				pr_info("[PID: %d] current mm: %p Switching to mm: %p\n", current->pid, current->active_mm, user_task->mm);
-				local_irq_disable();
-				//switch_mm(old_mm, user_task->mm);
-				kthread_use_mm(user_task->mm);
-				barrier();
-				local_irq_enable();
+				if ((current->flags & PF_KTHREAD) && current->active_mm != user_task->mm) {
+					pr_info("[PID: %d] current mm: %p Switching to mm: %p\n", current->pid, current->active_mm, user_task->mm);
+					kthread_use_mm(user_task->mm);
+					experienced_vm_switch = 1;
+				}
 
-				pr_info("current mm active: %p current mm: %p\n", current->active_mm, current->mm);
-
-				// Check if the address can be found in the user space area.
 				pte = lookup_user_address(addr, &l, current->active_mm);
 			}
 		}
@@ -673,18 +650,11 @@ int register_kmmio_probe(struct kmmio_probe *p)
 		size += page_level_size(l);
 	}
 out:
-	if (user_task) {
-		local_irq_disable();
-		struct mm_struct *prev_temp = NULL;
+	if (experienced_vm_switch) {
 		kthread_unuse_mm(user_task->mm);
-		//switch_mm(prev_temp, old_mm, current);
-		barrier();
-		local_irq_enable();
 	}
 
 	spin_unlock_irqrestore(&kmmio_lock, flags);
-	rcu_read_unlock();
-	preempt_enable_no_resched();
 	/*
 	 * XXX: What should I do here?
 	 * Here was a call to global_flush_tlb(), but it does not exist
@@ -822,42 +792,29 @@ void unregister_kmmio_probe(struct kmmio_probe *p)
 	struct kmmio_delayed_release *drelease;
 	unsigned int l;
 	pte_t *pte;
+	struct task_struct *user_task;
+	int experienced_vm_switch = 0;
 
 	pte = lookup_address(addr, &l);
+
 	if (!pte) {
 		if (p->user_task_pid) {
-			spin_lock_irqsave(&kmmio_lock, flags);
+			// Check if the address can be found in the user space area.
+			user_task = find_task_by_vpid(p->user_task_pid);
 
-			while (size < size_lim) {
-				release_kmmio_fault_page(addr + size, &release_list);
-				size += page_level_size(l);
+			if (user_task) {
+				if ((current->flags & PF_KTHREAD) && current->active_mm != user_task->mm) {
+					kthread_use_mm(user_task->mm);
+					experienced_vm_switch = 1;
+				}
+
+				pte = lookup_user_address(addr, &l, current->active_mm);
 			}
-
-			if ((&p->list))
-				list_del_rcu(&p->list);
-			kmmio_count--;
-			spin_unlock_irqrestore(&kmmio_lock, flags);
-
-			if (!release_list)
-				return;
-
-			drelease = kmalloc(sizeof(*drelease), GFP_ATOMIC);
-			if (!drelease) {
-				pr_crit("leaking kmmio_fault_page objects.\n");
-				return;
-			}
-			drelease->release_list = release_list;
-
-			call_rcu(&drelease->rcu, remove_kmmio_fault_pages);
-
-			return;
-			//pte = lookup_user_address(addr, &l, current->mm);
 		}
 
-		if (!pte)
+		if (!pte) {
 			return;
-
-
+		}
 	}
 		
 	spin_lock_irqsave(&kmmio_lock, flags);
@@ -866,8 +823,7 @@ void unregister_kmmio_probe(struct kmmio_probe *p)
 		size += page_level_size(l);
 	}
 
-	if ((&p->list))
-		list_del_rcu(&p->list);
+	list_del_rcu(&p->list);
 	kmmio_count--;
 	spin_unlock_irqrestore(&kmmio_lock, flags);
 
@@ -896,6 +852,10 @@ void unregister_kmmio_probe(struct kmmio_probe *p)
 	 * a kmmio fault, when it actually is. This would lead to madness.
 	 */
 	call_rcu(&drelease->rcu, remove_kmmio_fault_pages);
+
+	if (experienced_vm_switch) {
+		kthread_unuse_mm(user_task->mm);
+	}
 }
 EXPORT_SYMBOL(unregister_kmmio_probe);
 
