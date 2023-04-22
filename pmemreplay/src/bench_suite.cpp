@@ -28,10 +28,12 @@
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
-#define SAMPLE_RATE   4000000
-#define SAMPLE_LENGTH 500000
+#define SAMPLE_RATE  10000000  //4000000
+#define SAMPLE_LENGTH 5000000  //500000
 #define ENABLE_DCOLLECTION
 
+// See: https://perfmon-events.intel.com/
+#define EVENT_UNC_M_CLOCKTICKS 0x00 // umask=0x0,event=0x0 
 #define EVENT_UNC_M_PMM_WPQ_INSERTS 0xE7
 #define EVENT_UNC_M_PMM_RPQ_INSERTS 0xE3
 #define EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL 0x1E0 // umask=0x1,event=0xE0
@@ -276,7 +278,13 @@ static void* do_work(void *arg)
         pthread_exit(NULL);
     }
 
-    struct iMCProbe wpq_probe{}, rpq_probe{}, wpq_occupancy_probe{}, rpq_occupancy_probe{};
+    struct iMCProbe unc_ticks_probe{}, wpq_probe{}, rpq_probe{}, wpq_occupancy_probe{}, rpq_occupancy_probe{};
+
+    if (!pmc.add_imc_probe(EVENT_UNC_M_CLOCKTICKS, unc_ticks_probe)) {
+        std::cerr << "Unable to add EVENT_UNC_M_CLOCKTICKS probe!" << std::endl;
+        pthread_exit(NULL);
+    }
+
     if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS, wpq_probe)) {
         std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_INSERTS probe!" << std::endl;
         pthread_exit(NULL);
@@ -298,6 +306,7 @@ static void* do_work(void *arg)
     }
 
 
+    probe_reset(unc_ticks_probe);
     probe_reset(wpq_probe);
     probe_reset(rpq_probe);
     probe_reset(wpq_occupancy_probe);
@@ -332,11 +341,13 @@ static void* do_work(void *arg)
                     is_sampling = false;
 
                     cur_sample->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
+                    probe_disable(unc_ticks_probe);
                     probe_disable(rpq_probe);
                     probe_disable(wpq_probe);
                     probe_disable(wpq_occupancy_probe);
                     probe_disable(rpq_occupancy_probe);
 
+                    probe_count_single_imc(unc_ticks_probe, &(cur_sample->unc_ticks));
                     probe_count(rpq_probe, &(cur_sample->rpq_inserts));
                     probe_count(wpq_probe, &(cur_sample->wpq_inserts));
                     probe_count(wpq_occupancy_probe, &(cur_sample->wpq_occupancy));
@@ -351,11 +362,13 @@ static void* do_work(void *arg)
                     is_sampling = true;
                     latest_sample_time = cur_time;
 
+                    probe_reset(unc_ticks_probe);
                     probe_reset(wpq_probe);
                     probe_reset(rpq_probe);
                     probe_reset(wpq_occupancy_probe);
                     probe_reset(rpq_occupancy_probe);
 
+                    probe_enable(unc_ticks_probe);
                     probe_enable(rpq_probe);
                     probe_enable(wpq_probe);
                     probe_enable(wpq_occupancy_probe);
@@ -627,6 +640,9 @@ static void* do_work(void *arg)
     // Do a simple addition to make sure the compiler does not optimize 'temp_var' away.
     temp_var++;
     const auto time_stop = std::chrono::high_resolution_clock::now();
+
+    probe_disable(unc_ticks_probe);
+    pmc.remove_imc_probe(unc_ticks_probe);
 
     probe_disable(rpq_probe);
     pmc.remove_imc_probe(rpq_probe);
