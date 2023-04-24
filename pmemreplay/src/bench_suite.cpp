@@ -28,8 +28,9 @@
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
-#define SAMPLE_RATE  10000000  //4000000
-#define SAMPLE_LENGTH 5000000  //500000
+#define SAMPLE_RATE  500000000000  //50000000
+#define SAMPLE_DUTY_CYCLE 50
+#define SAMPLE_LENGTH 8000000  //500000
 #define ENABLE_DCOLLECTION
 
 // See: https://perfmon-events.intel.com/
@@ -334,7 +335,7 @@ static void* do_work(void *arg)
 
     size_t i = 0;
     //const uint64_t sample_mask = next_pow2_fast(args->trace_file->size() / args->num_samples) - 1;
-    const uint64_t sample_mask = (128 - 1);
+    const uint64_t sample_mask = (1024 - 1);
     unsigned long long latest_sample_time = __builtin_ia32_rdtsc();
     for (; i < args->replay_rounds + 1; ++i) {
         //prev_op = (*args->trace_file)[0].op;
@@ -361,7 +362,7 @@ static void* do_work(void *arg)
             if (unlikely((z & sample_mask) == 0)) {  // (cur_time - latest_sample_time) >= SAMPLE_LENGTH
                 cur_time = __builtin_ia32_rdtsc();
 
-                if ((cur_time - latest_sample_time) >= SAMPLE_LENGTH) {
+                if  ((cur_time - latest_sample_time) >= SAMPLE_LENGTH) {
                     if (is_sampling) {
                         is_sampling = false;
 
