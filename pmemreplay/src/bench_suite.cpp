@@ -28,10 +28,17 @@
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
-#define SAMPLE_RATE  500000000000  //50000000
-#define SAMPLE_DUTY_CYCLE 50
+#define SAMPLE_RATE  50000000L  //50000000
+#define SAMPLE_DUTY_CYCLE 25
 #define SAMPLE_LENGTH 8000000  //500000
 #define ENABLE_DCOLLECTION
+
+// period_on = (period * (thread_data->duty_cycle)) / 100;
+// 	period_off = (period * ((100 - thread_data->duty_cycle))) / 100;
+
+
+static constexpr unsigned long SAMPLE_PERIOD_ON = (SAMPLE_RATE * SAMPLE_DUTY_CYCLE) / 100;
+static constexpr unsigned long SAMPLE_PERIOD_OFF = (SAMPLE_RATE * (100 - SAMPLE_DUTY_CYCLE)) / 100;
 
 // See: https://perfmon-events.intel.com/
 #define EVENT_UNC_M_CLOCKTICKS 0x00 // umask=0x0,event=0x0 
@@ -337,6 +344,9 @@ static void* do_work(void *arg)
     //const uint64_t sample_mask = next_pow2_fast(args->trace_file->size() / args->num_samples) - 1;
     const uint64_t sample_mask = (1024 - 1);
     unsigned long long latest_sample_time = __builtin_ia32_rdtsc();
+
+
+
     for (; i < args->replay_rounds + 1; ++i) {
         //prev_op = (*args->trace_file)[0].op;
 
@@ -362,8 +372,9 @@ static void* do_work(void *arg)
             if (unlikely((z & sample_mask) == 0)) {  // (cur_time - latest_sample_time) >= SAMPLE_LENGTH
                 cur_time = __builtin_ia32_rdtsc();
 
-                if  ((cur_time - latest_sample_time) >= SAMPLE_LENGTH) {
-                    if (is_sampling) {
+
+                if (is_sampling) {
+                    if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_ON) {
                         is_sampling = false;
 
                         cur_sample->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
@@ -384,7 +395,9 @@ static void* do_work(void *arg)
                         assert(stat->num_collected_samples < MAX_SAMPLES);
                         
                         latest_sample_time = cur_time;
-                    } else {
+                    }
+                } else {
+                    if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_OFF) {
                         is_sampling = true;
                         latest_sample_time = cur_time;
 
