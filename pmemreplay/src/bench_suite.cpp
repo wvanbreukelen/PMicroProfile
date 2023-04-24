@@ -254,6 +254,23 @@ static __inline__ unsigned long long rdtsc(void)
     return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
 }
 
+static inline uint64_t next_pow2_fast(uint64_t x)
+{
+    #if defined(__GNUC__) || defined(__GNUG___)
+    // ref: https://jameshfisher.com/2018/03/30/round-up-power-2/
+    return (x == 1) ? 1 : 1 << (64 - __builtin_clzl(x - 1));
+    #else
+    x |= x>>1;
+    x |= x>>2;
+    x |= x>>4;
+    x |= x>>8;
+    x |= x>>16;
+    x |= x>>32;
+
+    return x;
+    #endif
+}
+
 
 static void* do_work(void *arg)
 {
@@ -316,6 +333,8 @@ static void* do_work(void *arg)
     cur_sample = &(stat->samples[0]);
 
     size_t i = 0;
+    //const uint64_t sample_mask = next_pow2_fast(args->trace_file->size() / args->num_samples) - 1;
+    const uint64_t sample_mask = (128 - 1);
     unsigned long long latest_sample_time = __builtin_ia32_rdtsc();
     for (; i < args->replay_rounds + 1; ++i) {
         //prev_op = (*args->trace_file)[0].op;
@@ -335,46 +354,54 @@ static void* do_work(void *arg)
             #ifdef ENABLE_DCOLLECTION
             // Calling rdtsc each iteration is quite expensive; it takes +/- 30 cycles, therefore, we only
             // check the rdtsc counter every 8 iterations (i.e. (z % 8) == 0))
-            if (((z & 0x08) == 0)) {
+            //if (((z & 0x08) == 0)) {
+            //cur_time = __builtin_ia32_rdtsc();
+
+            
+            if (unlikely((z & sample_mask) == 0)) {  // (cur_time - latest_sample_time) >= SAMPLE_LENGTH
                 cur_time = __builtin_ia32_rdtsc();
-                if (is_sampling && (cur_time - latest_sample_time) >= SAMPLE_LENGTH) {
-                    is_sampling = false;
 
-                    cur_sample->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
-                    probe_disable(unc_ticks_probe);
-                    probe_disable(rpq_probe);
-                    probe_disable(wpq_probe);
-                    probe_disable(wpq_occupancy_probe);
-                    probe_disable(rpq_occupancy_probe);
+                if ((cur_time - latest_sample_time) >= SAMPLE_LENGTH) {
+                    if (is_sampling) {
+                        is_sampling = false;
 
-                    probe_count_single_imc(unc_ticks_probe, &(cur_sample->unc_ticks));
-                    probe_count(rpq_probe, &(cur_sample->rpq_inserts));
-                    probe_count(wpq_probe, &(cur_sample->wpq_inserts));
-                    probe_count(wpq_occupancy_probe, &(cur_sample->wpq_occupancy));
-                    probe_count(rpq_occupancy_probe, &(cur_sample->rpq_occupancy));
+                        cur_sample->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
+                        probe_disable(unc_ticks_probe);
+                        probe_disable(rpq_probe);
+                        probe_disable(wpq_probe);
+                        probe_disable(wpq_occupancy_probe);
+                        probe_disable(rpq_occupancy_probe);
 
-                    cur_sample++;
-                    ++(stat->num_collected_samples);
-                    assert(stat->num_collected_samples < MAX_SAMPLES);
-                    
-                    latest_sample_time = cur_time;
-                } else if ((cur_time - latest_sample_time) >= SAMPLE_RATE) {
-                    is_sampling = true;
-                    latest_sample_time = cur_time;
+                        probe_count_single_imc(unc_ticks_probe, &(cur_sample->unc_ticks));
+                        probe_count(rpq_probe, &(cur_sample->rpq_inserts));
+                        probe_count(wpq_probe, &(cur_sample->wpq_inserts));
+                        probe_count(wpq_occupancy_probe, &(cur_sample->wpq_occupancy));
+                        probe_count(rpq_occupancy_probe, &(cur_sample->rpq_occupancy));
 
-                    probe_reset(unc_ticks_probe);
-                    probe_reset(wpq_probe);
-                    probe_reset(rpq_probe);
-                    probe_reset(wpq_occupancy_probe);
-                    probe_reset(rpq_occupancy_probe);
+                        cur_sample++;
+                        ++(stat->num_collected_samples);
+                        assert(stat->num_collected_samples < MAX_SAMPLES);
+                        
+                        latest_sample_time = cur_time;
+                    } else {
+                        is_sampling = true;
+                        latest_sample_time = cur_time;
 
-                    probe_enable(unc_ticks_probe);
-                    probe_enable(rpq_probe);
-                    probe_enable(wpq_probe);
-                    probe_enable(wpq_occupancy_probe);
-                    probe_enable(rpq_occupancy_probe);
+                        probe_reset(unc_ticks_probe);
+                        probe_reset(wpq_probe);
+                        probe_reset(rpq_probe);
+                        probe_reset(wpq_occupancy_probe);
+                        probe_reset(rpq_occupancy_probe);
+
+                        probe_enable(unc_ticks_probe);
+                        probe_enable(rpq_probe);
+                        probe_enable(wpq_probe);
+                        probe_enable(wpq_occupancy_probe);
+                        probe_enable(rpq_occupancy_probe);
+                    }
                 }
             }
+
             ++z;
             #endif
 
@@ -678,7 +705,7 @@ void BenchSuite::run(const size_t replay_rounds)
 
     // Spawn the threads
     pthread_t threads[this->num_threads] = {};
-    struct WorkerArguments thread_args[this->num_threads] = {{(&(this->trace_file)), replay_rounds}};
+    struct WorkerArguments thread_args[this->num_threads] = {{(&(this->trace_file)), this->num_samples, replay_rounds}};
 
     std::cout << "Initializing " << this->num_threads << " threads ..." << std::endl;
 

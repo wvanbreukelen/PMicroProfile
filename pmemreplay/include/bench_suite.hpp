@@ -3,11 +3,12 @@
 
 class BenchSuite {
 public:
-    BenchSuite(TraceFile &trace_file, const std::string& pmem_device_loc, const size_t mem_size, const unsigned int num_threads, const bool force_ram, const bool do_fallback_ram, const bool prealloc = true) :
+    BenchSuite(TraceFile &trace_file, const std::string& pmem_device_loc, const size_t mem_size, const unsigned int num_threads, const uint64_t num_samples, const bool force_ram, const bool do_fallback_ram, const bool prealloc = true) :
         trace_file(trace_file),
         pmem_device_loc(pmem_device_loc),
         mem_size(mem_size),
         num_threads(num_threads),
+        num_samples(num_samples),
         force_ram(force_ram),
         do_fallback_ram(do_fallback_ram)
     {
@@ -38,6 +39,7 @@ private:
     const std::string pmem_device_loc;
     const size_t mem_size;
     const unsigned int num_threads;
+    const uint64_t num_samples;
     const bool force_ram;
     const bool do_fallback_ram;
 
