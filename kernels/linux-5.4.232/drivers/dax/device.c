@@ -343,6 +343,8 @@ static int dax_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	struct dev_dax *dev_dax = filp->private_data;
 	int rc, id;
+	phys_addr_t phys;
+	pgoff_t pgoff;
 
 	
 	dev_dbg(&dev_dax->dev, "trace\n");

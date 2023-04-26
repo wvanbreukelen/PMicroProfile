@@ -14,8 +14,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g -march=native -pthread")
 
 
 # Add the main executable
-add_executable(pmemreplay trace.cpp bench_suite.cpp bench_export.cpp pmc.cpp main.cpp)
+add_executable(pmemreplay src/trace.cpp src/bench_suite.cpp src/bench_export.cpp src/pmc.cpp src/worker.cpp main.cpp)
 
-target_include_directories(pmemreplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_include_directories(pmemreplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(pmemreplay PRIVATE pthread Arrow::arrow_shared Parquet::parquet_shared)

@@ -300,7 +300,7 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 		.probe = {
 			.addr = (unsigned long)addr,
 			.len = size,
-			.user_task = _user_task,
+			.user_task_pid = (_user_task) ? _user_task->pid : 0,
 			.pre_handler = pre,
 			.post_handler = post,
 			.private = trace
@@ -403,8 +403,11 @@ static void iounmap_trace_core(volatile void __iomem *addr)
 
 	list_for_each_entry_safe(trace, tmp, &trace_list, list) {
 		if ((unsigned long)addr == trace->probe.addr) {
-			if (!nommiotrace && trace->enabled)
+			if (!nommiotrace && trace->enabled) {
 				unregister_kmmio_probe(&trace->probe);
+				trace->enabled = 0;
+			}
+				
 			list_del(&trace->list);
 			found_trace = trace;
 			break;
@@ -556,7 +559,7 @@ static void enable_mmiotrace_soft(void)
 	list_for_each_entry(trace, &trace_list, list) {
 		if (!nommiotrace && !trace->enabled) {
 			if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
-				pr_warn("Unable to map probe!\n");
+				pr_warn("Unable to map probe, err code: %d\n", ret);
 			}
 			trace->enabled = 1;
 		}
@@ -653,15 +656,21 @@ static int pmemtrace_sampler(void *data)
 				atomic_set(&faults_captured, 0);
 				if (kmmio_count)
 					disable_mmiotrace_soft();
-			} else if (atomic_read(&faults_counter) > period_off) {
-				if (!kmmio_count)
-					enable_mmiotrace_soft();
+			}
+
+			if (atomic_read(&faults_counter) > period_off) {
+				if (kmmio_count)
+					disable_mmiotrace_soft();
+				//preempt_disable();
+				enable_mmiotrace_soft();
+				//preempt_enable_no_resched();
 
 				atomic_set(&faults_counter, 0);
 				//toggle = !(toggle);
 			}
 
-			usleep_range(100, 150);
+			//usleep_range(250, 500);
+			msleep_interruptible(1);
 		}
 	}
 
@@ -735,10 +744,10 @@ void enable_mmiotrace(void)
 	atomic_inc(&mmiotrace_enabled);
 	spin_unlock_irq(&trace_lock);
 
-	// // The sampler might still be running, kill it just to be sure.
-	// disable_pmemtrace_sampler();
+	// The sampler might still be running, kill it just to be sure.
+	disable_pmemtrace_sampler();
 
-	// enable_pmemtrace_sampler(0, 0, 1);
+	enable_pmemtrace_sampler(0, 0, 1);
 
 	pr_info("enabled.\n");
 out:
@@ -747,8 +756,8 @@ out:
 
 void disable_mmiotrace(void)
 {
-	// if (disable_pmemtrace_sampler() < 0)
-	// 	pr_warn("Could not stop sampler!\n");
+	if (disable_pmemtrace_sampler() < 0)
+		pr_warn("Could not stop sampler!\n");
 
 	mutex_lock(&mmiotrace_mutex);
 	if (!is_enabled())

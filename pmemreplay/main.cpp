@@ -18,6 +18,7 @@ int main(int argc, char** argv)
     size_t replay_rounds;
     bool do_fallback_ram = false;
     bool force_dram = false;
+    uint64_t num_samples = 0;
 
     app.add_option("trace file", trace_file, "Trace file to execute (must have .parquet extension)")
         ->required()
@@ -27,16 +28,18 @@ int main(int argc, char** argv)
             }
             return "";
         });
-    app.add_option("-t, --num-threads", num_threads, "Number of execution threads")
+    app.add_option("-t, --num-threads", num_threads, "Number of execution threads.")
         ->default_val(1);
-    app.add_option("-r, --replay-rounds", replay_rounds, "Number of replay rounds")
+    app.add_option("-r, --replay-rounds", replay_rounds, "Number of replay rounds.")
         ->default_val(0);
-    app.add_flag("-v,--verbose", is_verbose, "Enable verbose output")
+    app.add_flag("-v,--verbose", is_verbose, "Enable verbose output.")
         ->default_val(false);
-    app.add_flag("--fallback-ram", do_fallback_ram, "Fallback using RAM in case Persistent Memory is not available")
+    app.add_flag("--fallback-ram", do_fallback_ram, "Fallback using RAM in case Persistent Memory is not available.")
         ->default_val(false);
     app.add_option("d, --device", pmem_device_loc, "Location of Persistent Memory DAX device. Enter 'dram' to use DRAM instead.")
         ->default_val("/dev/dax0.0");
+    app.add_option("-s,--num-samples", num_samples, "Number of samples to collect.")
+        ->default_val(2000);
 
     CLI11_PARSE(app, argc, argv);
 
@@ -56,7 +59,7 @@ int main(int argc, char** argv)
 
     std::cout << "Trace -> #R: " << trace.get_total(TraceOperation::READ) << " #W: " << trace.get_total(TraceOperation::WRITE) << " #FLUSH: " << trace.get_total(TraceOperation::CLFLUSH) << std::endl;
 
-    BenchSuite bsuite(trace, pmem_device_loc, BENCH_MAP_SIZE, num_threads, force_dram, do_fallback_ram);
+    BenchSuite bsuite(trace, pmem_device_loc, BENCH_MAP_SIZE, num_threads, num_samples, force_dram, do_fallback_ram);
 
     bsuite.run(replay_rounds);
 

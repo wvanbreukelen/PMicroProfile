@@ -141,6 +141,8 @@ static inline void mm_update_next_owner(struct mm_struct *mm)
 #define arch_get_mmap_base(addr, base) (base)
 #endif
 
+extern void membarrier_update_current_mm(struct mm_struct *next_mm);
+
 extern void arch_pick_mmap_layout(struct mm_struct *mm,
 				  struct rlimit *rlim_stack);
 extern unsigned long
@@ -384,6 +386,8 @@ static inline void membarrier_mm_sync_core_before_usermode(struct mm_struct *mm)
 }
 
 extern void membarrier_exec_mmap(struct mm_struct *mm);
+extern void membarrier_update_current_mm(struct mm_struct *next_mm);
+
 
 #else
 #ifdef CONFIG_ARCH_HAS_MEMBARRIER_CALLBACKS
@@ -400,5 +404,7 @@ static inline void membarrier_mm_sync_core_before_usermode(struct mm_struct *mm)
 {
 }
 #endif
+
+
 
 #endif /* _LINUX_SCHED_MM_H */
