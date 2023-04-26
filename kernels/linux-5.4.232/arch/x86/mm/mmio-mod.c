@@ -558,8 +558,13 @@ static void enable_mmiotrace_soft(void)
 
 	list_for_each_entry(trace, &trace_list, list) {
 		if (!nommiotrace && !trace->enabled) {
+			if ((current->flags & PF_KTHREAD) && trace->probe.user_task_pid > 0) {
+				pr_warn("Unable to map user space probe\n");
+				continue;
+			}
+
 			if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
-				pr_warn("Unable to map probe, err code: %d\n", ret);
+				pr_warn_once("Unable to map probe, err code: %d\n", ret);
 			}
 			trace->enabled = 1;
 		}
@@ -593,8 +598,12 @@ static void disable_mmiotrace_soft(void)
 		// pr_notice("purging non-iounmapped trace @0x%08lx, size 0x%lx.\n",
 		// 	  trace->probe.addr, trace->probe.len);
 		if (!nommiotrace && trace->enabled) {
+			if ((current->flags & PF_KTHREAD) && trace->probe.user_task_pid > 0) {
+				pr_warn("Unable to unmap user space probe\n");
+				continue;
+			}
 			unregister_kmmio_probe(&trace->probe);
-			trace->enabled = 0;
+			trace->enabled = 0;	
 			//list_del(&trace->list);
 		}
 	}

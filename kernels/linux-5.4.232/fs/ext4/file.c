@@ -25,10 +25,16 @@
 #include <linux/mount.h>
 #include <linux/path.h>
 #include <linux/dax.h>
+#include <linux/pfn_t.h>
+#include <linux/types.h>
 #include <linux/quotaops.h>
 #include <linux/pagevec.h>
 #include <linux/uio.h>
+#include <linux/printk.h>
 #include <linux/mman.h>
+#include <linux/mm.h>
+#include <linux/pfn.h>
+#include <linux/mmiotrace.h>
 #include "ext4.h"
 #include "ext4_jbd2.h"
 #include "xattr.h"
@@ -328,7 +334,9 @@ retry:
 	} else {
 		down_read(&EXT4_I(inode)->i_mmap_sem);
 	}
+
 	result = dax_iomap_fault(vmf, pe_size, &pfn, &error, &ext4_iomap_ops);
+	
 	if (write) {
 		ext4_journal_stop(handle);
 
@@ -343,6 +351,20 @@ retry:
 	} else {
 		up_read(&EXT4_I(inode)->i_mmap_sem);
 	}
+	printk("faulting virtual addr: 0x%lx size: %lu physical addr: 0x%lx 0x%lx\n", vmf->address, (pe_size == PE_SIZE_PTE) ? PAGE_SIZE : PE_SIZE_PMD, PFN_PHYS(pfn_t_to_pfn(pfn)), virt_to_phys(vmf->address));
+
+	switch (pe_size) {
+	case PE_SIZE_PTE:
+		mmiotrace_ioremap(virt_to_phys(vmf->address), PAGE_SIZE, vmf->address, NULL);
+		break;
+	case PE_SIZE_PMD:
+		mmiotrace_ioremap(virt_to_phys(vmf->address), PMD_SIZE, vmf->address, NULL);
+		break;
+	default:
+		break;
+	}
+
+	
 
 	return result;
 }

@@ -18,6 +18,7 @@
 #include <linux/ptrace.h>
 #include <linux/preempt.h>
 #include <linux/percpu.h>
+#include <linux/sched/mm.h>
 #include <linux/kdebug.h>
 #include <linux/mutex.h>
 #include <linux/io.h>
@@ -30,6 +31,7 @@
 #include <linux/sched.h>
 #include <linux/kthread.h>
 #include <asm/mmu_context.h>
+
 
 
 
@@ -84,15 +86,16 @@ static LIST_HEAD(kmmio_probes);
 
 
 static pte_t *lookup_user_address(unsigned long addr, unsigned int* level, struct mm_struct *mm)
-{
+{	
 	p4d_t *p4d;
 	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
+	pgd_t *pgd;
 
 	*level = PG_LEVEL_NONE;
 
-	pgd_t *pgd = pgd_offset(mm, addr);
+	pgd = pgd_offset(mm, addr);
 	if (pgd_none(*pgd) || pgd_bad(*pgd))
 		return NULL;
 	
@@ -123,8 +126,6 @@ static pte_t *lookup_user_address(unsigned long addr, unsigned int* level, struc
 	*level = PG_LEVEL_4K;
 
 	return pte_offset_map(pmd, addr);
-
-	return pte;
 }
 
 static struct list_head *kmmio_page_list(unsigned long addr)
@@ -329,12 +330,12 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	int ret = 0; /* default to fault not handled */
 	unsigned long page_base = addr;
 	unsigned int l;
-	struct mm_struct *old_mm = NULL;
+	struct mm_struct *old_mm = NULL, *user_mm = NULL;
 	struct kmmio_probe *p = NULL;
 	struct task_struct *user_task = NULL;
 	unsigned long flags;
 	int experienced_vm_switch = 0;
-
+	pte_t *pte = NULL;
 	
 
 	/*
@@ -349,7 +350,7 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	preempt_disable();
 	rcu_read_lock();
 
-	pte_t *pte = lookup_address(addr, &l);
+	pte = lookup_address(addr, &l);
 	if (!pte) {
 		
 		p = get_kmmio_probe(page_base);
@@ -358,17 +359,27 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 			user_task = find_task_by_vpid(p->user_task_pid);
 
 			if (user_task) {
+				// int ret = get_user_pages_remote(user_task, user_task->mm, addr, 1, FOLL_WRITE | FOLL_GET, NULL, NULL, NULL);
+
+				// if (ret < 0) {
+				// 	pr_info("Failed to map in user pages! (rc: %d)\n", ret);
+				// }
 				if ((current->flags & PF_KTHREAD) && current->active_mm != user_task->mm) {
-					old_mm = current->active_mm;
-					//kthread_use_mm(user_task->mm);
-					//switch_mm(old_mm, user_task->mm, NULL);
-					//barrier();
-					experienced_vm_switch = 1;
-					pr_info("Switched MM to user thread!\n");
-					//pte = lookup_user_address(addr, &l, user_task->mm);
+					// old_mm = current->active_mm;
+					// //user_mm = get_task_mm(user_task);
+					// //kthread_use_mm(user_task->mm);
+					// //switch_mm(old_mm, user_task->mm, NULL);
+					// //barrier();
+					// experienced_vm_switch = 1;
+
+					
+
+					// pr_info("Switched MM to user thread!\n");
+					// //pte = lookup_user_address(addr, &l, user_task->mm);
 				}
+				pte = lookup_user_address(addr, &l, current->active_mm);
 			}
-			pte = lookup_user_address(addr, &l, current->active_mm);
+			//pte = mm_find_pmd(current->active_mm, addr);
 		}
 
 		if (!pte) {
@@ -517,7 +528,7 @@ static int post_kmmio_handler(unsigned long condition, struct pt_regs *regs)
 	//if (ctx->old_mm) {
 	// 	struct mm_struct* prev_temp;
 
-	 	//kthread_unuse_mm(ctx->old_mm);
+	 	////kthread_unuse_mm(ctx->old_mm);
 	// 	// We are still holding the rcu read lock. To avoid locking errors while in single stepping mode we manually decrease the lock count by one.
 	// 	//current->lockdep_depth++;
 	//}
@@ -664,20 +675,41 @@ int register_kmmio_probe(struct kmmio_probe *p)
 			
 
 			if (user_task) {
-				pr_info("[PID: %d] current mm: %p Switching to mm: %p\n", current->pid, current->active_mm, user_task->mm);
-				if ((current->flags & PF_KTHREAD) && current->active_mm != user_task->mm) {
-					//kthread_use_mm(user_task->mm);
-					experienced_vm_switch = 1;
-					pr_info("Switched MM to user thread (current->active_mm: %p)!\n", current->active_mm);
+				
+
+				
+				//pr_info("[PID: %d] current mm: %p Switching to mm: %p\n", current->pid, current->active_mm, user_task->mm);
+				if ((current->flags & PF_KTHREAD)) { // && current->active_mm != user_task->mm
+					// kthread_use_mm(user_task->mm);
+					// experienced_vm_switch = 1;
+					// int ret = get_user_pages_remote(user_task, user_task->mm, addr, 1, FOLL_WRITE | FOLL_GET, NULL, NULL, NULL);
+
+					// pte = lookup_user_address(addr, &l, current->active_mm);
+					// kthread_unuse_mm(user_task->mm);
+
+					//pr_info("Switched MM to user thread (current->active_mm: %p)!\n", current->active_mm);
+
+					// long get_user_pages_remote(struct task_struct *tsk, struct mm_struct *mm,
+					// unsigned long start, unsigned long nr_pages,
+					// unsigned int gup_flags, struct page **pages,
+					// struct vm_area_struct **vmas, int *locked)
+
+					
+					pr_warn("Sampling on top of user space is unsupported, skipping register_kmmio_probe.\n");
+					ret = 0;
+					goto out;
 				}
 
-				pr_info("pte: %p\n", pte);
+				//pr_info("pte: %p\n", pte);
 
 			}
-			pte = lookup_user_address(addr, &l, current->active_mm);			
+
+			if (!pte)
+				pte = lookup_user_address(addr, &l, current->active_mm);			
 		}
 
 		if (!pte) {
+			pr_warn_once("register_kmmio_probe -> Failed to find probe..\n");
 			ret = -EINVAL;
 			goto out;
 		}
@@ -849,28 +881,47 @@ void unregister_kmmio_probe(struct kmmio_probe *p)
 		if (p->user_task_pid) {
 			// Check if the address can be found in the user space area.
 			rcu_read_lock();
-			user_task = find_task_by_vpid(p->user_task_pid);
+			struct pid* vpid = find_vpid(p->user_task_pid);
+			if (vpid) {
+				user_task = pid_task(vpid, PIDTYPE_PID);
+			}
 			rcu_read_unlock();
 
 			if (user_task && user_task->mm) {
-				if ((current->flags & PF_KTHREAD) && current->active_mm != user_task->mm) {
-					//kthread_use_mm(user_task->mm);
-					experienced_vm_switch = 1;
+			
+				if ((current->flags & PF_KTHREAD)) { // && current->active_mm != user_task->mm
+					// //kthread_use_mm(user_task->mm);
+					// //kthread_use_mm(user_task->mm);
+					// experienced_vm_switch = 1;
+					// int ret = get_user_pages_remote(user_task, user_task->mm, addr, 1, FOLL_WRITE | FOLL_GET, NULL, NULL, NULL);
+
+					// pte = lookup_user_address(addr, &l, current->active_mm);
+					// //kthread_unuse_mm(user_task->mm);
+					
+
+					// //pte = lookup_user_address(addr, &l, user_task->mm);
+					pr_warn_once("Sampling on top of user space is unsupported, skipping unregister_kmmio_probe.\n");
+					goto out;
 				}
 			}
-			pte = lookup_user_address(addr, &l, current->active_mm);
+
+			if (!pte)
+				pte = lookup_user_address(addr, &l, current->active_mm);
 		}
 
+		// if (experienced_vm_switch)
+		// 	kthread_unuse_mm(user_task->mm);;
+
 		if (!pte) {
-			pr_warn("Failed to find probe..\n");
+			pr_warn_once("unregister_kmmio_probe -> Failed to find probe..\n");
 
-			// spin_lock_irqsave(&kmmio_lock, flags);
-			// if ((&p->list))
+			spin_lock_irqsave(&kmmio_lock, flags);
+			// if (p && (&p->list))
 			// 	list_del_rcu(&p->list);
-			// kmmio_count--;
-			// spin_unlock_irqrestore(&kmmio_lock, flags);
+			kmmio_count--;
+			spin_unlock_irqrestore(&kmmio_lock, flags);
 
-			// goto out;
+			goto out;
 		}
 	}
 		
@@ -879,6 +930,7 @@ void unregister_kmmio_probe(struct kmmio_probe *p)
 		release_kmmio_fault_page(addr + size, &release_list);
 		size += page_level_size(l);
 	}
+
 
 	if ((&p->list))
 		list_del_rcu(&p->list);
