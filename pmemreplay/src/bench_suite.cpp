@@ -112,6 +112,13 @@ bool BenchSuite::allocate_pmem_area()
         return false;
     }
 
+    //size_t page_size = sysconf(_SC_PAGESIZE);
+
+    if (madvise(dax_area, this->mem_size, MADV_WILLNEED) < 0)
+	std::cerr << "Warning: unable to perform madvice on DAX region." << std::endl;
+    //for (char* dax_ptr = static_cast<char*>(dax_area); dax_ptr < static_cast<char*>(dax_area) + this->mem_size; dax_ptr += page_size)
+	//madvise(dax_ptr, page_size, MADV_WILLNEED);
+
     // if (mlock(dax_area, this->mem_size) < 0) {
     //     std::cerr << "Warning: unable to mlock DAX-backed memory region" << std::endl;
     // }
@@ -450,13 +457,13 @@ static void* do_work(void *arg)
                             #ifdef ENABLE_DCOLLECTION
                             if (is_sampling) {
                                 const unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
+                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<int*>(entry.dax_addr));
                                 cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
                             } else {
-                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
+                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<int*>(entry.dax_addr));
                             }
                             #else
-                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
+                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<int*>(entry.dax_addr));
                             #endif
 
                             break;
@@ -466,13 +473,13 @@ static void* do_work(void *arg)
                             #ifdef ENABLE_DCOLLECTION
                             if (is_sampling) {
                                 const unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
+                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<long*>(entry.dax_addr));
                                 cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
                             } else {
-                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
+                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<long*>(entry.dax_addr));
                             }
                             #else
-                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
+                                *(reinterpret_cast<volatile unsigned long*>(&temp_var)) = *(static_cast<unsigned long*>(entry.dax_addr));
                             #endif
 
                             break;
