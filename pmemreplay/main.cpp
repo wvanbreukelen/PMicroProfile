@@ -12,13 +12,13 @@ int main(int argc, char** argv)
     CLI::App app{"App description"};
 
     bool is_verbose = false;
-    unsigned int num_threads;
+    const unsigned int num_threads = 1;
     std::string trace_file;
     std::string pmem_device_loc;
     size_t replay_rounds;
     bool do_fallback_ram = false;
     bool force_dram = false;
-    uint64_t num_samples = 0;
+    const uint64_t num_samples = 2000;
 
     app.add_option("trace file", trace_file, "Trace file to execute (must have .parquet extension)")
         ->required()
@@ -28,18 +28,18 @@ int main(int argc, char** argv)
             }
             return "";
         });
-    app.add_option("-t, --num-threads", num_threads, "Number of execution threads.")
-        ->default_val(1);
+    // app.add_option("-t, --num-threads", num_threads, "Number of execution threads.")
+    //     ->default_val(1);
     app.add_option("-r, --replay-rounds", replay_rounds, "Number of replay rounds.")
         ->default_val(0);
     app.add_flag("-v,--verbose", is_verbose, "Enable verbose output.")
         ->default_val(false);
-    app.add_flag("--fallback-ram", do_fallback_ram, "Fallback using RAM in case Persistent Memory is not available.")
+    app.add_flag("--fallback-ram", do_fallback_ram, "Fallback to RAM in case Persistent Memory is not available.")
         ->default_val(false);
     app.add_option("d, --device", pmem_device_loc, "Location of Persistent Memory DAX device. Enter 'dram' to use DRAM instead.")
         ->default_val("/dev/dax0.0");
-    app.add_option("-s,--num-samples", num_samples, "Number of samples to collect.")
-        ->default_val(2000);
+    // app.add_option("-s,--num-samples", num_samples, "Number of samples to collect.")
+    //     ->default_val(2000);
 
     CLI11_PARSE(app, argc, argv);
 

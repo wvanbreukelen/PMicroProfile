@@ -1,0 +1,5 @@
+fileystem,runtime,percent_device_io,percent_indexing_kernel,percent_indexing_user,percent_page_fault,percent_idle,percent_interrupts,percent_other
+ext4-DAX,38.73,37.47,34.20,0.00,0.00,1.75,0.00,26.58
+SplitFS,29.22,41.46,27.73,2.00,1.00,1.74,0.00,26.07
+NOVA,18.81,76.71,17.08,1.00,0.00,1.48,0.00,3.73
+UFS,15.25,45.76,25.52,3,16.66,2.36,0,6.70
