@@ -278,8 +278,9 @@ __weak long __pmem_direct_access(struct pmem_device *pmem, pgoff_t pgoff,
 		
 	// }
 		
-	if (pfn)
+	if (pfn) {
 		*pfn = phys_to_pfn_t(pmem->phys_addr + offset, pmem->pfn_flags);
+	}
 
 	/*
 	 * If badblocks are present, limit known good range to the
@@ -290,7 +291,7 @@ __weak long __pmem_direct_access(struct pmem_device *pmem, pgoff_t pgoff,
 
 	//printk("pmem->virt_addr: %p, pgoff: %p pgoff physical: %p, pmem->data_offset: %p, offset: %p\n", pmem->virt_addr, pgoff, PFN_PHYS(pgoff), pmem->data_offset, offset);
 	
-	printk("DAX: PA: 0x%lx VA: 0x%lx (size: %lx) user: 0x%lx\n", (unsigned long) pmem->phys_addr + offset, (unsigned long) pmem->virt_addr + offset, nr_pages * PAGE_SIZE, PHYS_PFN(pmem->size - pmem->pfn_pad - offset));
+	printk("DAX: PA: 0x%lx VA: 0x%lx (size: %lx)", (unsigned long) pmem->phys_addr + offset, (unsigned long) pmem->virt_addr + offset, nr_pages * PAGE_SIZE);
 
 	//unmap_kernel_range((unsigned long) pmem->virt_addr + offset, nr_pages * PAGE_SIZE);
 	//mmiotrace_ioremap(pmem->phys_addr + offset, PFN_PHYS(nr_pages), (void __iomem *) pmem->virt_addr + offset);
@@ -534,7 +535,7 @@ static int pmem_attach_disk(struct device *dev,
 	if (!pmem->bb_state)
 		dev_warn(dev, "'badblocks' notification disabled\n");
 
-	mmiotrace_ioremap(pmem->phys_addr, pmem->size, (unsigned long) pmem->virt_addr, NULL);
+	mmiotrace_ioremap(pmem->phys_addr, pmem->size, (unsigned long) pmem->virt_addr, NULL, 0);
 
 	return 0;
 }
@@ -624,7 +625,7 @@ static void nd_pmem_notify(struct device *dev, enum nvdimm_event event)
 		struct pmem_device *pmem = dev_get_drvdata(dev);
 		//pr_info("Tracing PMEM accesses at [%p %p] (size: %lu, virt_addr: %p)\n", pmem->phys_addr, pmem->phys_addr + pmem->size, pmem->size, pmem->virt_addr);
 
-		mmiotrace_ioremap(pmem->phys_addr, pmem->size, (unsigned long) pmem->virt_addr, NULL);
+		mmiotrace_ioremap(pmem->phys_addr, pmem->size, (unsigned long) pmem->virt_addr, NULL, 0);
 
 		return;
 	}

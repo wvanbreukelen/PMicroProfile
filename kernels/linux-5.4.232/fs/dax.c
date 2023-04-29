@@ -26,6 +26,7 @@
 #include <linux/mmu_notifier.h>
 #include <linux/iomap.h>
 #include <asm/pgalloc.h>
+#include <linux/mmiotrace.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/fs_dax.h>
@@ -1369,11 +1370,14 @@ static vm_fault_t dax_iomap_pte_fault(struct vm_fault *vmf, pfn_t *pfnp,
 			ret = VM_FAULT_NEEDDSYNC | major;
 			goto finish_iomap;
 		}
+		*pfnp = pfn;
 		trace_dax_insert_mapping(inode, vmf, entry);
 		if (write)
 			ret = vmf_insert_mixed_mkwrite(vma, vaddr, pfn);
 		else
 			ret = vmf_insert_mixed(vma, vaddr, pfn);
+
+		mmiotrace_ioremap(pfn_t_to_phys(pfn), PAGE_SIZE, vmf->address, current, 1);
 
 		goto finish_iomap;
 	case IOMAP_UNWRITTEN:
@@ -1567,6 +1571,7 @@ static vm_fault_t dax_iomap_pmd_fault(struct vm_fault *vmf, pfn_t *pfnp,
 		if (error < 0)
 			goto finish_iomap;
 
+
 		entry = dax_insert_entry(&xas, mapping, vmf, entry, pfn,
 						DAX_PMD, write && !sync);
 
@@ -1586,6 +1591,10 @@ static vm_fault_t dax_iomap_pmd_fault(struct vm_fault *vmf, pfn_t *pfnp,
 
 		trace_dax_pmd_insert_mapping(inode, vmf, PMD_SIZE, pfn, entry);
 		result = vmf_insert_pfn_pmd(vmf, pfn, write);
+
+		mmiotrace_ioremap(pfn_t_to_phys(pfn), PMD_SIZE, vmf->address, current, 1);
+		
+
 		break;
 	case IOMAP_UNWRITTEN:
 	case IOMAP_HOLE:

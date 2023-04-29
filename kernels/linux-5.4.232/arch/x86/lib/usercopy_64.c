@@ -99,9 +99,9 @@ static void clean_cache_range(void *addr, size_t size)
 
 	//#ifdef CONFIG_MMIOTRACE
 	//if (unlikely(mmiotrace_is_enabled())) {
-		pr_info(
-			"F 0 0x0 0.0 0 %p 0x%lx 0x00 %d\n",
-			addr, size, smp_processor_id());
+		// pr_info(
+		// 	"F 0 0x0 0.0 0 %p 0x%lx 0x00 %d\n",
+		// 	addr, size, smp_processor_id());
 	//}
 	//#endif
 

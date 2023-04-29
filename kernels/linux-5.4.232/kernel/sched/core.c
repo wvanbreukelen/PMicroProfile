@@ -12,6 +12,8 @@
 
 #include <linux/kcov.h>
 
+#include <linux/mmiotrace.h>
+
 #include <asm/switch_to.h>
 #include <asm/tlb.h>
 
@@ -4109,12 +4111,20 @@ static void __sched notrace __schedule(bool preempt)
 	rq = cpu_rq(cpu);
 	prev = rq->curr;
 
+	#ifdef CONFIG_MMIOTRACE
+	preempt_disable();
+	if (unlikely(mmiotrace_is_enabled() && current->has_kmmio_probes))
+		mmiotrace_sync_sampler_status();
+	#endif
+
+
 	schedule_debug(prev, preempt);
 
 	if (sched_feat(HRTICK))
 		hrtick_clear(rq);
 
 	local_irq_disable();
+
 	rcu_note_context_switch(preempt);
 
 	/*

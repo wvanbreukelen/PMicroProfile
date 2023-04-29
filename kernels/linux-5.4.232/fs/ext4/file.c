@@ -294,6 +294,55 @@ out:
 }
 
 #ifdef CONFIG_FS_DAX
+
+static unsigned long lookup_user_address(unsigned long addr, struct mm_struct *mm)
+{	
+	p4d_t *p4d;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+	pgd_t *pgd;
+
+	//*level = PG_LEVEL_NONE;
+
+	pgd = pgd_offset(mm, addr);
+	if (pgd_none(*pgd) || pgd_bad(*pgd))
+		return NULL;
+	
+	p4d = p4d_offset(pgd, addr);
+	if (p4d_none(*p4d))
+		return NULL;
+
+	//*level = PG_LEVEL_512G;
+	if (p4d_large(*p4d) || !p4d_present(*p4d))
+		return (pte_t *)p4d;
+
+	pud = pud_offset(p4d, addr);
+	if (pud_none(*pud))
+		return NULL;
+
+	//*level = PG_LEVEL_1G;
+	if (pud_large(*pud) || !pud_present(*pud)) {
+		return pud_val(*pud);
+	}
+
+	pmd = pmd_offset(pud, addr);
+	if (pmd_none(*pmd))
+		return NULL;
+
+	//*level = PG_LEVEL_2M;
+	if (pmd_large(*pmd) || !pmd_present(*pmd)) {
+		return pmd_val(*pmd);
+	}
+		//return (pte_t *)pmd;
+
+	//*level = PG_LEVEL_4K;
+
+	pte = pte_offset_map(pmd, addr);
+
+	return pte_val(*pte);
+}
+
 static vm_fault_t ext4_dax_huge_fault(struct vm_fault *vmf,
 		enum page_entry_size pe_size)
 {
@@ -351,20 +400,25 @@ retry:
 	} else {
 		up_read(&EXT4_I(inode)->i_mmap_sem);
 	}
-	printk("faulting virtual addr: 0x%lx size: %lu physical addr: 0x%lx 0x%lx\n", vmf->address, (pe_size == PE_SIZE_PTE) ? PAGE_SIZE : PE_SIZE_PMD, PFN_PHYS(pfn_t_to_pfn(pfn)), virt_to_phys(vmf->address));
+	//printk("faulting virtual addr: 0x%lx size: %lu physical addr: 0x%lx 0x%lx\n", vmf->address, (pe_size == PE_SIZE_PTE) ? PAGE_SIZE : PE_SIZE_PMD, PFN_PHYS(pfn_t_to_pfn(pfn)), virt_to_phys(vmf->address));
 
-	switch (pe_size) {
-	case PE_SIZE_PTE:
-		mmiotrace_ioremap(virt_to_phys(vmf->address), PAGE_SIZE, vmf->address, NULL);
-		break;
-	case PE_SIZE_PMD:
-		mmiotrace_ioremap(virt_to_phys(vmf->address), PMD_SIZE, vmf->address, NULL);
-		break;
-	default:
-		break;
-	}
+	// pr_info("pfn: 0x%lx\n", pfn_t_to_pfn(pfn));
 
-	
+	// switch (pe_size) {
+	// case PE_SIZE_PTE:
+	// 	mmiotrace_ioremap(pfn_t_to_phys(pfn), PAGE_SIZE, vmf->address, current, 0);
+	// 	break;
+	// case PE_SIZE_PMD:
+	// 	mmiotrace_ioremap(pfn_t_to_phys(pfn), PMD_SIZE, vmf->address, current, 0);
+	// 	break;
+	// default:
+	// 	break;
+	// }
+
+	//BUG();
+	//struct vm_area_struct *vma = vmf->vma;
+
+	//mmiotrace_ioremap(virt_to_phys(vma->vm_start), (vma->vm_end - vma->vm_start), vma->vm_start, current, 1);
 
 	return result;
 }

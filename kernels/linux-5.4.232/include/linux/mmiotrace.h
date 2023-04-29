@@ -33,7 +33,7 @@ struct kmmio_probe {
 extern unsigned int kmmio_count;
 
 extern int register_kmmio_probe(struct kmmio_probe *p);
-extern void unregister_kmmio_probe(struct kmmio_probe *p);
+extern int unregister_kmmio_probe(struct kmmio_probe *p);
 extern int kmmio_init(void);
 extern void kmmio_cleanup(void);
 
@@ -49,13 +49,15 @@ extern int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long
 
 /* Called from ioremap.c */
 extern void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
-							void __iomem *addr, struct task_struct* user_task);
+							void __iomem *addr, struct task_struct* user_task, unsigned int defer);
 extern void mmiotrace_iounmap(volatile void __iomem *addr);
 
 extern void mmiotrace_disarm_trace_probe(volatile void __iomem *addr);
-
+extern void mmiotrace_sync_sampler_status(void);
 
 extern bool mmiotrace_is_enabled(void);
+extern bool mmiotrace_rrobes_enabled(void);
+
 
 /* For anyone to insert markers. Remember trailing newline. */
 extern __printf(1, 2) int mmiotrace_printk(const char *fmt, ...);
@@ -71,7 +73,7 @@ static inline int kmmio_handler(struct pt_regs *regs, unsigned long addr)
 }
 
 static inline void mmiotrace_ioremap(resource_size_t offset,
-					unsigned long size, void __iomem *addr)
+					unsigned long size, void __iomem *addr, unsigned int defer)
 {
 }
 

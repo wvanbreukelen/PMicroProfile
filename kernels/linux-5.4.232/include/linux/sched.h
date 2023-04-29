@@ -1206,6 +1206,12 @@ struct task_struct {
 
 	/* Bitmask and counter of trace recursion: */
 	unsigned long			trace_recursion;
+
+
+	#ifdef CONFIG_MMIOTRACE
+	unsigned int 			is_kmmio_sampling;
+	unsigned int			has_kmmio_probes;
+	#endif
 #endif /* CONFIG_TRACING */
 
 #ifdef CONFIG_KCOV

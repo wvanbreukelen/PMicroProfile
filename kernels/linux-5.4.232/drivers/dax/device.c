@@ -293,7 +293,7 @@ static vm_fault_t dev_dax_huge_fault(struct vm_fault *vmf,
 			// 	__flush_tlb_one_user(dax_faulting_addr);
 			// }
 			
-			mmiotrace_ioremap(dax_pgoff_to_phys(dev_dax, pgoff, fault_size), fault_size, dax_faulting_addr, current);
+			mmiotrace_ioremap(dax_pgoff_to_phys(dev_dax, pgoff, fault_size), fault_size, dax_faulting_addr, current, 0);
 		}
 
 		#endif
