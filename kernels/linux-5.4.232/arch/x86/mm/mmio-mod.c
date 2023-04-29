@@ -220,7 +220,7 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 		my_trace->opcode = MMIO_CLFLUSH;
 	} else { // (hw_error_code & X86_PF_WRITE) 
 		pr_info("Unknown instruction: %x addr: 0x%lx, instptr: %p\n", my_trace->opcode_cpu, addr, instptr);
-		dump_stack();
+		//dump_stack();
 		//pr_info("Unknown instruction\n");
 	}
 	// 	my_trace->opcode = MMIO_WRITE;
@@ -322,8 +322,6 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 	};
 	map.map_id = trace->id;
 
-	//iounmap_trace_core(addr);
-
 	spin_lock_irq(&trace_lock);
 	if (!is_enabled()) {
 		kfree(trace);
@@ -333,8 +331,12 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 	struct remap_trace *trace_in_list;
 	list_for_each_entry_safe(trace_in_list, tmp, &trace_list, list) {
 		if ((unsigned long)addr == trace_in_list->probe.addr) {
+			if (!nommiotrace)
+				unregister_kmmio_probe(&trace_in_list->probe);
+			
+			list_del(&trace_in_list->list);
 			//pr_warn("Existing probe at virtual address 0x%lx, removing...\n", (unsigned long) addr);
-			goto not_enabled;
+			//goto not_enabled;
 			// unregister_kmmio_probe(&trace_in_list->probe);
 			// list_del(&trace_in_list->list);
 		}
@@ -363,7 +365,7 @@ void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
 	if (!is_enabled()) /* recheck and proper locking in *_core() */
 		return;
 
-	pr_debug("ioremap_*(0x%llx, 0x%lx) = %lx\n",
+	pr_debug_ratelimited("ioremap_*(0x%llx, 0x%lx) = %lx\n",
 		 (unsigned long long)offset, size, (unsigned long) addr);
 	if ((filter_offset) && (offset != filter_offset)) {
 		printk("Filter_offset skip.\n");
@@ -565,28 +567,26 @@ void mmiotrace_sync_sampler_status(void)
 	struct remap_trace *trace;
 	//struct remap_trace *tmp;
 	unsigned int is_probes_enabled;
-	unsigned long flags;
 	int do_require_rcu_sync = 0;
 	int ret;
 
-	return;
-
-	mutex_lock(&mmiotrace_mutex);
+	//mutex_lock(&mmiotrace_mutex);
 
 
-	spin_lock_irqsave(&trace_lock, flags);
+	rcu_read_lock();
 	is_probes_enabled = mmiotrace_probes_enabled();
 
 	if (is_probes_enabled != current->is_kmmio_sampling) {
 		if (!is_enabled())
 			goto not_enabled;
+		//spin_lock_irq(&trace_lock);
 		list_for_each_entry(trace, &trace_list, list) {
 			if (trace->probe.user_task_pid == current->pid) {
 				if (is_probes_enabled) {
 					// Turn on probing.
 					if (!trace->enabled) {
 						if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
-							pr_warn_once("Unable to arm probe %p (ret: %d)\n", &trace->probe, ret);
+							pr_warn_once("Unable to arm probe %p (ret: %d, addr: %p)\n", &trace->probe);
 						}
 						//pr_info("Enabled probe %p task %d!\n", &trace->probe, current->pid);
 						trace->enabled = 1;
@@ -610,14 +610,14 @@ void mmiotrace_sync_sampler_status(void)
 				}
 			}
 		}
+		//spin_unlock_irq(&trace_lock);
 		current->is_kmmio_sampling = is_probes_enabled;
 		//pr_info("%u\n", is_probes_enabled);
 	}
 
 not_enabled:
-	spin_unlock_irqrestore(&trace_lock, flags);
-
-	mutex_unlock(&mmiotrace_mutex);
+	rcu_read_unlock();
+	//mutex_unlock(&mmiotrace_mutex);
 
 	if (do_require_rcu_sync)
 	 	synchronize_rcu();
@@ -640,7 +640,7 @@ static void enable_mmiotrace_soft(void)
 				if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
 					pr_warn_once("Unable to map probe, err code: %d\n", ret);
 				} else {
-					pr_info_ratelimited("Enabled probe at address 0x%lx!\n", (unsigned long) trace->probe.addr);
+					//pr_info_ratelimited("Enabled probe at address 0x%lx!\n", (unsigned long) trace->probe.addr);
 				}
 
 
@@ -843,7 +843,6 @@ void enable_mmiotrace(void)
 
 	// The sampler might still be running, kill it just to be sure.
 	disable_pmemtrace_sampler();
-
 	enable_pmemtrace_sampler(0, 0, 1);
 
 	pr_info("enabled.\n");
@@ -855,8 +854,8 @@ void disable_mmiotrace(void)
 {
 	if (disable_pmemtrace_sampler() < 0)
 		pr_warn("Could not stop sampler!\n");
-
 	mutex_lock(&mmiotrace_mutex);
+
 	if (!is_enabled())
 		goto out;
 

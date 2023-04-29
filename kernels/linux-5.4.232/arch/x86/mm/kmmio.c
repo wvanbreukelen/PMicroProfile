@@ -330,13 +330,14 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	int ret = 0; /* default to fault not handled */
 	unsigned long page_base = addr;
 	unsigned int l;
-	struct mm_struct *old_mm = NULL, *user_mm = NULL;
-	struct kmmio_probe *p = NULL;
-	struct task_struct *user_task = NULL;
-	unsigned long flags;
-	int experienced_vm_switch = 0;
-	pte_t *pte = NULL;
-	
+	pte_t *pte = lookup_address(addr, &l);
+
+	if (current->mm)
+		pte = lookup_user_address(addr, &l, current->mm);
+
+	if (!pte)
+		return -EINVAL;
+	page_base &= page_level_mask(l);
 
 	/*
 	 * Preemption is now disabled to prevent process switch during
@@ -346,58 +347,8 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	 * stepping to avoid looking up the probe and kmmio_fault_page
 	 * again.
 	 */
-
 	preempt_disable();
 	rcu_read_lock();
-
-	
-
-
-	pte = lookup_address(addr, &l);
-	if (!pte) {
-		
-		p = get_kmmio_probe(page_base);
-
-		if (p && p->user_task_pid) {
-			user_task = find_task_by_vpid(p->user_task_pid);
-
-			if (user_task) {
-				// int ret = get_user_pages_remote(user_task, user_task->mm, addr, 1, FOLL_WRITE | FOLL_GET, NULL, NULL, NULL);
-
-				// if (ret < 0) {
-				// 	pr_info("Failed to map in user pages! (rc: %d)\n", ret);
-				// }
-				// if ((current->flags & PF_KTHREAD) && current->active_mm != user_task->mm) {
-				// 	// old_mm = current->active_mm;
-				// 	// //user_mm = get_task_mm(user_task);
-				// 	// //kthread_use_mm(user_task->mm);
-				// 	// //switch_mm(old_mm, user_task->mm, NULL);
-				// 	// //barrier();
-				// 	// experienced_vm_switch = 1;
-
-					
-
-				// 	// pr_info("Switched MM to user thread!\n");
-				// 	// //pte = lookup_user_address(addr, &l, user_task->mm);
-				// }
-			}
-			//pte = mm_find_pmd(current->active_mm, addr);
-		}
-
-		if (!pte && current->mm)
-			pte = lookup_user_address(addr, &l, current->mm);
-
-		if (!pte) {
-			//pr_warn("Lookup address failed in kmmio_handler!!!!\n");
-			ret = -EINVAL;
-			
-			goto no_kmmio;
-		}
-	}
-		
-	page_base &= page_level_mask(l);
-
-
 
 	faultpage = get_kmmio_fault_page(page_base);
 	if (!faultpage) {
@@ -406,10 +357,7 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 		 * another CPU just pulled the kmmio probe from under
 		 * our feet. The latter case should not be possible.
 		 */
-
-		//pr_warn_ratelimited("kmmio_handler: unable to get fauling page address 0x%lx.\n", addr);
-
-		goto no_kmmio_switch_mm;
+		goto no_kmmio;
 	}
 
 	ctx = &get_cpu_var(kmmio_ctx);
@@ -446,37 +394,15 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	ctx->saved_flags = (regs->flags & (X86_EFLAGS_TF | X86_EFLAGS_IF));
 	ctx->addr = page_base;
 
-
-	//ctx->old_mm = (experienced_vm_switch) ? current->active_mm : NULL;
-
-	//mm_segment_t old_fs = get_fs();
-
-
-	//set_fs(USER_DS);
 	if (ctx->probe && ctx->probe->pre_handler)
 		ctx->probe->pre_handler(ctx->probe, regs, addr, hw_error_code);
 
-	//set_fs(old_fs);
 	/*
 	 * Enable single-stepping and disable interrupts for the faulting
 	 * context. Local interrupts must not get enabled during stepping.
 	 */
-
-
-	//
-		
-	//} else {
-
-	//}
-
 	regs->flags |= X86_EFLAGS_TF;
 	regs->flags &= ~X86_EFLAGS_IF;
-
-	// if (!(current->flags & PF_KTHREAD)) {
-	// 	set_tsk_thread_flag(current, TIF_SINGLESTEP);
-	// 	set_tsk_thread_flag(current, TIF_FORCED_TF);
-	// }
-	
 
 	/* Now we set present bit in PTE and single step. */
 	disarm_kmmio_fault_page(ctx->fpage);
@@ -488,26 +414,12 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	 * the user should drop to single cpu before tracing.
 	 */
 
-	if (experienced_vm_switch) {
-		//kthread_unuse_mm(user_task->mm);
-		//current->active_mm = old_mm;
-		//barrier();
-		//unuse_mm(user_task->mm);
-	}
-
 	put_cpu_var(kmmio_ctx);
-	
 	return 1; /* fault handled */
 
 no_kmmio_ctx:
 	put_cpu_var(kmmio_ctx);
-no_kmmio_switch_mm:
 no_kmmio:
-	if (experienced_vm_switch) {
-		//kthread_unuse_mm(user_task->mm);
-	}
-
-	//pr_info("releasing rcu_read_lock\n");
 	rcu_read_unlock();
 	preempt_enable_no_resched();
 	return ret;
@@ -543,35 +455,12 @@ static int post_kmmio_handler(unsigned long condition, struct pt_regs *regs)
 		arm_kmmio_fault_page(ctx->fpage);
 	spin_unlock(&kmmio_lock);
 
-
-
-
-
 	regs->flags &= ~X86_EFLAGS_TF;
 	regs->flags |= ctx->saved_flags;
-
-
-	// if (!(current->flags & PF_KTHREAD)) {
-	// 	clear_tsk_thread_flag(current, TIF_SINGLESTEP);
-	// 	clear_tsk_thread_flag(current, TIF_FORCED_TF);
-	// }
 
 	/* These were acquired in kmmio_handler(). */
 	ctx->active--;
 	BUG_ON(ctx->active);
-	
-	//if (ctx->old_mm) {
-	// 	struct mm_struct* prev_temp;
-
-	 	////kthread_unuse_mm(ctx->old_mm);
-	// 	// We are still holding the rcu read lock. To avoid locking errors while in single stepping mode we manually decrease the lock count by one.
-	// 	//current->lockdep_depth++;
-	//}
-
-	//pr_info("releasing rcu_read_lock\n");
-
-	atomic_inc(&faults_captured);
-	
 	rcu_read_unlock();
 	preempt_enable_no_resched();
 
@@ -683,9 +572,7 @@ int register_kmmio_probe(struct kmmio_probe *p)
 	unsigned long addr = p->addr & PAGE_MASK;
 	const unsigned long size_lim = p->len + (p->addr & ~PAGE_MASK);
 	unsigned int l;
-	pte_t *pte = NULL;
-	struct task_struct* user_task = NULL;
-	int experienced_vm_switch = 0;
+	pte_t *pte;
 
 	spin_lock_irqsave(&kmmio_lock, flags);
 	if (get_kmmio_probe(addr)) {
@@ -693,64 +580,15 @@ int register_kmmio_probe(struct kmmio_probe *p)
 		goto out;
 	}
 
-	
-
-	//pr_info("register_kmmio_probe: looking up info for address 0x%lx\n", addr);
-
-	rcu_read_lock();
 	pte = lookup_address(addr, &l);
 
+	if (!pte && current->mm)
+		pte = lookup_user_address(addr, &l, current->mm);
+
 	if (!pte) {
-		if (p->user_task_pid) {
-			// Check if the address can be found in the user space area.
-			struct pid* vpid = find_vpid(p->user_task_pid);
-			if (vpid) {
-				user_task = pid_task(vpid, PIDTYPE_PID);
-			}
-			
-
-			if (user_task) {
-				
-
-				
-				//pr_info("[PID: %d] current mm: %p Switching to mm: %p\n", current->pid, current->active_mm, user_task->mm);
-				if ((current->flags & PF_KTHREAD)) { // && current->active_mm != user_task->mm
-					// kthread_use_mm(user_task->mm);
-					// experienced_vm_switch = 1;
-					// int ret = get_user_pages_remote(user_task, user_task->mm, addr, 1, FOLL_WRITE | FOLL_GET, NULL, NULL, NULL);
-
-					// pte = lookup_user_address(addr, &l, current->active_mm);
-					// kthread_unuse_mm(user_task->mm);
-
-					//pr_info("Switched MM to user thread (current->active_mm: %p)!\n", current->active_mm);
-
-					// long get_user_pages_remote(struct task_struct *tsk, struct mm_struct *mm,
-					// unsigned long start, unsigned long nr_pages,
-					// unsigned int gup_flags, struct page **pages,
-					// struct vm_area_struct **vmas, int *locked)
-
-					
-					pr_warn("Sampling on top of user space is unsupported, skipping register_kmmio_probe.\n");
-					ret = 0;
-					goto out;
-				}
-
-				//pr_info("pte: %p\n", pte);
-
-			}
-
-			if (!pte)
-				pte = lookup_user_address(addr, &l, current->active_mm);			
-		}
-
-		if (!pte) {
-			pr_warn_once("register_kmmio_probe -> Failed to find probe..\n");
-			ret = -EINVAL;
-			goto out;
-		}
+		ret = -EINVAL;
+		goto out;
 	}
-
-	//pr_info("pte for address %p: %p\n", addr, pte);
 
 	kmmio_count++;
 	list_add_rcu(&p->list, &kmmio_probes);
@@ -760,13 +598,6 @@ int register_kmmio_probe(struct kmmio_probe *p)
 		size += page_level_size(l);
 	}
 out:
-	// if (unlikely(experienced_vm_switch)) {
-	// 	//kthread_unuse_mm(user_task->mm);
-	// 	pr_info("Switched MM back to %p!\n", current->active_mm);
-	// }
-
-	rcu_read_unlock();
-
 	spin_unlock_irqrestore(&kmmio_lock, flags);
 	/*
 	 * XXX: What should I do here?

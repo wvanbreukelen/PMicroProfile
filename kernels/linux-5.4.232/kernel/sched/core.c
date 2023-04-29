@@ -4111,11 +4111,10 @@ static void __sched notrace __schedule(bool preempt)
 	rq = cpu_rq(cpu);
 	prev = rq->curr;
 
-	#ifdef CONFIG_MMIOTRACE
-	preempt_disable();
+	// #ifdef CONFIG_MMIOTRACE
 	if (unlikely(mmiotrace_is_enabled() && current->has_kmmio_probes))
-		mmiotrace_sync_sampler_status();
-	#endif
+	 	mmiotrace_sync_sampler_status();
+	// #endif
 
 
 	schedule_debug(prev, preempt);
