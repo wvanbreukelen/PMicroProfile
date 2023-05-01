@@ -788,7 +788,7 @@ int unregister_kmmio_probe(struct kmmio_probe *p)
 			// 	}
 			// }
 
-			if (!pte)
+			if (!pte && current->active_mm)
 				pte = lookup_user_address(addr, &l, current->active_mm);
 		}
 
