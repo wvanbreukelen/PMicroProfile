@@ -19,12 +19,13 @@ function run_command {
     fi
 }
 
+echo "Installing package dependencies..."
 
-# WIP: do kernel install...
+run_command "sudo apt update" ""
+run_command "sudo apt install -y -V build-essential gcc g++ make cmake" "installed package dependencies"
 
 echo "Installing Apache Arrow..."
 
-run_command "sudo apt update" ""
 run_command "sudo apt install -y -V ca-certificates lsb-release wget" ""
 run_command "rm -f apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb" ""
 run_command "wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb" ""
@@ -40,7 +41,7 @@ run_command "rm -rf pmemtrace/build" ""
 run_command "mkdir pmemtrace/build" ""
 cd pmemtrace/build
 run_command "cmake .." ""
-run_command "make -j4" "built pmemtrace"
+run_command "sudo make install -j4" "built pmemtrace"
 
 cd $cwd
 
