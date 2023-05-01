@@ -50,10 +50,11 @@ extern int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long
 /* Called from ioremap.c */
 extern void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
 							void __iomem *addr, struct task_struct* user_task, unsigned int defer);
-extern void mmiotrace_iounmap(volatile void __iomem *addr);
+extern void mmiotrace_iounmap(volatile void __iomem *addr, volatile void __iomem *size, struct task_struct *task);
 
 extern void mmiotrace_disarm_trace_probe(volatile void __iomem *addr);
 extern void mmiotrace_sync_sampler_status(void);
+extern void mmiotrace_detach_user_probes(void);
 
 extern bool mmiotrace_is_enabled(void);
 extern bool mmiotrace_rrobes_enabled(void);
@@ -77,7 +78,7 @@ static inline void mmiotrace_ioremap(resource_size_t offset,
 {
 }
 
-static inline void mmiotrace_iounmap(volatile void __iomem *addr)
+static inline void mmiotrace_iounmap(volatile void __iomem *addr, volatile void __iomem *size, struct task_struct *task)
 {
 }
 

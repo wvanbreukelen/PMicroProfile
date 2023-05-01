@@ -634,7 +634,7 @@ static void nd_pmem_notify(struct device *dev, enum nvdimm_event event)
 		struct pmem_device *pmem = dev_get_drvdata(dev);
 		//pr_info("Not Tracing PMEM accesses at [%p %p] (size: %lu, virt_addr: %p)\n", pmem->phys_addr, pmem->phys_addr + pmem->size, pmem->size, pmem->virt_addr);
 
-		mmiotrace_iounmap((volatile void __iomem *) pmem->virt_addr);
+		mmiotrace_iounmap((volatile void __iomem *) pmem->virt_addr, 0, NULL);
 
 		return;
 	}

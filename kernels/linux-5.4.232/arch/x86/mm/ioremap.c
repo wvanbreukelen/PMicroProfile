@@ -460,7 +460,7 @@ void iounmap(volatile void __iomem *addr)
 		return;
 	}
 
-	mmiotrace_iounmap(addr);
+	mmiotrace_iounmap(addr, 0, NULL);
 
 	addr = (volatile void __iomem *)
 		(PAGE_MASK & (unsigned long __force)addr);

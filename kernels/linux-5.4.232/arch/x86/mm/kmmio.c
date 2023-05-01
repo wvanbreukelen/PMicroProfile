@@ -226,13 +226,17 @@ static void clear_pmd_presence(pmd_t *pmd, bool clear, pmdval_t *old)
 	set_pmd(pmd, new_pmd);
 }
 
-static void clear_pte_presence(pte_t *pte, bool clear, pteval_t *old)
+static void clear_pte_presence(pte_t *pte, bool clear, pteval_t *old, struct mm_struct *mm)
 {
 	pteval_t v = pte_val(*pte);
 	if (clear) {
 		*old = v;
 		/* Nothing should care about address */
-		pte_clear(&init_mm, 0, pte);
+		//pte_clear(&init_mm, 0, pte);
+		if (mm)
+			pte_clear(mm, 0, pte);
+		else
+			pte_clear(&init_mm, 0, pte);
 	} else {
 		/* Presume this has been called with clear==true previously */
 		set_pte_atomic(pte, __pte(*old));
@@ -242,6 +246,7 @@ static void clear_pte_presence(pte_t *pte, bool clear, pteval_t *old)
 static int clear_page_presence(struct kmmio_fault_page *f, bool clear)
 {
 	unsigned int level;
+	unsigned int is_user = 0;
 	pte_t *pte = lookup_address(f->addr, &level);
 
 	if (!pte) {
@@ -251,6 +256,8 @@ static int clear_page_presence(struct kmmio_fault_page *f, bool clear)
 			pr_err("no pte for addr 0x%08lx\n", f->addr);
 			return -1;
 		}
+
+		is_user = 1;
 	}
 
 	switch (level) {
@@ -261,14 +268,21 @@ static int clear_page_presence(struct kmmio_fault_page *f, bool clear)
 		clear_pmd_presence((pmd_t *)pte, clear, &f->old_presence);
 		break;
 	case PG_LEVEL_4K:
-		clear_pte_presence(pte, clear, &f->old_presence);
+		if (is_user)
+			clear_pte_presence(pte, clear, &f->old_presence, current->active_mm);
+		else
+			clear_pte_presence(pte, clear, &f->old_presence, NULL);
 		break;
 	default:
 		pr_err("unexpected page level 0x%x.\n", level);
 		return -1;
 	}
 
+	if (is_user)
+		__flush_tlb_one_user(f->addr);
+	
 	__flush_tlb_one_kernel(f->addr);
+
 	return 0;
 }
 
@@ -332,8 +346,10 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	unsigned int l;
 	pte_t *pte = lookup_address(addr, &l);
 
-	if (current->mm)
+	if (current->mm) {
 		pte = lookup_user_address(addr, &l, current->mm);
+	}
+
 
 	if (!pte)
 		return -EINVAL;
@@ -782,11 +798,6 @@ int unregister_kmmio_probe(struct kmmio_probe *p)
 		if (!pte) {
 			pr_warn_once("unregister_kmmio_probe -> Failed to find probe..\n");
 
-			// spin_lock_irqsave(&kmmio_lock, flags);
-			// // if (p && (&p->list))
-			// // 	list_del_rcu(&p->list);
-			// kmmio_count--;
-			// spin_unlock_irqrestore(&kmmio_lock, flags);
 
 			goto out;
 		}
@@ -794,7 +805,6 @@ int unregister_kmmio_probe(struct kmmio_probe *p)
 		
 	res = 0;
 	
-	spin_lock_irqsave(&kmmio_lock, flags);
 	while (size < size_lim) {
 		release_kmmio_fault_page(addr + size, &release_list);
 		size += page_level_size(l);
@@ -804,7 +814,6 @@ int unregister_kmmio_probe(struct kmmio_probe *p)
 	if ((&p->list))
 		list_del_rcu(&p->list);
 	kmmio_count--;
-	spin_unlock_irqrestore(&kmmio_lock, flags);
 
 	if (!release_list)
 		goto out;

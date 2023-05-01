@@ -71,6 +71,7 @@
 #include <linux/dax.h>
 #include <linux/oom.h>
 #include <linux/numa.h>
+#include <linux/mmiotrace.h>
 
 #include <asm/io.h>
 #include <asm/mmu_context.h>
@@ -2765,6 +2766,9 @@ static void unmap_mapping_range_vma(struct vm_area_struct *vma,
 		unsigned long start_addr, unsigned long end_addr,
 		struct zap_details *details)
 {
+	if (unlikely(mmiotrace_is_enabled()))
+		mmiotrace_iounmap(start_addr, end_addr - start_addr, current);
+
 	zap_page_range_single(vma, start_addr, end_addr - start_addr, details);
 }
 

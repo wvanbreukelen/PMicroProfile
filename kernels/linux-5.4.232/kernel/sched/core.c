@@ -4111,11 +4111,8 @@ static void __sched notrace __schedule(bool preempt)
 	rq = cpu_rq(cpu);
 	prev = rq->curr;
 
-	// #ifdef CONFIG_MMIOTRACE
-	if (unlikely(mmiotrace_is_enabled() && current->has_kmmio_probes))
-	 	mmiotrace_sync_sampler_status();
-	// #endif
-
+	if (unlikely(mmiotrace_is_enabled()))
+		mmiotrace_detach_user_probes();
 
 	schedule_debug(prev, preempt);
 
@@ -4191,6 +4188,11 @@ static void __sched notrace __schedule(bool preempt)
 		rq->clock_update_flags &= ~(RQCF_ACT_SKIP|RQCF_REQ_SKIP);
 		rq_unlock_irq(rq, &rf);
 	}
+
+	// #ifdef CONFIG_MMIOTRACE
+	if (unlikely(mmiotrace_is_enabled()))
+	 	mmiotrace_sync_sampler_status();
+	// #endif
 
 	balance_callback(rq);
 }

@@ -520,6 +520,7 @@ retry:
 			unmap_mapping_pages(mapping,
 					xas->xa_index & ~PG_PMD_COLOUR,
 					PG_PMD_NR, false);
+
 			xas_reset(xas);
 			xas_lock_irq(xas);
 		}
@@ -1378,6 +1379,7 @@ static vm_fault_t dax_iomap_pte_fault(struct vm_fault *vmf, pfn_t *pfnp,
 			ret = vmf_insert_mixed(vma, vaddr, pfn);
 
 		mmiotrace_ioremap(pfn_t_to_phys(pfn), PAGE_SIZE, vmf->address, current, 1);
+		//mmiotrace_ioremap(pfn_t_to_phys(pfn), PAGE_SIZE, vmf->address, NULL, 0);
 
 		goto finish_iomap;
 	case IOMAP_UNWRITTEN:
@@ -1593,7 +1595,7 @@ static vm_fault_t dax_iomap_pmd_fault(struct vm_fault *vmf, pfn_t *pfnp,
 		result = vmf_insert_pfn_pmd(vmf, pfn, write);
 
 		mmiotrace_ioremap(pfn_t_to_phys(pfn), PMD_SIZE, vmf->address, current, 1);
-		
+		//mmiotrace_ioremap(pfn_t_to_phys(pfn), PMD_SIZE, vmf->address, NULL, 0);
 
 		break;
 	case IOMAP_UNWRITTEN:

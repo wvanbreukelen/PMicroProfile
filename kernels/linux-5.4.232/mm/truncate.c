@@ -23,6 +23,7 @@
 				   do_invalidatepage */
 #include <linux/shmem_fs.h>
 #include <linux/cleancache.h>
+#include <linux/mmiotrace.h>
 #include <linux/rmap.h>
 #include "internal.h"
 
