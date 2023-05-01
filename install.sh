@@ -22,7 +22,7 @@ function run_command {
 echo "Installing package dependencies..."
 
 run_command "sudo apt update" ""
-run_command "sudo apt install -y -V build-essential gcc g++ make cmake ndctl" "installed package dependencies"
+run_command "sudo apt install -y -V wget build-essential gcc g++ make cmake ndctl" "installed package dependencies"
 
 echo "Installing Apache Arrow..."
 
