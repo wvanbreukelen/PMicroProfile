@@ -1,14 +1,18 @@
+#!/bin/bash
+SCRIPT=$(realpath "$0")
+CUR_PATH=$(dirname "$SCRIPT")
+
 qemu-system-x86_64\
 	-s \
 	-cpu host \
 	-enable-kvm \
 	-smp cores=8 \
-	-drive file=ubuntu.img.qcow2,format=qcow2 \
-	-append "root=/dev/sda5 earlyprintk=serial net.ifnames=0 nokaslr nosmap nosmep" \
-	-kernel $1/arch/x86/boot/bzImage \
+	-drive file=$CUR_PATH/disk.qcow2,format=qcow2 \
+	-append "root=/dev/sda5 earlyprintk=serial net.ifnames=0 nokaslr nosmap nosmep crashkernel=128M" \
+	-kernel $CUR_PATH/../kernels/linux-5.4.232/arch/x86/boot/bzImage \
 	-machine pc,nvdimm=on \
 	-m 8G,slots=2,maxmem=36G \
-	-object memory-backend-file,id=mem1,mem-path=./nvdimm0,share=off,pmem=on,size=28G,align=2M \
+    -object memory-backend-file,id=mem1,mem-path=nvdimm0,share=off,pmem=on,size=28G,align=2M \
 	-device nvdimm,memdev=mem1,id=nv1,label-size=256K \
 	-net user,host=10.0.2.10,hostfwd=tcp:127.0.0.1:2222-:22 \
 	-net nic,model=e1000 \

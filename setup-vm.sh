@@ -44,7 +44,7 @@ log_cmd "wget --progress=bar:force --no-clobber --output-document=$CUR_PATH/vm/$
 fi
 
 # Install dependencies using apt.
-log_cmd "sudo apt-get update && sudo apt-get install -y build-essential gcc make libncurses-dev bison flex libssl-dev libelf-dev qemu-kvm qemu-system-x86 virt-manager virtinst libvirt-clients libvirt-daemon-system" \
+log_cmd "sudo apt-get update && sudo apt-get install -y build-essential gcc make libncurses-dev bison flex libssl-dev libelf-dev qemu qemu-kvm qemu-system-x86 virt-manager virtinst libvirt-clients libvirt-daemon-system" \
     "Installed package dependencies." \
     "Dependencies installation failed." true
 
@@ -63,13 +63,15 @@ log_cmd "nice make -j $(nproc)" \
 
 # Setup QEMU
 cd $CUR_PATH
-log_cmd "qemu-img create -f qcow2 $CUR_PATH/vm/disk.qcow 30G" \
+log_cmd "qemu-img create -f qcow2 $CUR_PATH/vm/disk.qcow2 30G" \
     "Created QEMU disk image." \
     "Failed to create QEMU disk image." true
 
 
-printf "${GREEN}${CHECKMARK} Setup Finished! Execute './run_kvm_iso.sh' command to launch Ubuntu Installer.${NC}\n"
-printf "After completing the Ubuntu installation, perform the following actions:\n"
-printf "1. Open a terminal inside the VM and execute the following command: ''\n"
-printf "2. Copy the mount path of the root file system (/) and update the kernel boot parameters in the $CUR_PATH/vm/run_kvm.sh file accordingly\n"
-printf "3. Now, boot the VM using the custom kernel by running './vm/run_kvm.sh' \n"
+printf "${GREEN}${CHECKMARK} Setup Finished! Execute 'vm/run_kvm_iso.sh' command to launch Ubuntu Installer. Make sure that you select \"QEMU HARDDISK\" as install drive!${NC}\n"
+printf "After completing the Ubuntu installation, perform the following steps:\n"
+printf "1. Remove the installation medium by commenting the line '-cdrom \"ubuntu.iso\"\' in vm/run_kvm_iso.sh  \n"
+printf "2. Open a terminal inside the VM and execute the following command: 'cat /proc/mounts | grep \" / \"'\n"
+printf "3. Copy the mount path of the root file system, e.g. '/dev/sda5', and update the kernel 'root' boot parameter in the vm/run_kvm.sh file accordingly\n"
+printf "4. Now, boot the VM using the custom kernel by executing the script 'vm/run_kvm.sh' \n"
+printf "5. Verify that you are running the custom kernel by running 'uname -r' within the VM. This should return '5.4.232'. \n"
