@@ -220,7 +220,7 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 		my_trace->opcode = MMIO_CLFLUSH;
 	} else { // (hw_error_code & X86_PF_WRITE) 
 		pr_info_ratelimited("Unknown instruction: %x addr: 0x%lx, instptr: %p\n", my_trace->opcode_cpu, addr, instptr);
-		//dump_stack();
+		dump_stack();
 		//pr_info("Unknown instruction\n");
 	}
 	// 	my_trace->opcode = MMIO_WRITE;
@@ -709,10 +709,9 @@ void mmiotrace_detach_user_probes(void)
 
 	spin_lock_irqsave(&trace_lock, flags);
 
-	if (!is_enabled())
-		goto not_enabled;
-
 	list_for_each_entry(trace, &trace_list, list) {
+		if (!is_enabled())
+			goto not_enabled;
 		if (trace->probe.user_task_pid > 0 && trace->probe.user_task_pid == current->pid && trace->enabled) {
 			if ((ret = unregister_kmmio_probe(&trace->probe)) < 0) {
 				pr_warn("mmiotrace_detach_user_probes: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);
