@@ -31,10 +31,12 @@ static unsigned int rw8[] = { 0x88, 0x8A, 0xC6, 0xAA };
 static unsigned int rw32[] = {
 	0x89, 0x8B, 0xC7, 0xB60F, 0xB70F, 0xBE0F, 0xBF0F, 0xAB, 0xC30F
 };
+static unsigned int rw64[] = {};
 static unsigned int mw8[] = { 0x88, 0x8A, 0xC6, 0xB60F, 0xBE0F, 0xAA };
 static unsigned int mw16[] = { 0xB70F, 0xBF0F };
 static unsigned int mw32[] = { 0x89, 0x8B, 0xC7, 0xAB };
 static unsigned int mw64[] = {};
+static unsigned int mw128[] = {};
 #else /* not __i386__ */
 static unsigned char prefix_codes[] = {
 	0x66, 0x67, 0x2E, 0x3E, 0x26, 0x64, 0x65, 0x36,
@@ -47,13 +49,14 @@ static unsigned char prefix_codes[] = {
 static unsigned int reg_rop[] = {
 	0x8A, 0x8B, 0xB60F, 0xB70F, 0xBE0F, 0xBF0F
 };
-static unsigned int reg_wop[] = { 0x88, 0x89, 0xAA, 0xAB, 0xA4, 0xC30F };
+static unsigned int reg_wop[] = { 0x88, 0x89, 0xAA, 0xAB, 0xA4, 0xC30F, 0xE70F };
 static unsigned int imm_wop[] = { 0xC6, 0xC7 };
 static unsigned int cache_op[] = { 0xAE0F };
 static unsigned int rw8[] = { 0xC6, 0x88, 0x8A, 0xAA, 0xA4 };
 static unsigned int rw32[] = {
 	0xC7, 0x89, 0x8B, 0xB60F, 0xB70F, 0xBE0F, 0xBF0F, 0xAB, 0xC30F
 };
+static unsigned int rw64[] = { 0xE70F };
 /* 8 bit only */
 static unsigned int mw8[] = { 0xC6, 0x88, 0x8A, 0xB60F, 0xBE0F, 0xAA, 0xA4 };
 /* 16 bit only */
@@ -62,6 +65,8 @@ static unsigned int mw16[] = { 0xB70F, 0xBF0F };
 static unsigned int mw32[] = { 0xC7 };
 /* 16, 32 or 64 bit */
 static unsigned int mw64[] = { 0x89, 0x8B, 0xAB, 0xC30F };
+
+static unsigned int mw128[] = { 0xE70F };
 #endif /* not __i386__ */
 
 struct prefix_bits {
@@ -179,6 +184,10 @@ static unsigned int get_ins_reg_width(unsigned long ins_addr)
 		if (rw32[i] == opcode)
 			return prf.shorted ? 2 : (prf.enlarged ? 8 : 4);
 
+	for (i = 0; i < ARRAY_SIZE(rw64); i++)
+		if (rw64[i] == opcode)
+			return prf.shorted ? 16 : 8;
+
 	printk(KERN_ERR "mmiotrace: Unknown opcode 0x%02x\n", opcode);
 	return 0;
 }
@@ -209,6 +218,10 @@ unsigned int get_ins_mem_width(unsigned long ins_addr)
 	for (i = 0; i < ARRAY_SIZE(mw64); i++)
 		if (mw64[i] == opcode)
 			return prf.shorted ? 2 : (prf.enlarged ? 8 : 4);
+
+	for (i = 0; i < ARRAY_SIZE(mw128); i++)
+		if (mw128[i] == opcode)
+			return prf.shorted ? 16 : 8;
 
 	printk(KERN_ERR "mmiotrace: Unknown opcode 0x%02x\n", opcode);
 	return 0;
@@ -406,7 +419,7 @@ static unsigned long *get_reg_w32(int no, struct pt_regs *regs)
 	return rv;
 }
 
-unsigned long get_ins_reg_val(unsigned long ins_addr, struct pt_regs *regs)
+unsigned long long get_ins_reg_val(unsigned long ins_addr, struct pt_regs *regs)
 {
 	unsigned int opcode;
 	int reg;
@@ -450,6 +463,8 @@ do_work:
 #ifdef __amd64__
 	case 8:
 		return *(unsigned long *)get_reg_w32(reg, regs);
+	case 16:
+		return *(unsigned long long *)get_reg_w32(reg, regs);
 #endif
 
 	default:

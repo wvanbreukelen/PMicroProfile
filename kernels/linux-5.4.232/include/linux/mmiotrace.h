@@ -5,6 +5,7 @@
 #include <linux/types.h>
 #include <linux/list.h>
 #include <linux/atomic.h>
+#include <linux/sched.h>
 
 struct kmmio_probe;
 struct pt_regs;
@@ -55,6 +56,7 @@ extern void mmiotrace_iounmap(volatile void __iomem *addr, volatile void __iomem
 extern void mmiotrace_disarm_trace_probe(volatile void __iomem *addr);
 extern void mmiotrace_sync_sampler_status(void);
 extern void mmiotrace_detach_user_probes(void);
+extern void mmiotrace_task_exit(struct task_struct *task);
 
 extern bool mmiotrace_is_enabled(void);
 extern bool mmiotrace_rrobes_enabled(void);
@@ -99,7 +101,7 @@ enum mm_io_opcode {
 
 struct mmiotrace_rw {
 	resource_size_t	phys;	/* PCI address of register */
-	unsigned long	value;
+	unsigned long long	value;
 	unsigned long	pc;	/* optional program counter */
 	int		map_id;
 	unsigned int 	opcode_cpu;

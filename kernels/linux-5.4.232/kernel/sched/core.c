@@ -3486,6 +3486,10 @@ context_switch(struct rq *rq, struct task_struct *prev,
 	switch_to(prev, next, prev);
 	barrier();
 
+	// #ifdef CONFIG_MMIOTRACE
+	if (unlikely(mmiotrace_is_enabled()))
+	 	mmiotrace_sync_sampler_status();
+
 	return finish_task_switch(prev);
 }
 
@@ -4189,10 +4193,6 @@ static void __sched notrace __schedule(bool preempt)
 		rq_unlock_irq(rq, &rf);
 	}
 
-	// #ifdef CONFIG_MMIOTRACE
-	if (unlikely(mmiotrace_is_enabled()))
-	 	mmiotrace_sync_sampler_status();
-	// #endif
 
 	balance_callback(rq);
 }

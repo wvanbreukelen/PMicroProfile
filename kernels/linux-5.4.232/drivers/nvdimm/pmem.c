@@ -322,6 +322,7 @@ long pmem_dax_direct_access(struct dax_device *dax_dev,
 static size_t pmem_copy_from_iter(struct dax_device *dax_dev, pgoff_t pgoff,
 		void *addr, size_t bytes, struct iov_iter *i)
 {
+	pr_info_ratelimited("pmem_copy_from_iter\n");
 	size_t num_read;
 	const int mmiotrace_active = is_kmmio_active();
 	if (unlikely(mmiotrace_active))
@@ -338,6 +339,7 @@ static size_t pmem_copy_from_iter(struct dax_device *dax_dev, pgoff_t pgoff,
 static size_t pmem_copy_to_iter(struct dax_device *dax_dev, pgoff_t pgoff,
 		void *addr, size_t bytes, struct iov_iter *i)
 {
+	pr_info_ratelimited("pmem_copy_to_iter\n");
 	size_t num_read;
 	spin_lock(&pmem_mmiotrace_lock);
 	num_read = _copy_to_iter_mcsafe(addr, bytes, i);

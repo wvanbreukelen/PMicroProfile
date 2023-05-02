@@ -338,13 +338,18 @@ static void dax_associate_entry(void *entry, struct address_space *mapping,
 	if (IS_ENABLED(CONFIG_FS_DAX_LIMITED))
 		return;
 
+	//pr_info("Inserting DAX hole at 0x%lx, pointing to PA: 0x%lx entry: 0x%lx\n", vmf->address & PMD_MASK, pfn_t_to_phys(pfn), pfn_t_to_phys(pfn_to_pfn_t(dax_to_pfn(*entry))));
+	
+	if (entry && size > 0)
+		mmiotrace_ioremap(pfn_t_to_phys(pfn_to_pfn_t(dax_to_pfn(entry))), size, address & ~(size - 1), current, 1);
+
 	index = linear_page_index(vma, address & ~(size - 1));
 	for_each_mapped_pfn(entry, pfn) {
 		struct page *page = pfn_to_page(pfn);
 
 		WARN_ON_ONCE(page->mapping);
 		page->mapping = mapping;
-		page->index = index + i++;
+		page->index = index + i++;	
 	}
 }
 
@@ -352,9 +357,14 @@ static void dax_disassociate_entry(void *entry, struct address_space *mapping,
 		bool trunc)
 {
 	unsigned long pfn;
+	unsigned long size = dax_entry_size(entry);
 
 	if (IS_ENABLED(CONFIG_FS_DAX_LIMITED))
 		return;
+
+	if (entry && size > 0)
+		mmiotrace_iounmap(pfn_t_to_phys(pfn_to_pfn_t(dax_to_pfn(entry))), size, current);
+
 
 	for_each_mapped_pfn(entry, pfn) {
 		struct page *page = pfn_to_page(pfn);
@@ -363,6 +373,8 @@ static void dax_disassociate_entry(void *entry, struct address_space *mapping,
 		WARN_ON_ONCE(page->mapping && page->mapping != mapping);
 		page->mapping = NULL;
 		page->index = 0;
+
+		pr_info("dax_disassociate_entry\n");
 	}
 }
 
@@ -1378,8 +1390,7 @@ static vm_fault_t dax_iomap_pte_fault(struct vm_fault *vmf, pfn_t *pfnp,
 		else
 			ret = vmf_insert_mixed(vma, vaddr, pfn);
 
-		mmiotrace_ioremap(pfn_t_to_phys(pfn), PAGE_SIZE, vmf->address, current, 1);
-		//mmiotrace_ioremap(pfn_t_to_phys(pfn), PAGE_SIZE, vmf->address, NULL, 0);
+		//mmiotrace_ioremap(pfn_t_to_phys(pfn), PAGE_SIZE, vmf->address & PAGE_MASK, current, 1);
 
 		goto finish_iomap;
 	case IOMAP_UNWRITTEN:
@@ -1461,7 +1472,9 @@ static vm_fault_t dax_pmd_load_hole(struct xa_state *xas, struct vm_fault *vmf,
 	pmd_entry = pmd_mkhuge(pmd_entry);
 	set_pmd_at(vmf->vma->vm_mm, pmd_addr, vmf->pmd, pmd_entry);
 	spin_unlock(ptl);
+
 	trace_dax_pmd_load_hole(inode, vmf, zero_page, *entry);
+
 	return VM_FAULT_NOPAGE;
 
 fallback:
@@ -1570,6 +1583,7 @@ static vm_fault_t dax_iomap_pmd_fault(struct vm_fault *vmf, pfn_t *pfnp,
 	switch (iomap.type) {
 	case IOMAP_MAPPED:
 		error = dax_iomap_pfn(&iomap, pos, PMD_SIZE, &pfn);
+
 		if (error < 0)
 			goto finish_iomap;
 
@@ -1594,8 +1608,7 @@ static vm_fault_t dax_iomap_pmd_fault(struct vm_fault *vmf, pfn_t *pfnp,
 		trace_dax_pmd_insert_mapping(inode, vmf, PMD_SIZE, pfn, entry);
 		result = vmf_insert_pfn_pmd(vmf, pfn, write);
 
-		mmiotrace_ioremap(pfn_t_to_phys(pfn), PMD_SIZE, vmf->address, current, 1);
-		//mmiotrace_ioremap(pfn_t_to_phys(pfn), PMD_SIZE, vmf->address, NULL, 0);
+		//mmiotrace_ioremap(pfn_t_to_phys(pfn), PMD_SIZE, vmf->address & PMD_MASK, current, 1);
 
 		break;
 	case IOMAP_UNWRITTEN:
@@ -1603,6 +1616,8 @@ static vm_fault_t dax_iomap_pmd_fault(struct vm_fault *vmf, pfn_t *pfnp,
 		if (WARN_ON_ONCE(write))
 			break;
 		result = dax_pmd_load_hole(&xas, vmf, &iomap, &entry);
+
+
 		break;
 	default:
 		WARN_ON_ONCE(1);
