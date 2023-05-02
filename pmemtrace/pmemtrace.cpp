@@ -447,7 +447,7 @@ bool compress_trace(std::filesystem::path read_path, std::filesystem::path write
 
 		const double timestamp_sec = std::stod(tokens_line[3]);
 		const unsigned int opcode = std::stoi(tokens_line[2], nullptr, 16);
-		const size_t opcode_size = std::stoul(tokens_line[1], nullptr, 16);
+		const size_t opcode_size = std::stoul(tokens_line[1]);
 		const unsigned long abs_addr = std::stoul(tokens_line[5], nullptr, 16);
 		#ifdef ENABLE_ASSERTS
 		assert(abs_addr > pmem_range_strawnameart);
