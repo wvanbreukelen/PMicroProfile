@@ -91,6 +91,26 @@ arrow::Status trace_to_arrow(std::filesystem::path path, const std::vector<Trace
     return arrow::Status::OK();
 }
 
+template<size_t N>
+bool tokenize(std::string const &str, std::array<std::string, N>& out)
+{
+	std::stringstream ss(str);
+
+	std::string s;
+	size_t i = 0;
+
+	while (std::getline(ss, s, ' ')) {
+		if ((i + 1) > N) {
+			return false;
+		}
+
+		out[(i++)] = s;
+	}
+
+	return (i == N);
+}
+
+
 int compress_trace(std::filesystem::path path)
 {
     std::ifstream trace_handle(path);
@@ -150,55 +170,52 @@ int compress_trace(std::filesystem::path path)
             parquet::schema::PrimitiveNode::Make("abs_addr", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
             parquet::schema::PrimitiveNode::Make("rel_addr", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
             parquet::schema::PrimitiveNode::Make("data", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
+			parquet::schema::PrimitiveNode::Make("cpu_id", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
         }
     ));
     
+    TraceOperation op;
     parquet::StreamWriter os{
         parquet::ParquetFileWriter::Open(outfile, schema, props)};
 
+    std::array<std::string, 9> tokens_line;
 
     while (std::getline(trace_handle, line)) {
-        if (std::regex_search(line, matches, pattern)) {
-            TraceOperation op;
+		if (!tokenize(line, tokens_line)) {
+			continue;
+		}
 
-            if (matches[1] == "R") {
-                op = TraceOperation::READ;
-            } else if (matches[1] == "W") {
-                op = TraceOperation::WRITE;
-            } else if (matches[1] == "F") {
-                op = TraceOperation::CLFLUSH;
-            } else {
-                std::cerr << "Unknown trace operation: " << matches[1] << std::endl;
+		if (tokens_line[0] == "R") {
+			op = TraceOperation::READ;
+		} else if (tokens_line[0] == "W") {
+			op = TraceOperation::WRITE;
+		} else if (tokens_line[0] == "F") {
+			op = TraceOperation::CLFLUSH;
+		} else {
+			//std::cerr << "Unknown trace operation: " << tokens_line[0] << std::endl;
 
-                return -1;
-            }
+			continue;
+			//return false;
+		}
 
-            // const std::vector<uint8_t> op_bytes = hex_string_to_bytes(matches[5]);
-            // std::cout << matches[5] << std::endl;
+		const double timestamp_sec = std::stod(tokens_line[3]);
+		const unsigned int opcode = std::stoi(tokens_line[2], nullptr, 16);
+		const size_t opcode_size = std::stoul(tokens_line[1]);
+		const unsigned long abs_addr = std::stoul(tokens_line[5], nullptr, 16);
+		#ifdef ENABLE_ASSERTS
+		assert(abs_addr > pmem_range_strawnameart);
+		assert(abs_addr < pmem_range_end);
+		#endif
+		const unsigned long rel_addr = abs_addr - pmem_range_start;
+		const unsigned long long data = std::stoull(tokens_line[6], nullptr, 16);
+		const unsigned int cpu_id = std::stoi(tokens_line[8]);
 
-
-            const double timestamp_sec = std::stod(matches[4]);
-            const unsigned int opcode = std::stoi(matches[3], nullptr, 16);
-            const size_t opcode_size = std::stoul(matches[2], nullptr, 16);
-            const unsigned long abs_addr = std::stoul(matches[5], nullptr, 16);
-            #ifdef ENABLE_ASSERTS
-            assert(abs_addr > pmem_range_strawnameart);
-            assert(abs_addr < pmem_range_end);
-            #endif
-            const unsigned long rel_addr = abs_addr - pmem_range_start;
-            const unsigned long data = std::stoul(matches[6], nullptr, 16);
-
-
-            //std::cout << std::hex << abs_addr << std::endl;
-
-            //trace.emplace_back(op, std::stoi(matches[2]), std::stod(matches[3]), abs_addr, rel_addr, op_bytes);
-            //TraceEntry(const TraceOperation op, const size_t op_size, const unsigned int opcode, const double timestamp_sec, const unsigned long abs_addr, const unsigned long rel_addr, const unsigned long long data) :
-            //trace_entries.emplace_back(op, std::stoi(matches[2]), std::stoi(matches[3], nullptr, 16), std::stod(matches[4]), abs_addr, rel_addr, data);
+		//std::cout << timestamp_sec << " " << static_cast<uint32_t>(op) << " " << std::hex << opcode << " " << std::dec << opcode_size << " 0x" << std::hex << abs_addr << " 0x" << rel_addr << " 0x" << data << " " << std::dec << cpu_id << std::endl;
 
 
-            os << timestamp_sec << static_cast<uint32_t>(op) << opcode << opcode_size << abs_addr << rel_addr << data << parquet::EndRow;
-        }
+		os << timestamp_sec << static_cast<uint32_t>(op) << opcode << opcode_size << abs_addr << rel_addr << static_cast<uint64_t>(data) << cpu_id << parquet::EndRow;
     }
+
 
     std::cout << "num columns: " << std::dec << os.num_columns() << std::endl;
 
@@ -265,10 +282,10 @@ int main(int argc, char* argv[]) {
     if (argc < 2)
         return -1;
 
-    // const int ret_code = compress_trace(std::string(argv[1]));
+    const int ret_code = compress_trace(std::string(argv[1]));
     // std::cout << ret_code << std::endl;
 
-    read_parquet_trace(std::filesystem::path(argv[1]).replace_extension(".parquet"));
+    //read_parquet_trace(std::filesystem::path(argv[1]).replace_extension(".parquet"));
 
     return 0;
 }
