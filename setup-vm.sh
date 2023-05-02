@@ -7,14 +7,14 @@ NC='\033[0m'
 CHECKMARK='\u2713'
 XMARK='\u2717'
 
-DO_CLEANUP_BEFORE_BUILD=false
+DO_CLEANUP_BEFORE_BUILD=true
 
 ISO_NAME="ubuntu.iso"
 CUR_PATH=$(readlink -f .)
 
 log_cmd() {
     output=""
-    printf "Running command: %s\n" "$1"
+    # printf "Running command: %s\n" "$1"
     if [ "$4" = true ]; then
         output=$({ eval "$1" ; } 2>&1)
     else

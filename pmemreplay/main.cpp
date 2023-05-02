@@ -57,7 +57,8 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    std::cout << "Trace -> #R: " << trace.get_total(TraceOperation::READ) << " #W: " << trace.get_total(TraceOperation::WRITE) << " #FLUSH: " << trace.get_total(TraceOperation::CLFLUSH) << std::endl;
+    std::cout << "Trace: #reads: " << trace.get_total(TraceOperation::READ) << " #writes: " << trace.get_total(TraceOperation::WRITE) << " #flushes: " << trace.get_total(TraceOperation::CLFLUSH);
+    std::cout << " (size: " << (trace.size() * sizeof(TraceEntry)) / (1024 * 1024) << " MiB)" << std::endl;
 
     BenchSuite bsuite(trace, pmem_device_loc, BENCH_MAP_SIZE, num_threads, num_samples, force_dram, do_fallback_ram);
 

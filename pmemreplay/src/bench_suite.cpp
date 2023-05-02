@@ -11,6 +11,7 @@
 #include <asm/unistd.h>
 
 #include <immintrin.h>
+#include <emmintrin.h>
 
 #include "worker.hpp"
 #include "bench_export.hpp"
@@ -287,7 +288,6 @@ static inline uint64_t next_pow2_fast(uint64_t x)
     #endif
 }
 
-
 static void* do_work(void *arg)
 {
     struct WorkerArguments *args = static_cast<struct WorkerArguments*>(arg);
@@ -311,6 +311,7 @@ static void* do_work(void *arg)
         pthread_exit(NULL);
     }
 
+    #ifdef ENABLE_DCOLLECTION
     struct iMCProbe unc_ticks_probe{}, wpq_probe{}, rpq_probe{}, wpq_occupancy_probe{}, rpq_occupancy_probe{};
 
     if (!pmc.add_imc_probe(EVENT_UNC_M_CLOCKTICKS, unc_ticks_probe)) {
@@ -344,6 +345,7 @@ static void* do_work(void *arg)
     probe_reset(rpq_probe);
     probe_reset(wpq_occupancy_probe);
     probe_reset(rpq_occupancy_probe);
+    #endif
     //probe_enable(wpq_probe);
 
     cur_sample = &(stat->samples[0]);
@@ -356,30 +358,14 @@ static void* do_work(void *arg)
 
 
     for (; i < args->replay_rounds + 1; ++i) {
-        //prev_op = (*args->trace_file)[0].op;
-
-        //void* dev_addr = nullptr;
-        //uint64_t data;
         bool is_sampling = false;
         unsigned long long cur_time;
         size_t z = 0;
 
-        //size_t num_reads = 0, num_writes = 0, num_flushes = 0;
-        //unsigned long long read_sum_cycles = 0, write_sum_cycles = 0, flush_sum_cycles = 0;
-
-        //probe_enable(wpq_probe);
-
         for (const TraceEntry& entry : *(args->trace_file)) {
             #ifdef ENABLE_DCOLLECTION
-            // Calling rdtsc each iteration is quite expensive; it takes +/- 30 cycles, therefore, we only
-            // check the rdtsc counter every 8 iterations (i.e. (z % 8) == 0))
-            //if (((z & 0x08) == 0)) {
-            //cur_time = __builtin_ia32_rdtsc();
-
-            
             if (unlikely((z & sample_mask) == 0)) {  // (cur_time - latest_sample_time) >= SAMPLE_LENGTH
                 cur_time = __builtin_ia32_rdtsc();
-
 
                 if (is_sampling) {
                     if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_ON) {
@@ -485,7 +471,8 @@ static void* do_work(void *arg)
                             break;
                         }
                         default:
-                            std::cerr << "Unsupported op size " << entry.op_size << "!" << std::endl;
+                            std::cerr << "Unsupported op size " << std::dec << entry.op_size << "!" << std::endl;
+                            
 
                             pthread_exit(NULL);
                             break;
@@ -503,9 +490,9 @@ static void* do_work(void *arg)
 
                 case TraceOperation::WRITE:
                 {
-                    switch (entry.op_size)
+                    switch (entry.opcode)
                     {
-                    case 1:
+                    case 0xA4: // 1 byte size
                     {
                         #ifdef ENABLE_DCOLLECTION
                         if (is_sampling) {
@@ -540,7 +527,7 @@ static void* do_work(void *arg)
 
                         break;
                     }
-                    case 4:
+                    case 0x4444: // FIXME: find opcode.
                     {
                         #ifdef ENABLE_DCOLLECTION
                         if (is_sampling) {
@@ -587,7 +574,7 @@ static void* do_work(void *arg)
 
                         break;
                     }
-                    case 8:
+                    case 0xC30F: // 8 bytes - MOVNT
                     {
                         #ifdef ENABLE_DCOLLECTION
                         if (is_sampling) {
@@ -619,7 +606,7 @@ static void* do_work(void *arg)
                             #endif
                         }
                         #else
-                             #ifdef STRICT_CONSISTENCY
+                            #ifdef STRICT_CONSISTENCY
                             _mm_sfence();
                             #endif
 
@@ -633,8 +620,44 @@ static void* do_work(void *arg)
 
                         break;
                     }
+                    case 0xE70F: // 16 bytes - MOVNTDQ
+                    {
+                        const __m128i _stream_data = _mm_set_epi64x(0, entry.data);
+
+                        #ifdef ENABLE_DCOLLECTION
+                        const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+                        #ifdef STRICT_CONSISTENCY
+                        _mm_sfence();
+                        #endif
+
+                        _mm_stream_si128(static_cast<__m128i*>(entry.dax_addr), _stream_data);
+                        
+
+                        #ifdef STRICT_CONSISTENCY
+                        _mm_clflushopt(static_cast<void*>(dev_addr));
+                        _mm_sfence();
+                        #endif
+
+                        cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+                        #else
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_sfence();
+                            #endif
+
+                            _mm_stream_si128(static_cast<__m128i*>(entry.dax_addr), _stream_data);
+                                
+                            #ifdef STRICT_CONSISTENCY
+                            _mm_clflushopt(static_cast<void*>(dev_addr));
+                            _mm_sfence();
+                            #endif
+                        #endif
+                        
+                        break;
+                    }
+
                     default:
-                        std::cerr << "Unsupported op size " << entry.op_size << "!" << std::endl;
+                        std::cerr << "Unsupported operation 0x" << std::hex << entry.opcode << "!" << std::endl;
+                        std::cout << entry << std::endl;
 
                         pthread_exit(NULL);
                         break;
@@ -671,8 +694,6 @@ static void* do_work(void *arg)
                     _mm_sfence();
                     #endif
 
-                    assert(false);
-
                     break;
                 }
 
@@ -690,6 +711,7 @@ static void* do_work(void *arg)
     temp_var++;
     const auto time_stop = std::chrono::high_resolution_clock::now();
 
+    #ifdef ENABLE_DCOLLECTION
     probe_disable(unc_ticks_probe);
     pmc.remove_imc_probe(unc_ticks_probe);
 
@@ -704,6 +726,7 @@ static void* do_work(void *arg)
 
     probe_disable(rpq_occupancy_probe);
     pmc.remove_imc_probe(rpq_occupancy_probe);
+    #endif
 
     stat->latency_sum += std::chrono::duration_cast<std::chrono::nanoseconds>(time_stop - time_start).count();
     

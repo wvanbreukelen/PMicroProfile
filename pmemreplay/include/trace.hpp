@@ -59,10 +59,24 @@ public:
     size_t op_size;
     unsigned long abs_addr;
     unsigned long rel_addr;
-    uint64_t data;
+    unsigned long data;
+    unsigned int cpu_id;
+    
     void* dax_addr;
     //const std::vector<uint8_t> data;
 };
+
+inline std::ostream& operator<<(std::ostream& os, const TraceEntry& entry) {
+    os << "timestamp_sec: " << entry.timestamp_sec << ", ";
+    os << "op: " << static_cast<int>(entry.op) << ", ";
+    os << "opcode: 0x" << std::hex << entry.opcode << ", ";
+    os << "op_size: " << std::dec << entry.op_size << ", ";
+    os << "abs_addr: 0x" << std::hex << entry.abs_addr << ", ";
+    os << "rel_addr: 0x" << std::hex << entry.rel_addr << ", ";
+    os << "data: 0x" << std::hex << entry.data;
+    return os;
+}
+
 
 class TraceFile : public std::vector<TraceEntry> {
 public:

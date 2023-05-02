@@ -39,15 +39,33 @@ bool parse_trace(const std::filesystem::path &path, TraceFile &trace)
     
     size_t count_reads = 0, count_writes = 0, count_flushes = 0;
 
-    trace.reserve(stream.num_rows());
+    const size_t total_rows = stream.num_rows();
+    size_t loaded_rows = 0;
+    unsigned int percent_loaded = 0;
+
+    trace.reserve(total_rows);
 
     while (!(stream.eof())) {
-        stream >> trace_entry.timestamp_sec >> op >> trace_entry.opcode >> trace_entry.op_size >> trace_entry.abs_addr >> trace_entry.rel_addr >> trace_entry.data >> parquet::EndRow;
+        stream >> trace_entry.timestamp_sec >> op >> trace_entry.opcode >> trace_entry.op_size >> trace_entry.abs_addr >> trace_entry.rel_addr >> trace_entry.data >> trace_entry.cpu_id >> parquet::EndRow;
         //std::cout << "OP: " << op << " opcode: 0x" << std::hex << opcode << " timestamp: " << timestamp_sec << " 0x" << std::hex << abs_addr << " data: 0x" << data << std::endl;
         trace_entry.op = static_cast<TraceOperation>(op);
 
         trace.push_back(trace_entry);
+
+        // Calculate and print loading progress
+        unsigned int new_percent_loaded = (static_cast<float>(loaded_rows++) / static_cast<float>(total_rows)) * 100;
+
+        if (new_percent_loaded - percent_loaded >= 1 || loaded_rows == total_rows) {
+            percent_loaded = new_percent_loaded;
+            std::cout << "\rLoading trace, please wait (" << static_cast<int>(percent_loaded) << "%)";
+            std::cout.flush();
+        }
+
+        if (trace_entry.op_size > 16)
+            std::cout << trace_entry << std::endl;
+
     }
+    std::cout << std::endl;
 
     return true;
 }
