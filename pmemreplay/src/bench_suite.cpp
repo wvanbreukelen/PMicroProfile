@@ -10,61 +10,12 @@
 #include <linux/perf_event.h>
 #include <asm/unistd.h>
 
-#include <immintrin.h>
-#include <emmintrin.h>
+
 
 #include "worker.hpp"
 #include "bench_export.hpp"
 #include "pmc.hpp"
-
-
-#define likely(x)    __builtin_expect (!!(x), 1)
-#define unlikely(x)  __builtin_expect (!!(x), 0)
-
-#define Mebibyte (1024 * 1024)
-#define Gibibyte (1024 * 1024 * 1024)
-
-#define ALIGN_TO_64(ptr) ((char*)(((uintptr_t)(ptr) + 63) & ~(uintptr_t)63))
-//#define STRICT_CONSISTENCY
-
-static constexpr size_t CACHE_LINE_SIZE = 64;
-
-#define SAMPLE_RATE  10000000L  //50000000
-#define SAMPLE_DUTY_CYCLE 25
-//#define SAMPLE_LENGTH 8000000  //500000
-//#define ENABLE_DCOLLECTION
-
-// period_on = (period * (thread_data->duty_cycle)) / 100;
-// 	period_off = (period * ((100 - thread_data->duty_cycle))) / 100;
-
-
-static constexpr unsigned long SAMPLE_PERIOD_ON = (SAMPLE_RATE * SAMPLE_DUTY_CYCLE) / 100;
-static constexpr unsigned long SAMPLE_PERIOD_OFF = (SAMPLE_RATE * (100 - SAMPLE_DUTY_CYCLE)) / 100;
-
-// See: https://perfmon-events.intel.com/
-#define EVENT_UNC_M_CLOCKTICKS 0x00 // umask=0x0,event=0x0 
-#define EVENT_UNC_M_PMM_WPQ_INSERTS 0xE7
-#define EVENT_UNC_M_PMM_RPQ_INSERTS 0xE3
-#define EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL 0x1E0 // umask=0x1,event=0xE0
-#define EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL 0x1E4  // umask=0x1,event=0xE4
-
-
-// from: https://github.com/hpides/perma-bench/blob/75b6e3ceea6895fdb779b4981aa43a2ff6185104/src/read_write_ops.hpp
-#define READ_SIMD_512(mem_addr, offset) _mm512_load_si512((void*)((mem_addr) + ((offset)*CACHE_LINE_SIZE)))
-
-#define WRITE_SIMD_NT_512(mem_addr, offset, data) \
-  _mm512_stream_si512(reinterpret_cast<__m512i*>((mem_addr) + ((offset)*CACHE_LINE_SIZE)), data)
-
-#define WRITE_SIMD_512(mem_addr, offset, data) \
-  _mm512_store_si512(reinterpret_cast<__m512i*>((mem_addr) + ((offset)*CACHE_LINE_SIZE)), data)
-
-#define READ_SIMD_256(mem_addr, offset) _mm256_load_si256((void*)((mem_addr) + ((offset)*CACHE_LINE_SIZE)))
-
-#define WRITE_SIMD_NT_256(mem_addr, offset, data) \
-  _mm256_stream_si256(reinterpret_cast<__m256i*>((mem_addr) + ((offset)*CACHE_LINE_SIZE)), data)
-
-#define WRITE_SIMD_256(mem_addr, offset, data) \
-  _mm256_store_si256(reinterpret_cast<__m256i*>((mem_addr) + ((offset)*CACHE_LINE_SIZE)), data)
+#include "io.hpp"
 
 
 inline void flush_clwb(char* addr, const size_t len) {
@@ -116,7 +67,7 @@ bool BenchSuite::allocate_pmem_area()
     //size_t page_size = sysconf(_SC_PAGESIZE);
 
     if (madvise(dax_area, this->mem_size, MADV_WILLNEED) < 0)
-	std::cerr << "Warning: unable to perform madvice on DAX region." << std::endl;
+	    std::cerr << "Warning: unable to perform madvice on DAX region." << std::endl;
     //for (char* dax_ptr = static_cast<char*>(dax_area); dax_ptr < static_cast<char*>(dax_area) + this->mem_size; dax_ptr += page_size)
 	//madvise(dax_ptr, page_size, MADV_WILLNEED);
 
@@ -142,9 +93,8 @@ bool BenchSuite::allocate_dram_area()
         std::cerr << "Warning: unable to mprotect DRAM-backed memory region" << std::endl;
     }
 
-    if (mlock(mem_area, this->mem_size) < 0) {
-        std::cerr << "Warning: unable to mlock DRAM-backed memory region" << std::endl;
-    }
+    if (madvise(mem_area, this->mem_size, MADV_WILLNEED) < 0)
+        std::cerr << "Warning: unable to MADV_WILLNEED DRAM-backed memory region" << std::endl;
 
 
     this->mem_area = mem_area;
@@ -157,6 +107,7 @@ void BenchSuite::allocate_mem_area()
     if (force_ram) {
         if (!allocate_dram_area()) {
             std::cerr << "Unable to allocate DRAM-backed region, exiting..." << std::endl;
+            exit(1);
             return;
         }
 
@@ -175,6 +126,7 @@ void BenchSuite::allocate_mem_area()
 
         if (!allocate_dram_area()) {
             std::cerr << "Unable to allocate DRAM-backed region, exiting..." << std::endl;
+            exit(1);
             return;
         }
     }
@@ -288,6 +240,7 @@ static inline uint64_t next_pow2_fast(uint64_t x)
     #endif
 }
 
+
 static void* do_work(void *arg)
 {
     struct WorkerArguments *args = static_cast<struct WorkerArguments*>(arg);
@@ -340,11 +293,11 @@ static void* do_work(void *arg)
     }
 
 
-    probe_reset(unc_ticks_probe);
-    probe_reset(wpq_probe);
-    probe_reset(rpq_probe);
-    probe_reset(wpq_occupancy_probe);
-    probe_reset(rpq_occupancy_probe);
+    unc_ticks_probe.probe_reset();
+    wpq_probe.probe_reset();
+    rpq_probe.probe_reset();
+    wpq_occupancy_probe.probe_reset();
+    rpq_occupancy_probe.probe_reset();
     #endif
     //probe_enable(wpq_probe);
 
@@ -372,17 +325,17 @@ static void* do_work(void *arg)
                         is_sampling = false;
 
                         cur_sample->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
-                        probe_disable(unc_ticks_probe);
-                        probe_disable(rpq_probe);
-                        probe_disable(wpq_probe);
-                        probe_disable(wpq_occupancy_probe);
-                        probe_disable(rpq_occupancy_probe);
+                        unc_ticks_probe.probe_disable();
+                        rpq_probe.probe_disable();
+                        wpq_probe.probe_disable();
+                        wpq_occupancy_probe.probe_disable();
+                        rpq_occupancy_probe.probe_disable();
 
-                        probe_count_single_imc(unc_ticks_probe, &(cur_sample->unc_ticks));
-                        probe_count(rpq_probe, &(cur_sample->rpq_inserts));
-                        probe_count(wpq_probe, &(cur_sample->wpq_inserts));
-                        probe_count(wpq_occupancy_probe, &(cur_sample->wpq_occupancy));
-                        probe_count(rpq_occupancy_probe, &(cur_sample->rpq_occupancy));
+                        unc_ticks_probe.probe_count_single_imc(&(cur_sample->unc_ticks));
+                        rpq_probe.probe_count(&(cur_sample->rpq_inserts));
+                        wpq_probe.probe_count(&(cur_sample->wpq_inserts));
+                        wpq_occupancy_probe.probe_count(&(cur_sample->wpq_occupancy));
+                        rpq_occupancy_probe.probe_count(&(cur_sample->rpq_occupancy));
 
                         cur_sample++;
                         ++(stat->num_collected_samples);
@@ -395,27 +348,23 @@ static void* do_work(void *arg)
                         is_sampling = true;
                         latest_sample_time = cur_time;
 
-                        probe_reset(unc_ticks_probe);
-                        probe_reset(wpq_probe);
-                        probe_reset(rpq_probe);
-                        probe_reset(wpq_occupancy_probe);
-                        probe_reset(rpq_occupancy_probe);
+                        unc_ticks_probe.probe_reset();
+                        wpq_probe.probe_reset();
+                        rpq_probe.probe_reset();
+                        wpq_occupancy_probe.probe_reset();
+                        rpq_occupancy_probe.probe_reset();
 
-                        probe_enable(unc_ticks_probe);
-                        probe_enable(rpq_probe);
-                        probe_enable(wpq_probe);
-                        probe_enable(wpq_occupancy_probe);
-                        probe_enable(rpq_occupancy_probe);
+                        unc_ticks_probe.probe_enable();
+                        rpq_probe.probe_enable();
+                        wpq_probe.probe_enable();
+                        wpq_occupancy_probe.probe_enable();
+                        rpq_occupancy_probe.probe_enable();
                     }
                 }
             }
 
             ++z;
             #endif
-
-            //std::cout << std::dec << (__builtin_ia32_rdtsc() - latest_sample_time) << std::endl;
-            //dev_addr = entry.dax_addr;
-            //data = entry.data;
 
             switch (entry.op) {
                 case TraceOperation::READ:
@@ -424,56 +373,31 @@ static void* do_work(void *arg)
                     {
                         case 1:
                         {
-                            #ifdef ENABLE_DCOLLECTION
-                            if (is_sampling) {
-                                const unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                                *(reinterpret_cast<volatile char*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
-                                cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
-                            } else {
-                                *(reinterpret_cast<volatile char*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
-                            }
-                            #else
-                                *(reinterpret_cast<volatile char*>(&temp_var)) = *(static_cast<char*>(entry.dax_addr));
-                            #endif
+                            read_value<uint8_t>(entry, is_sampling, cur_sample);
 
                             break;
                         }
                         case 4:
                         {
-                            #ifdef ENABLE_DCOLLECTION
-                            if (is_sampling) {
-                                const unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<int*>(entry.dax_addr));
-                                cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
-                            } else {
-                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<int*>(entry.dax_addr));
-                            }
-                            #else
-                                *(reinterpret_cast<volatile int*>(&temp_var)) = *(static_cast<int*>(entry.dax_addr));
-                            #endif
+                            read_value<uint32_t>(entry, is_sampling, cur_sample);
 
                             break;
                         }
                         case 8:
                         {
-                            #ifdef ENABLE_DCOLLECTION
-                            if (is_sampling) {
-                                const unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<long*>(entry.dax_addr));
-                                cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
-                            } else {
-                                *(reinterpret_cast<volatile long*>(&temp_var)) = *(static_cast<long*>(entry.dax_addr));
-                            }
-                            #else
-                                *(reinterpret_cast<volatile unsigned long*>(&temp_var)) = *(static_cast<unsigned long*>(entry.dax_addr));
-                            #endif
+                            read_value<uint64_t>(entry, is_sampling, cur_sample);
+
+                            break;
+                        }
+                        case 16:
+                        {
+                            read_value<__uint128_t>(entry, is_sampling, cur_sample);
 
                             break;
                         }
                         default:
                             std::cerr << "Unsupported op size " << std::dec << entry.op_size << "!" << std::endl;
                             
-
                             pthread_exit(NULL);
                             break;
                     }
@@ -494,163 +418,24 @@ static void* do_work(void *arg)
                     {
                     case 0xA4: // 1 byte size
                     {
-                        #ifdef ENABLE_DCOLLECTION
-                        if (is_sampling) {
-                            const unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_sfence();
-                            #endif
-
-                            *(static_cast<unsigned char*>(entry.dax_addr)) = static_cast<unsigned char>(entry.data);
-
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_clflushopt(static_cast<void*>(dev_addr));
-                            _mm_sfence();
-                            #endif
-
-                            cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
-                        } else {
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_sfence();
-                            #endif
-
-                            *(static_cast<unsigned char*>(entry.dax_addr)) = static_cast<unsigned char>(entry.data);
-
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_clflushopt(static_cast<void*>(dev_addr));
-                            _mm_sfence();
-                            #endif
-                        }
-                        #else
-                            *(static_cast<unsigned char*>(entry.dax_addr)) = static_cast<unsigned char>(entry.data);
-                        #endif
+                        write_mov_8(entry, is_sampling, cur_sample);
+                        break;
+                    }
+                    case 0x4444: // 4 bytes - MOVNTI
+                    {
+                        write_movnti_32(entry, is_sampling, cur_sample);
 
                         break;
                     }
-                    case 0x4444: // FIXME: find opcode.
+                    case 0xC30F: // 8 bytes - MOVNTQ
                     {
-                        #ifdef ENABLE_DCOLLECTION
-                        if (is_sampling) {
-                            const unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_sfence();
-                            #endif
-
-                            //_mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
-                            _mm_stream_si32(static_cast<int*>(entry.dax_addr), static_cast<int>(entry.data));
-
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_clflushopt(static_cast<void*>(entry.dax_addr));
-                            _mm_sfence();
-                            #endif
-
-                            cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
-                        } else {
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_sfence();
-                            #endif
-
-                            //_mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
-                            _mm_stream_si32(static_cast<int*>(entry.dax_addr), static_cast<int>(entry.data));
-
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_clflushopt(static_cast<void*>(entry.dax_addr));
-                            _mm_sfence();
-                            #endif
-                        }
-                        #else
-                            #ifdef STRICT_CONSISTENCY
-                                _mm_sfence();
-                                #endif
-
-                                //_mm_stream_pi((__m64*) entry.dax_addr, (__m64) entry.data);
-                                _mm_stream_si32(static_cast<int*>(entry.dax_addr), static_cast<int>(entry.data));
-
-                                #ifdef STRICT_CONSISTENCY
-                                _mm_clflushopt(static_cast<void*>(dev_addr));
-                                _mm_sfence();
-                                #endif
-                        #endif
-
-                        break;
-                    }
-                    case 0xC30F: // 8 bytes - MOVNT
-                    {
-                        #ifdef ENABLE_DCOLLECTION
-                        if (is_sampling) {
-                            const unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_sfence();
-                            #endif
-
-                            _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), reinterpret_cast<__m64>(entry.data));
-                            
-
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_clflushopt(static_cast<void*>(dev_addr));
-                            _mm_sfence();
-                            #endif
-
-                            cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
-                        } else {
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_sfence();
-                            #endif
-
-                            _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), reinterpret_cast<__m64>(entry.data));
-                            
-
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_clflushopt(static_cast<void*>(dev_addr));
-                            _mm_sfence();
-                            #endif
-                        }
-                        #else
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_sfence();
-                            #endif
-
-                            _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), reinterpret_cast<__m64>(entry.data));
-                            
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_clflushopt(static_cast<void*>(dev_addr));
-                            _mm_sfence();
-                            #endif
-                        #endif
+                        write_movntq_64(entry, is_sampling, cur_sample);
 
                         break;
                     }
                     case 0xE70F: // 16 bytes - MOVNTDQ
                     {
-                        const __m128i _stream_data = _mm_set_epi64x(0, entry.data);
-
-                        #ifdef ENABLE_DCOLLECTION
-                        const unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                        #ifdef STRICT_CONSISTENCY
-                        _mm_sfence();
-                        #endif
-
-                        _mm_stream_si128(static_cast<__m128i*>(entry.dax_addr), _stream_data);
-                        
-
-                        #ifdef STRICT_CONSISTENCY
-                        _mm_clflushopt(static_cast<void*>(dev_addr));
-                        _mm_sfence();
-                        #endif
-
-                        cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
-                        #else
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_sfence();
-                            #endif
-
-                            _mm_stream_si128(static_cast<__m128i*>(entry.dax_addr), _stream_data);
-                                
-                            #ifdef STRICT_CONSISTENCY
-                            _mm_clflushopt(static_cast<void*>(dev_addr));
-                            _mm_sfence();
-                            #endif
-                        #endif
+                        write_movntqd_128(entry, is_sampling, cur_sample);
                         
                         break;
                     }
@@ -675,24 +460,7 @@ static void* do_work(void *arg)
 
                 case TraceOperation::CLFLUSH:
                 {
-                    #ifdef ENABLE_DCOLLECTION
-                        if (is_sampling) {
-                            unsigned long long start_ticks = __builtin_ia32_rdtsc();
-                            _mm_sfence();
-                            _mm_clflushopt(entry.dax_addr);
-                            _mm_sfence();
-                            cur_sample->flush_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
-                            ++(cur_sample->num_flushes);
-                        } else {
-                            _mm_sfence();
-                            _mm_clflushopt(entry.dax_addr);
-                            _mm_sfence();
-                        }
-                    #else
-                    _mm_sfence();
-                    _mm_clflushopt(entry.dax_addr);
-                    _mm_sfence();
-                    #endif
+                    flush_clflush(entry, is_sampling, cur_sample);
 
                     break;
                 }
@@ -712,19 +480,19 @@ static void* do_work(void *arg)
     const auto time_stop = std::chrono::high_resolution_clock::now();
 
     #ifdef ENABLE_DCOLLECTION
-    probe_disable(unc_ticks_probe);
+    unc_ticks_probe.probe_disable();
     pmc.remove_imc_probe(unc_ticks_probe);
 
-    probe_disable(rpq_probe);
+    rpq_probe.probe_disable();
     pmc.remove_imc_probe(rpq_probe);
 
-    probe_disable(wpq_probe);
+    wpq_probe.probe_disable();
     pmc.remove_imc_probe(wpq_probe);
 
-    probe_disable(wpq_occupancy_probe);
+    wpq_occupancy_probe.probe_disable();
     pmc.remove_imc_probe(wpq_occupancy_probe);
 
-    probe_disable(rpq_occupancy_probe);
+    rpq_occupancy_probe.probe_disable();
     pmc.remove_imc_probe(rpq_occupancy_probe);
     #endif
 
@@ -757,30 +525,6 @@ void BenchSuite::run(const size_t replay_rounds)
     this->drop_caches();
 
     assert(sysconf(_SC_NPROCESSORS_ONLN) > static_cast<long>(this->num_threads));
-
-    
-
-    // for (size_t i = 0; i < num_imcs; ++i) {
-    //     int fd = attach_imc_probe(imc_ids[i], EVENT_UNC_M_PMM_WPQ_INSERTS);
-    //     close(fd);
-    // }
-
-    // for (size_t i = 0; i < num_imcs; ++i) {
-    //     int fd = attach_imc_probe(imc_ids[i], EVENT_UNC_M_PMM_RPQ_INSERTS);
-    //     close(fd);
-    // }
-
-    // for (size_t i = 0; i < num_imcs; ++i) {
-    //     int fd = attach_imc_probe(imc_ids[i], EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL);
-    //     close(fd);
-    // }
-
-    // TODO: for each of the iMC's, capture unc_m_pmm_wpq_inserts and unc_m_pmm_rpq_inserts
-
-    //int fd = setup_perf_events(getpid());
-
-    //return;
-
 
 
     pthread_attr_t attr;
@@ -816,20 +560,6 @@ void BenchSuite::run(const size_t replay_rounds)
         pthread_join(threads[i], NULL);
     }
 
-	struct read_format {
-                 uint64_t value;         /* The value of the event */
-                 uint64_t time_enabled;  /* if PERF_FORMAT_TOTAL_TIME_ENABLED */
-                 uint64_t time_running;  /* if PERF_FORMAT_TOTAL_TIME_RUNNING */
-	};
-
-
-    // probe_disable(wpq_probe);
-    // probe_count(wpq_probe, &total_count);
-
-    // if (!pmc.remove_imc_probe(wpq_probe)) {
-    //     std::cerr << "Unable to remove iMC probes!" << std::endl;
-    // }
-
     const struct io_stat* thread_stat = nullptr;
 
     for (size_t i = 0; i < this->num_threads; ++i) {
@@ -840,13 +570,6 @@ void BenchSuite::run(const size_t replay_rounds)
             " Write: " << (static_cast<double>(thread_stat->write_bytes) / Mebibyte) << " MB" <<
             " Total bytes: "  << (static_cast<double>(thread_stat->total_bytes) / Mebibyte) << " MB"
             " Bandwidth: " << (static_cast<double>(thread_stat->total_bytes) / Gibibyte / (thread_stat->latency_sum / 1'000'000'000)) << " GB/s" << std::endl;
-
-        // if (thread_stat->num_reads > 0)
-        //     std::cout << "Avg. read latency: " << (thread_stat->read_inst_cycles / thread_stat->num_reads) << " cycles" <<  std::endl;
-        // if (thread_stat->num_writes > 0)
-        //     std::cout << "Avg. write latency: " << (thread_stat->write_inst_cycles / thread_stat->num_writes) << " cycles" << std::endl;
-        // if (thread_stat->num_flushes > 0)
-        //     std::cout << "Avg. flush latency: " << (thread_stat->flush_inst_cycles / thread_stat->num_flushes) << " cycles" << std::endl;
 
         std::cout << "Collected " << thread_stat->num_collected_samples << " samples!" << std::endl;
     }

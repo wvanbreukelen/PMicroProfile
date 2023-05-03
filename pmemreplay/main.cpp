@@ -5,7 +5,7 @@
 #include "trace.hpp"
 #include "bench_suite.hpp"
 
-#define BENCH_MAP_SIZE (30UL * 1024 * 1024 * 1024)
+#define BENCH_MAP_SIZE (8UL * 1024 * 1024 * 1024)
 
 int main(int argc, char** argv)
 {
@@ -18,6 +18,7 @@ int main(int argc, char** argv)
     size_t replay_rounds;
     bool do_fallback_ram = false;
     bool force_dram = false;
+    bool do_cache_warming = false;
     const uint64_t num_samples = 2000;
 
     app.add_option("trace file", trace_file, "Trace file to execute (must have .parquet extension)")
@@ -35,6 +36,8 @@ int main(int argc, char** argv)
     app.add_flag("-v,--verbose", is_verbose, "Enable verbose output.")
         ->default_val(false);
     app.add_flag("--fallback-ram", do_fallback_ram, "Fallback to RAM in case Persistent Memory is not available.")
+        ->default_val(false);
+    app.add_flag("--cache-warming", do_cache_warming, "Enable cache warming.")
         ->default_val(false);
     app.add_option("d, --device", pmem_device_loc, "Location of Persistent Memory DAX device. Enter 'dram' to use DRAM instead.")
         ->default_val("/dev/dax0.0");
@@ -60,7 +63,7 @@ int main(int argc, char** argv)
     std::cout << "Trace: #reads: " << trace.get_total(TraceOperation::READ) << " #writes: " << trace.get_total(TraceOperation::WRITE) << " #flushes: " << trace.get_total(TraceOperation::CLFLUSH);
     std::cout << " (size: " << (trace.size() * sizeof(TraceEntry)) / (1024 * 1024) << " MiB)" << std::endl;
 
-    BenchSuite bsuite(trace, pmem_device_loc, BENCH_MAP_SIZE, num_threads, num_samples, force_dram, do_fallback_ram);
+    BenchSuite bsuite(trace, pmem_device_loc, BENCH_MAP_SIZE, num_threads, num_samples, force_dram, do_fallback_ram, do_cache_warming);
 
     bsuite.run(replay_rounds);
 
