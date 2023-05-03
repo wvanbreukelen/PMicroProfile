@@ -91,8 +91,8 @@ int PMC::add_probe(const int imc_id, const unsigned int event_id) const
     int flags = fcntl(fd, F_GETFD);
     flags &= ~FD_CLOEXEC;
     if (fcntl(fd, F_SETFD, flags) < 0) {
-	std::cerr << "error!" << std::endl;
-	return -1;
+	    std::cerr << "error!" << std::endl;
+	    return -1;
     }
 
     return fd;
@@ -102,6 +102,9 @@ bool PMC::add_imc_probe(const unsigned int event_id, struct iMCProbe &imc_probe)
 {
     int fd;
 
+    if (!this->num_imcs)
+        return false;
+
     for (size_t i = 0; i < this->num_imcs; ++i) {
         if ((fd = this->add_probe(this->imc_ids[i], event_id)) < 0) {
             return false;
@@ -109,9 +112,9 @@ bool PMC::add_imc_probe(const unsigned int event_id, struct iMCProbe &imc_probe)
 
         ++(imc_probe.num_probes);
         imc_probe.fd_probes[i] = fd;
-	#ifdef PMC_VERBOSE
-	std::cout << std::dec << fd << " ";
-	#endif
+        #ifdef PMC_VERBOSE
+        std::cout << std::dec << fd << " ";
+        #endif
     }
 
     #ifdef PMC_VERBOSE
