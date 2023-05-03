@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <regex>
 #include <fstream>
+#include <cassert>
 
 
 
@@ -67,7 +68,7 @@ int PMC::add_probe(const int imc_id, const unsigned int event_id) const
     pe.size = sizeof(struct perf_event_attr);
     pe.config = event_id;
     pe.sample_type = PERF_SAMPLE_IDENTIFIER;
-   // pe.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID;
+ 
     pe.disabled = 1;
     pe.inherit = 1;
     pe.exclude_guest = 0;
@@ -98,8 +99,11 @@ int PMC::add_probe(const int imc_id, const unsigned int event_id) const
     return fd;
 }
 
-bool PMC::add_imc_probe(const unsigned int event_id, struct iMCProbe &imc_probe) const
+bool PMC::add_imc_probe(const unsigned int event_id)
 {
+    struct iMCProbe& imc_probe = this->imc_probes[this->num_imc_probes++];
+    assert(this->num_imc_probes < this->imc_probes.size());
+
     int fd;
 
     if (!this->num_imcs)
@@ -117,12 +121,47 @@ bool PMC::add_imc_probe(const unsigned int event_id, struct iMCProbe &imc_probe)
         #endif
     }
 
+    imc_probe.event_id = event_id;
+
     #ifdef PMC_VERBOSE
     std::cout << "\nNum probes: " << imc_probe.num_probes << std::endl;
     #endif
 
     return true;
 }
+
+iMCProbe& PMC::get_probe(const unsigned int event_id)
+{
+    for (size_t i = 0; i < this->num_imc_probes; ++i)
+    {
+        if (this->imc_probes[i].event_id == event_id)
+            return this->imc_probes[i];
+    }
+
+    // Just crash the program if we cannot find the probe. Doing runtime checks (std::optional<>) would degrade performance.
+    assert(false);
+    // This is just a placeholder to keep the compiler happy.
+    return this->imc_probes[0];
+}
+
+void PMC::enable_imc_probes() const
+{
+    for (size_t i = 0; i < this->num_imc_probes; ++i)
+        this->imc_probes[i].probe_enable();
+}
+
+void PMC::disable_imc_probes() const
+{
+    for (size_t i = 0; i < this->num_imc_probes; ++i)
+        this->imc_probes[i].probe_disable();
+}
+
+void PMC::reset_imc_probes() const
+{
+    for (size_t i = 0; i < this->num_imc_probes; ++i)
+        this->imc_probes[i].probe_reset();
+}
+
 
 bool PMC::remove_probe(const int fd) const
 {
@@ -138,12 +177,14 @@ bool PMC::remove_probe(const int fd) const
     return true;
 }
 
-bool PMC::remove_imc_probe(const iMCProbe& imc_probe) const
+bool PMC::remove_imc_probes() const
 {
     bool res = true;
 
-    for (size_t i = 0; i < imc_probe.num_probes; ++i) {
-        res &= this->remove_probe(imc_probe.fd_probes[i]);
+    for (size_t z = 0; z < this->num_imc_probes; ++z) {
+        for (size_t i = 0; i < this->imc_probes[z].num_probes; ++i) {
+            res &= this->remove_probe(this->imc_probes[z].fd_probes[i]);
+        }
     }
 
     return res;

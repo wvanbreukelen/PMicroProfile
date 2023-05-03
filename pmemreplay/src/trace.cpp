@@ -30,8 +30,6 @@ bool parse_trace(const std::filesystem::path &path, TraceFile &trace)
         return false;
     }
 
-    
-
     parquet::StreamReader stream {parquet::ParquetFileReader::Open(infile)};
 
     TraceEntry trace_entry;
@@ -60,11 +58,8 @@ bool parse_trace(const std::filesystem::path &path, TraceFile &trace)
             std::cout << "\rLoading trace, please wait (" << static_cast<int>(percent_loaded) << "%)";
             std::cout.flush();
         }
-
-        if (loaded_rows > 100000)
-            return true;
-
     }
+    
     std::cout << std::endl;
 
     return true;

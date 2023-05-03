@@ -17,6 +17,7 @@
 #include "pmc.hpp"
 #include "io.hpp"
 
+std::chrono::time_point<std::chrono::high_resolution_clock> time_start;
 
 inline void flush_clwb(char* addr, const size_t len) {
     const char* end_addr = addr + len;
@@ -241,16 +242,166 @@ static inline uint64_t next_pow2_fast(uint64_t x)
 }
 
 
+static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur_sample, ssize_t* total_bytes, unsigned long long *_latest_sample_time, struct io_stat* stat)
+{
+    constexpr uint64_t sample_mask = (1024 - 1);
+    bool is_sampling = false;
+    unsigned long long cur_time;
+    unsigned long long latest_sample_time = *(_latest_sample_time);
+    size_t z = 0;
+
+    for (const TraceEntry& entry : trace_file) {
+        #ifdef ENABLE_DCOLLECTION
+        if (unlikely((z & sample_mask) == 0)) {  // (cur_time - latest_sample_time) >= SAMPLE_LENGTH
+            cur_time = __builtin_ia32_rdtsc();
+
+            if (is_sampling) {
+                if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_ON) {
+                    pmc.disable_imc_probes();
+
+                    is_sampling = false;
+                    (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
+
+                    pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single_imc(&((*cur_sample)->unc_ticks));
+                    pmc.get_probe(EVENT_UNC_M_PMM_RPQ_INSERTS).probe_count(&((*cur_sample)->unc_ticks));
+                    pmc.get_probe(EVENT_UNC_M_PMM_WPQ_INSERTS).probe_count(&((*cur_sample)->unc_ticks));
+                    pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->unc_ticks));
+                    pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->unc_ticks));
+
+                    cur_sample++;
+                    ++(stat->num_collected_samples);
+
+                    if (stat->num_collected_samples > MAX_SAMPLES) {
+                        std::cerr << "Number of collected sample exteeds MAX_SAMPLES (= " << std::dec << MAX_SAMPLES << "), please increase!" << std::endl;
+                        pthread_exit(NULL);
+                    }
+                    
+                    latest_sample_time = cur_time;
+                }
+            } else {
+                if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_OFF) {
+                    is_sampling = true;
+                    latest_sample_time = cur_time;
+
+                    pmc.reset_imc_probes();
+                    pmc.enable_imc_probes();
+                }
+            }
+        }
+
+        ++z;
+        #endif
+
+        switch (entry.op) {
+            case TraceOperation::READ:
+            {
+                switch (entry.op_size)
+                {
+                    case 1:
+                    {
+                        read_value<uint8_t>(entry, is_sampling, *cur_sample);
+                        break;
+                    }
+                    case 4:
+                    {
+                        read_value<uint32_t>(entry, is_sampling, *cur_sample);
+                        break;
+                    }
+                    case 8:
+                    {
+                        read_value<uint64_t>(entry, is_sampling, *cur_sample);
+                        break;
+                    }
+                    case 16:
+                    {
+                        read_value<__uint128_t>(entry, is_sampling, *cur_sample);
+                        break;
+                    }
+                    default:
+                        std::cerr << "Unsupported op size " << std::dec << entry.op_size << "!" << std::endl;
+                        
+                        pthread_exit(NULL);
+                        break;
+                }
+
+                #ifdef ENABLE_DCOLLECTION
+                if (is_sampling) {
+                    ++((*cur_sample)->num_reads);
+                    (*cur_sample)->bytes_read += entry.op_size;
+                }
+                #endif
+
+                break;
+            }
+
+            case TraceOperation::WRITE:
+            {
+                switch (entry.opcode)
+                {
+                case 0xA4: // 1 byte size
+                {
+                    write_mov_8(entry, is_sampling, *cur_sample);
+                    break;
+                }
+                case 0x4444: // 4 bytes - MOVNTI
+                {
+                    write_movnti_32(entry, is_sampling, *cur_sample);
+                    break;
+                }
+                case 0xC30F: // 8 bytes - MOVNTQ
+                {
+                    write_movntq_64(entry, is_sampling, *cur_sample);
+                    break;
+                }
+                case 0xE70F: // 16 bytes - MOVNTDQ
+                {
+                    write_movntqd_128(entry, is_sampling, *cur_sample);
+                    break;
+                }
+
+                default:
+                    std::cerr << "Unsupported operation 0x" << std::hex << entry.opcode << "!" << std::endl;
+                    std::cout << entry << std::endl;
+
+                    pthread_exit(NULL);
+                    break;
+                }
+
+                #ifdef ENABLE_DCOLLECTION
+                if (is_sampling) {
+                    ++((*cur_sample)->num_writes);
+                    (*cur_sample)->bytes_written += entry.op_size;
+                }
+                #endif
+
+                break;
+            }
+
+            case TraceOperation::CLFLUSH:
+            {
+                flush_clflush(entry, is_sampling, *cur_sample);
+                break;
+            }
+
+            default:
+                std::cerr << "Unknown operation" << std::endl;
+                assert(false);
+                break;
+        }
+
+        *total_bytes += entry.op_size;
+    }
+
+    *(_latest_sample_time) = latest_sample_time;
+}
+
 static void* do_work(void *arg)
 {
     struct WorkerArguments *args = static_cast<struct WorkerArguments*>(arg);
     struct io_stat *stat = &(args->stat);
 
     size_t count = 0;
-    volatile unsigned long long temp_var = 0;
-    
-    const auto time_start = std::chrono::high_resolution_clock::now();
-    size_t total_bytes = 0;
+    ssize_t total_bytes = 0;
 
     struct io_sample *cur_sample;
     size_t sample_pos = 0;
@@ -265,39 +416,40 @@ static void* do_work(void *arg)
     }
 
     #ifdef ENABLE_DCOLLECTION
-    struct iMCProbe unc_ticks_probe{}, wpq_probe{}, rpq_probe{}, wpq_occupancy_probe{}, rpq_occupancy_probe{};
+    //struct iMCProbe unc_ticks_probe{}, wpq_probe{}, rpq_probe{}, wpq_occupancy_probe{}, rpq_occupancy_probe{};
 
-    if (!pmc.add_imc_probe(EVENT_UNC_M_CLOCKTICKS, unc_ticks_probe)) {
+    if (!pmc.add_imc_probe(EVENT_UNC_M_CLOCKTICKS)) {
         std::cerr << "Unable to add EVENT_UNC_M_CLOCKTICKS probe!" << std::endl;
         pthread_exit(NULL);
     }
 
-    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS, wpq_probe)) {
+    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS)) {
         std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_INSERTS probe!" << std::endl;
         pthread_exit(NULL);
     }
 
-    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_INSERTS, rpq_probe)) {
+    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_INSERTS)) {
         std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_INSERTS probe!" << std::endl;
         pthread_exit(NULL);
     }
 
-    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL, wpq_occupancy_probe)) {
+    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL)) {
         std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL probe!" << std::endl;
         pthread_exit(NULL);
     }
 
-    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL, rpq_occupancy_probe)) {
+    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL)) {
         std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL probe!" << std::endl;
         pthread_exit(NULL);
     }
 
 
-    unc_ticks_probe.probe_reset();
-    wpq_probe.probe_reset();
-    rpq_probe.probe_reset();
-    wpq_occupancy_probe.probe_reset();
-    rpq_occupancy_probe.probe_reset();
+    // unc_ticks_probe.probe_reset();
+    // wpq_probe.probe_reset();
+    // rpq_probe.probe_reset();
+    // wpq_occupancy_probe.probe_reset();
+    // rpq_occupancy_probe.probe_reset();
+    pmc.reset_imc_probes();
     #endif
     //probe_enable(wpq_probe);
 
@@ -305,195 +457,27 @@ static void* do_work(void *arg)
 
     size_t i = 0;
     //const uint64_t sample_mask = next_pow2_fast(args->trace_file->size() / args->num_samples) - 1;
-    const uint64_t sample_mask = (1024 - 1);
-    unsigned long long latest_sample_time = __builtin_ia32_rdtsc();
-
-
-
-    for (; i < args->replay_rounds + 1; ++i) {
-        bool is_sampling = false;
-        unsigned long long cur_time;
-        size_t z = 0;
-
-        for (const TraceEntry& entry : *(args->trace_file)) {
-            #ifdef ENABLE_DCOLLECTION
-            if (unlikely((z & sample_mask) == 0)) {  // (cur_time - latest_sample_time) >= SAMPLE_LENGTH
-                cur_time = __builtin_ia32_rdtsc();
-
-                if (is_sampling) {
-                    if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_ON) {
-                        is_sampling = false;
-
-                        cur_sample->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
-                        unc_ticks_probe.probe_disable();
-                        rpq_probe.probe_disable();
-                        wpq_probe.probe_disable();
-                        wpq_occupancy_probe.probe_disable();
-                        rpq_occupancy_probe.probe_disable();
-
-                        unc_ticks_probe.probe_count_single_imc(&(cur_sample->unc_ticks));
-                        rpq_probe.probe_count(&(cur_sample->rpq_inserts));
-                        wpq_probe.probe_count(&(cur_sample->wpq_inserts));
-                        wpq_occupancy_probe.probe_count(&(cur_sample->wpq_occupancy));
-                        rpq_occupancy_probe.probe_count(&(cur_sample->rpq_occupancy));
-
-                        cur_sample++;
-                        ++(stat->num_collected_samples);
-                        assert(stat->num_collected_samples < MAX_SAMPLES);
-                        
-                        latest_sample_time = cur_time;
-                    }
-                } else {
-                    if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_OFF) {
-                        is_sampling = true;
-                        latest_sample_time = cur_time;
-
-                        unc_ticks_probe.probe_reset();
-                        wpq_probe.probe_reset();
-                        rpq_probe.probe_reset();
-                        wpq_occupancy_probe.probe_reset();
-                        rpq_occupancy_probe.probe_reset();
-
-                        unc_ticks_probe.probe_enable();
-                        rpq_probe.probe_enable();
-                        wpq_probe.probe_enable();
-                        wpq_occupancy_probe.probe_enable();
-                        rpq_occupancy_probe.probe_enable();
-                    }
-                }
-            }
-
-            ++z;
-            #endif
-
-            switch (entry.op) {
-                case TraceOperation::READ:
-                {
-                    switch (entry.op_size)
-                    {
-                        case 1:
-                        {
-                            read_value<uint8_t>(entry, is_sampling, cur_sample);
-
-                            break;
-                        }
-                        case 4:
-                        {
-                            read_value<uint32_t>(entry, is_sampling, cur_sample);
-
-                            break;
-                        }
-                        case 8:
-                        {
-                            read_value<uint64_t>(entry, is_sampling, cur_sample);
-
-                            break;
-                        }
-                        case 16:
-                        {
-                            read_value<__uint128_t>(entry, is_sampling, cur_sample);
-
-                            break;
-                        }
-                        default:
-                            std::cerr << "Unsupported op size " << std::dec << entry.op_size << "!" << std::endl;
-                            
-                            pthread_exit(NULL);
-                            break;
-                    }
-
-                    #ifdef ENABLE_DCOLLECTION
-                    if (is_sampling) {
-                        ++(cur_sample->num_reads);
-                        cur_sample->bytes_read += entry.op_size;
-                    }
-                    #endif
-
-                    break;
-                }
-
-                case TraceOperation::WRITE:
-                {
-                    switch (entry.opcode)
-                    {
-                    case 0xA4: // 1 byte size
-                    {
-                        write_mov_8(entry, is_sampling, cur_sample);
-                        break;
-                    }
-                    case 0x4444: // 4 bytes - MOVNTI
-                    {
-                        write_movnti_32(entry, is_sampling, cur_sample);
-
-                        break;
-                    }
-                    case 0xC30F: // 8 bytes - MOVNTQ
-                    {
-                        write_movntq_64(entry, is_sampling, cur_sample);
-
-                        break;
-                    }
-                    case 0xE70F: // 16 bytes - MOVNTDQ
-                    {
-                        write_movntqd_128(entry, is_sampling, cur_sample);
-                        
-                        break;
-                    }
-
-                    default:
-                        std::cerr << "Unsupported operation 0x" << std::hex << entry.opcode << "!" << std::endl;
-                        std::cout << entry << std::endl;
-
-                        pthread_exit(NULL);
-                        break;
-                    }
-
-                    #ifdef ENABLE_DCOLLECTION
-                    if (is_sampling) {
-                        ++(cur_sample->num_writes);
-                        cur_sample->bytes_written += entry.op_size;
-                    }
-                    #endif
-
-                    break;
-                }
-
-                case TraceOperation::CLFLUSH:
-                {
-                    flush_clflush(entry, is_sampling, cur_sample);
-
-                    break;
-                }
-
-                default:
-                    std::cerr << "Unknown operation" << std::endl;
-                    assert(false);
-                    break;
-            }
-
-            total_bytes += entry.op_size;
-        }
-    }
     
-    // Do a simple addition to make sure the compiler does not optimize 'temp_var' away.
-    temp_var++;
+    unsigned long long latest_sample_time = 0;
+    io_stat dummy_stat;
+
+    for (size_t round = 0; round < args->cache_warming_rounds; ++round)
+        replay_trace(*args->trace_file, pmc, &cur_sample, &total_bytes, &latest_sample_time, &dummy_stat);
+
+    time_start = std::chrono::high_resolution_clock::now();
+    latest_sample_time = __builtin_ia32_rdtsc();
+    total_bytes = 0;
+    sample_pos = 0;
+    cur_sample = &(stat->samples[0]);
+
+    for (; i < args->replay_rounds + 1; ++i)
+        replay_trace(*args->trace_file, pmc, &cur_sample, &total_bytes, &latest_sample_time, stat);
+    
     const auto time_stop = std::chrono::high_resolution_clock::now();
 
     #ifdef ENABLE_DCOLLECTION
-    unc_ticks_probe.probe_disable();
-    pmc.remove_imc_probe(unc_ticks_probe);
-
-    rpq_probe.probe_disable();
-    pmc.remove_imc_probe(rpq_probe);
-
-    wpq_probe.probe_disable();
-    pmc.remove_imc_probe(wpq_probe);
-
-    wpq_occupancy_probe.probe_disable();
-    pmc.remove_imc_probe(wpq_occupancy_probe);
-
-    rpq_occupancy_probe.probe_disable();
-    pmc.remove_imc_probe(rpq_occupancy_probe);
+    pmc.disable_imc_probes();
+    pmc.remove_imc_probes();
     #endif
 
     stat->latency_sum += std::chrono::duration_cast<std::chrono::nanoseconds>(time_stop - time_start).count();
@@ -501,7 +485,6 @@ static void* do_work(void *arg)
     stat->read_bytes += (args->trace_file->get_total(TraceOperation::READ) * i);
     stat->write_bytes += (args->trace_file->get_total(TraceOperation::WRITE) * i);
     stat->total_bytes += (stat->read_bytes + stat->write_bytes);
-
 
     pthread_exit(NULL);
 }
@@ -515,10 +498,9 @@ void BenchSuite::run(const size_t replay_rounds)
         entry.dax_addr = static_cast<char*>(this->mem_area) + entry.rel_addr;
     }
 
-
     // Spawn the threads
     pthread_t threads[this->num_threads] = {};
-    struct WorkerArguments thread_args[this->num_threads] = {{(&(this->trace_file)), this->num_samples, replay_rounds}};
+    struct WorkerArguments thread_args[this->num_threads] = {{(&(this->trace_file)), this->num_samples, replay_rounds, static_cast<size_t>((this->do_cache_warming) ? 1 : 0)}};
 
     std::cout << "Initializing " << this->num_threads << " threads ..." << std::endl;
 
@@ -542,7 +524,6 @@ void BenchSuite::run(const size_t replay_rounds)
         if (pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpus)) {
             std::cerr << "Unable to set core affinity to core " << i << std::endl;
         }
-        
 
         // https://www.strchr.com/performance_measurements_with_rdtsc
         // !!! We might need to fix CPU frequency, maybe we can set the CPU governor to performance and disable turbo?

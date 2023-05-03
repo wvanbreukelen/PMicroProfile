@@ -15,7 +15,7 @@ static constexpr size_t CACHE_LINE_SIZE = 64;
 #define SAMPLE_RATE  10000000L  //50000000
 #define SAMPLE_DUTY_CYCLE 25
 //#define SAMPLE_LENGTH 8000000  //500000
-#define ENABLE_DCOLLECTION
+//#define ENABLE_DCOLLECTION
 
 // period_on = (period * (thread_data->duty_cycle)) / 100;
 // 	period_off = (period * ((100 - thread_data->duty_cycle))) / 100;

@@ -61,10 +61,11 @@ public:
 
 struct WorkerArguments {
 public:
-    WorkerArguments(TraceFile *trace_file, const uint64_t num_samples, const size_t replay_rounds) :
+    WorkerArguments(TraceFile *trace_file, const uint64_t num_samples, const size_t replay_rounds, const size_t cache_warming_rounds) :
         trace_file(trace_file),
         num_samples(num_samples),
-        replay_rounds(replay_rounds)
+        replay_rounds(replay_rounds),
+        cache_warming_rounds(cache_warming_rounds)
     {}
 
     void init() {
@@ -74,7 +75,8 @@ public:
     WorkerArguments():
         trace_file(nullptr),
         num_samples(0),
-        replay_rounds(0)
+        replay_rounds(0),
+        cache_warming_rounds(0)
     {}
 
     ~WorkerArguments() {
@@ -84,6 +86,7 @@ public:
 
     TraceFile* trace_file;
     const size_t replay_rounds;
+    const size_t cache_warming_rounds;
     const uint64_t num_samples;
     io_stat stat;
 };
