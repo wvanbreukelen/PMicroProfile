@@ -373,8 +373,6 @@ static void dax_disassociate_entry(void *entry, struct address_space *mapping,
 		WARN_ON_ONCE(page->mapping && page->mapping != mapping);
 		page->mapping = NULL;
 		page->index = 0;
-
-		pr_info("dax_disassociate_entry\n");
 	}
 }
 

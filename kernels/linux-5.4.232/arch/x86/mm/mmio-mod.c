@@ -365,8 +365,8 @@ void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
 	if (!is_enabled()) /* recheck and proper locking in *_core() */
 		return;
 
-	pr_debug_ratelimited("ioremap_*(0x%llx, 0x%lx) = %lx\n",
-		 (unsigned long long)offset, size, (unsigned long) addr);
+	// pr_debug_ratelimited("ioremap_*(0x%llx, 0x%lx) = %lx\n",
+	// 	 (unsigned long long)offset, size, (unsigned long) addr);
 	if ((filter_offset) && (offset != filter_offset)) {
 		printk("Filter_offset skip.\n");
 		return;
@@ -464,8 +464,8 @@ void mmiotrace_iounmap(volatile void __iomem *addr, volatile void __iomem *size,
 {
 	might_sleep();
 	if (is_enabled()) { /* recheck and proper locking in *_core() */
-		pr_debug_ratelimited("iounmap_*(0x%llx, 0x%lx)\n",
-		 	(unsigned long long)addr, (unsigned long long) size);
+		// pr_debug_ratelimited("iounmap_*(0x%llx, 0x%lx)\n",
+		//  	(unsigned long long)addr, (unsigned long long) size);
 		iounmap_trace_core(addr, size, task);
 	}
 }
@@ -953,6 +953,8 @@ void enable_mmiotrace(void)
 	disable_pmemtrace_sampler();
 	enable_pmemtrace_sampler(0, 0, 1);
 
+	reset_kmmio_stepping_time();
+
 	pr_info("enabled.\n");
 out:
 	mutex_unlock(&mmiotrace_mutex);
@@ -960,8 +962,7 @@ out:
 
 void disable_mmiotrace(void)
 {
-	if (disable_pmemtrace_sampler() < 0)
-		pr_warn("Could not stop sampler!\n");
+	(void) disable_pmemtrace_sampler();
 	mutex_lock(&mmiotrace_mutex);
 
 	if (!is_enabled())

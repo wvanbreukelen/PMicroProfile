@@ -32,6 +32,8 @@
 #include <linux/kthread.h>
 #include <asm/mmu_context.h>
 #include <linux/uaccess.h>
+#include <linux/hrtimer.h>
+#include <linux/atomic.h>
 
 
 
@@ -72,6 +74,8 @@ struct kmmio_context {
 	unsigned long saved_flags;
 	unsigned long addr;
 	int active;
+
+	//unsigned long start_time_ns;
 };
 
 static DEFINE_SPINLOCK(kmmio_lock);
@@ -83,7 +87,7 @@ unsigned int kmmio_count;
 static struct list_head kmmio_page_table[KMMIO_PAGE_TABLE_SIZE];
 static LIST_HEAD(kmmio_probes);
 
-
+static atomic_t elapsed_stepping_time = ATOMIC_INIT(0);
 
 
 static pte_t *lookup_user_address(unsigned long addr, unsigned int* level, struct mm_struct *mm)
@@ -246,7 +250,7 @@ static void clear_pte_presence(pte_t *pte, bool clear, pteval_t *old, struct mm_
 static int clear_page_presence(struct kmmio_fault_page *f, bool clear)
 {
 	unsigned int level;
-	unsigned int is_user = 0;
+	int is_user = 0;
 	pte_t *pte = lookup_address(f->addr, &level);
 
 	if (!pte) {
@@ -277,9 +281,6 @@ static int clear_page_presence(struct kmmio_fault_page *f, bool clear)
 		pr_err("unexpected page level 0x%x.\n", level);
 		return -1;
 	}
-
-	if (is_user)
-		__flush_tlb_one_user(f->addr);
 	
 	__flush_tlb_one_kernel(f->addr);
 
@@ -344,6 +345,8 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	int ret = 0; /* default to fault not handled */
 	unsigned long page_base = addr;
 	unsigned int l;
+	ctx = &get_cpu_var(kmmio_ctx);
+	//ctx->start_time_ns = ktime_get_ns();
 	pte_t *pte = lookup_address(addr, &l);
 
 	if (current->mm) {
@@ -376,7 +379,6 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 		goto no_kmmio;
 	}
 
-	ctx = &get_cpu_var(kmmio_ctx);
 	if (ctx->active) {
 		if (page_base == ctx->addr) {
 			/*
@@ -409,6 +411,7 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 	ctx->probe = get_kmmio_probe(page_base);
 	ctx->saved_flags = (regs->flags & (X86_EFLAGS_TF | X86_EFLAGS_IF));
 	ctx->addr = page_base;
+	
 
 	if (ctx->probe && ctx->probe->pre_handler)
 		ctx->probe->pre_handler(ctx->probe, regs, addr, hw_error_code);
@@ -422,6 +425,8 @@ int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_err
 
 	/* Now we set present bit in PTE and single step. */
 	disarm_kmmio_fault_page(ctx->fpage);
+
+
 
 	/*
 	 * If another cpu accesses the same page while we are stepping,
@@ -439,6 +444,16 @@ no_kmmio:
 	rcu_read_unlock();
 	preempt_enable_no_resched();
 	return ret;
+}
+
+unsigned long get_kmmio_stepping_time(void)
+{
+	return atomic_read(&elapsed_stepping_time);
+}
+
+void reset_kmmio_stepping_time(void)
+{
+	return atomic_set(&elapsed_stepping_time, 0);
 }
 
 /*
@@ -461,6 +476,7 @@ static int post_kmmio_handler(unsigned long condition, struct pt_regs *regs)
 			   smp_processor_id());
 		goto out;
 	}
+
 
 	if (ctx->probe && ctx->probe->post_handler)
 		ctx->probe->post_handler(ctx->probe, condition, regs);
@@ -487,6 +503,7 @@ static int post_kmmio_handler(unsigned long condition, struct pt_regs *regs)
 	 */
 	if (!(regs->flags & X86_EFLAGS_TF))
 		ret = 1;
+	//atomic_add(ktime_get_ns() - ctx->start_time_ns, &elapsed_stepping_time);
 out:
 	put_cpu_var(kmmio_ctx);
 	return ret;

@@ -840,6 +840,12 @@ static const struct nd_cmd_desc __nd_cmd_bus_descs[] = {
 		.out_num = 1,
 		.out_sizes = { 4, },
 	},
+	[ND_CMD_GET_TIME_STEPPING] = {
+		.in_num = 1,
+		.in_sizes = { sizeof(unsigned long) },
+		.out_num = 1,
+		.out_sizes = { 4, },
+	},
 };
 
 const struct nd_cmd_desc *nd_cmd_bus_desc(int cmd)
@@ -1155,6 +1161,15 @@ static int __nd_ioctl(struct nvdimm_bus *nvdimm_bus, struct nvdimm *nvdimm,
 			pr_warn("Could not start sampler!\n");
 		#endif
 		nd_device_unlock(dev);
+
+		return 0;
+	}
+
+	if (cmd == ND_CMD_GET_TIME_STEPPING) {
+		if (copy_from_user(&pkg, p, sizeof(pkg)))
+			return -EFAULT;
+
+		*((unsigned long*) p) = get_kmmio_stepping_time();
 
 		return 0;
 	}

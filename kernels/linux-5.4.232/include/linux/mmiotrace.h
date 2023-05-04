@@ -48,6 +48,9 @@ extern atomic_t kmmio_miss_counter;
 /* Called from page fault handler. */
 extern int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_error_code);
 
+unsigned long get_kmmio_stepping_time(void);
+void reset_kmmio_stepping_time(void);
+
 /* Called from ioremap.c */
 extern void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
 							void __iomem *addr, struct task_struct* user_task, unsigned int defer);
