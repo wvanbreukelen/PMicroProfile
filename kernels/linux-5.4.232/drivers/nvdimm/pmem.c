@@ -272,12 +272,7 @@ __weak long __pmem_direct_access(struct pmem_device *pmem, pgoff_t pgoff,
 		return -EIO;
 
 	set_dax_kaddr(offset, pmem->virt_addr, kaddr);
-	// if (kaddr) {
-	// 	*kaddr = pmem->virt_addr + offset;
-	// 	//printk("DAX to address: %p (num pages: %lu)\n", pmem->virt_addr + offset, nr_pages);
-		
-	// }
-		
+
 	if (pfn) {
 		*pfn = phys_to_pfn_t(pmem->phys_addr + offset, pmem->pfn_flags);
 	}
@@ -288,13 +283,6 @@ __weak long __pmem_direct_access(struct pmem_device *pmem, pgoff_t pgoff,
 	 */
 	if (unlikely(pmem->bb.count))
 		return nr_pages;
-
-	//printk("pmem->virt_addr: %p, pgoff: %p pgoff physical: %p, pmem->data_offset: %p, offset: %p\n", pmem->virt_addr, pgoff, PFN_PHYS(pgoff), pmem->data_offset, offset);
-	
-	pr_info_ratelimited("DAX: PA: 0x%lx VA: 0x%lx (size: %lx)", (unsigned long) pmem->phys_addr + offset, (unsigned long) pmem->virt_addr + offset, nr_pages * PAGE_SIZE);
-
-	//unmap_kernel_range((unsigned long) pmem->virt_addr + offset, nr_pages * PAGE_SIZE);
-	//mmiotrace_ioremap(pmem->phys_addr + offset, PFN_PHYS(nr_pages), (void __iomem *) pmem->virt_addr + offset);
 
 	return PHYS_PFN(pmem->size - pmem->pfn_pad - offset);
 }
@@ -322,7 +310,6 @@ long pmem_dax_direct_access(struct dax_device *dax_dev,
 static size_t pmem_copy_from_iter(struct dax_device *dax_dev, pgoff_t pgoff,
 		void *addr, size_t bytes, struct iov_iter *i)
 {
-	pr_info_ratelimited("pmem_copy_from_iter\n");
 	size_t num_read;
 	const int mmiotrace_active = is_kmmio_active();
 	if (unlikely(mmiotrace_active))
@@ -339,7 +326,6 @@ static size_t pmem_copy_from_iter(struct dax_device *dax_dev, pgoff_t pgoff,
 static size_t pmem_copy_to_iter(struct dax_device *dax_dev, pgoff_t pgoff,
 		void *addr, size_t bytes, struct iov_iter *i)
 {
-	pr_info_ratelimited("pmem_copy_to_iter\n");
 	size_t num_read;
 	spin_lock(&pmem_mmiotrace_lock);
 	num_read = _copy_to_iter_mcsafe(addr, bytes, i);
