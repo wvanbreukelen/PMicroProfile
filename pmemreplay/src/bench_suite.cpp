@@ -250,6 +250,8 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
     unsigned long long latest_sample_time = *(_latest_sample_time);
     size_t z = 0;
 
+
+
     for (const TraceEntry& entry : trace_file) {
         #ifdef ENABLE_DCOLLECTION
         if (unlikely((z & sample_mask) == 0)) {  // (cur_time - latest_sample_time) >= SAMPLE_LENGTH
@@ -268,7 +270,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->unc_ticks));
                     pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->unc_ticks));
 
-                    cur_sample++;
+                    (*cur_sample)++;
                     ++(stat->num_collected_samples);
 
                     if (stat->num_collected_samples > MAX_SAMPLES) {
@@ -299,22 +301,22 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 {
                     case 1:
                     {
-                        read_value<uint8_t>(entry, is_sampling, *cur_sample);
+                        read_value<uint8_t>(entry, is_sampling, (*cur_sample));
                         break;
                     }
                     case 4:
                     {
-                        read_value<uint32_t>(entry, is_sampling, *cur_sample);
+                        read_value<uint32_t>(entry, is_sampling, (*cur_sample));
                         break;
                     }
                     case 8:
                     {
-                        read_value<uint64_t>(entry, is_sampling, *cur_sample);
+                        read_value<uint64_t>(entry, is_sampling, (*cur_sample));
                         break;
                     }
                     case 16:
                     {
-                        read_value<__uint128_t>(entry, is_sampling, *cur_sample);
+                        read_value<__uint128_t>(entry, is_sampling, (*cur_sample));
                         break;
                     }
                     default:
@@ -340,22 +342,22 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 {
                 case 0xA4: // 1 byte size
                 {
-                    write_mov_8(entry, is_sampling, *cur_sample);
+                    write_mov_8(entry, is_sampling, (*cur_sample));
                     break;
                 }
                 case 0x4444: // 4 bytes - MOVNTI
                 {
-                    write_movnti_32(entry, is_sampling, *cur_sample);
+                    write_movnti_32(entry, is_sampling, (*cur_sample));
                     break;
                 }
                 case 0xC30F: // 8 bytes - MOVNTQ
                 {
-                    write_movntq_64(entry, is_sampling, *cur_sample);
+                    write_movntq_64(entry, is_sampling, (*cur_sample));
                     break;
                 }
                 case 0xE70F: // 16 bytes - MOVNTDQ
                 {
-                    write_movntqd_128(entry, is_sampling, *cur_sample);
+                    write_movntqd_128(entry, is_sampling, (*cur_sample));
                     break;
                 }
 
@@ -420,27 +422,27 @@ static void* do_work(void *arg)
 
     if (!pmc.add_imc_probe(EVENT_UNC_M_CLOCKTICKS)) {
         std::cerr << "Unable to add EVENT_UNC_M_CLOCKTICKS probe!" << std::endl;
-        pthread_exit(NULL);
+        //pthread_exit(NULL);
     }
 
     if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS)) {
         std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_INSERTS probe!" << std::endl;
-        pthread_exit(NULL);
+        //pthread_exit(NULL);
     }
 
     if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_INSERTS)) {
         std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_INSERTS probe!" << std::endl;
-        pthread_exit(NULL);
+        //pthread_exit(NULL);
     }
 
     if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL)) {
         std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL probe!" << std::endl;
-        pthread_exit(NULL);
+        //pthread_exit(NULL);
     }
 
     if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL)) {
         std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL probe!" << std::endl;
-        pthread_exit(NULL);
+        //pthread_exit(NULL);
     }
 
 
