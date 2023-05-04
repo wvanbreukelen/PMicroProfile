@@ -50,6 +50,7 @@ enum class TraceOperation {
 #define ND_CMD_TRACE_DISABLE 12
 #define ND_CMD_TRACE_FREQ _IOWR('N', 13, unsigned int[3])
 #define ND_CMD_TRACE_IS_MULTICORE _IOWR('N', 14, unsigned int*)
+#define ND_CMD_TRACE_GET_STEPPING_TIME _IOWR('N', 15, unsigned long*)
 //#define ND_CMD_TRACE_FREQ 13
 
 #define CURRENT_TRACER "/sys/kernel/debug/tracing/current_tracer"
@@ -203,6 +204,11 @@ void set_trace_buf_size(const unsigned int buf_size) {
     close(fd);
 }
 
+int get_stepping_time(int fd, unsigned long *stepping_time)
+{
+	return ioctl(fd, ND_CMD_TRACE_GET_STEPPING_TIME, stepping_time);
+}
+
 /*
 void* pmem_sampler(void *arg)
 {
@@ -307,9 +313,11 @@ void* pmemtrace_output_thread(void *arg)
 		if (getStopIssued())
 			break;
 
-		n = read(in, buffer, sizeof(buffer));
- 		if (n)
-			write(out, buffer, n);
+		 n = read(in, buffer, sizeof(buffer));
+ 		 if (n)
+		 	write(out, buffer, n);
+
+		//sleep(1);
 	}
 
 	close(in);
@@ -634,6 +642,9 @@ int main(int argc, char** argv)
 
 	printf("Running command...\n\f");
 
+	struct timespec tprog_start = {0, 0}, tprog_end = {0, 0};
+	clock_gettime(CLOCK_MONOTONIC, &tprog_start);
+
 	close(pipe_fds[0]);
 	write(pipe_fds[1], "x", 1);
 
@@ -641,6 +652,7 @@ int main(int argc, char** argv)
 
 
 	waitpid(exec_pid, &status, 0);
+	clock_gettime(CLOCK_MONOTONIC, &tprog_end);
 
 	if (WIFEXITED(status)) {
 		ret_code = WEXITSTATUS(status);
@@ -658,6 +670,17 @@ int main(int argc, char** argv)
 	printf("Disabling pmemtrace...\n");
 
 	disable_pmemtrace(fd);
+
+
+	unsigned long time_single_stepping = 0;
+	get_stepping_time(fd, &time_single_stepping);
+
+	std::cout << std::fixed;
+	std::cout.precision(3);
+	std::cout << "Program execution took " << ((static_cast<double>(tprog_end.tv_sec) + 1.0e-9 * tprog_end.tv_nsec) - (static_cast<double>(tprog_start.tv_sec) + 1.0e-9 * tprog_start.tv_nsec)) << " sec" << std::endl;
+	std::cout << "ns: " << time_single_stepping << std::endl;
+	std::cout << "Time spent on single stepping: " << (static_cast<double>(time_single_stepping) / static_cast<double>(1000'000'000)) << " sec" << std::endl;
+
 
 	close(fd);
 	sync();
