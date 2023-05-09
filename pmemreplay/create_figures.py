@@ -42,7 +42,8 @@ df[(np.abs(stats.zscore(df['avg_latency_inst_read'])) < 3)]
 # df.loc[df['avg_latency_inst_read'] > threshold, 'avg_latency_inst_read'] = np.nan
 
 # ( #OneBillion * ( UNC_M_PMM_RPQ_OCCUPANCY.ALL / UNC_M_PMM_RPQ_INSERTS ) / UNC_M_CLOCKTICKS:one_unit ) if #PMM_App_Direct else #NA
-df['avg_latency_dev'] = (1000000000 * (df['rpq_occupancy'] / df['rpq_inserts']) / df['unc_ticks'])
+df['avg_latency_dev_read'] = (1000000000 * (df['rpq_occupancy'] / df['rpq_inserts']) / df['unc_ticks'])
+df['avg_latency_dev_write'] = (1000000000 * (df['wpq_occupancy'] / df['wpq_inserts']) / df['unc_ticks'])
 
 # Calculate Read and Write Amplication
 df['ra'] = (df['rpq_inserts'] * 64) / df['bytes_read']
@@ -58,7 +59,7 @@ df['bytes_written'] = df['bytes_written'] / (1024 * 1024)
 
 
 # Smooth the data using a 5-point moving average
-window_size = int(len(df) * 0.005) if int(len(df) * 0.01) > 0 else 5
+window_size = int(len(df) * 0.005) if int(len(df) * 0.005) > 0 else 5
 df['smoothed_reads'] = df['num_reads'].rolling(window_size, center=True).mean()
 df['smoothed_writes'] = df['num_writes'].rolling(window_size, center=True).mean()
 df['smoothed_flushes'] = df['num_flushes'].rolling(window_size, center=True).mean()
@@ -108,7 +109,8 @@ ax4.set_ylabel('Factor')
 ax4.legend()
 
 
-ax5.plot(df['timestamp_sec'], df['avg_latency_dev'], label='Device Read Latency')
+ax5.plot(df['timestamp_sec'], df['avg_latency_dev_read'], label='Device Read Latency')
+ax5.plot(df['timestamp_sec'], df['avg_latency_dev_write'], label='Device Write Latency')
 ax5.set_xlabel('Time (s)')
 ax5.set_ylabel('Latency (ns)')
 ax5.legend()

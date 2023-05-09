@@ -57,7 +57,7 @@ extern void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
 extern void mmiotrace_iounmap(volatile void __iomem *addr, volatile void __iomem *size, struct task_struct *task);
 
 extern void mmiotrace_disarm_trace_probe(volatile void __iomem *addr);
-extern void mmiotrace_sync_sampler_status(void);
+extern void mmiotrace_attach_user_probes(void);
 extern void mmiotrace_detach_user_probes(void);
 extern void mmiotrace_task_exit(struct task_struct *task);
 

@@ -18,7 +18,7 @@ bool BenchExport::export_io_stat(const std::string &filename) const {
     }
 
     // Write CSV header.
-    file_handle << "timestamp,num_reads,read_cycles,num_writes,write_cycles,num_flushes,flush_cycles,bytes_read,bytes_written,wpq_inserts,rpq_inserts,wpq_occupancy,rpq_occupancy,unc_ticks" << std::endl;
+    file_handle << "timestamp,num_reads,read_cycles,num_writes,write_cycles,num_flushes,flush_cycles,bytes_read,bytes_written,wpq_inserts,rpq_inserts,wpq_occupancy,rpq_occupancy,unc_ticks,total_read_write" << std::endl;
 
     const struct io_sample * samples = this->worker_args.stat.samples;
 

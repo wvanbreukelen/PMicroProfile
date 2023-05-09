@@ -34,7 +34,7 @@ inline void write_mov_8(const TraceEntry& entry, const bool is_sampling, struct 
         _mm_sfence();
         #endif
 
-        *(static_cast<unsigned char*>(entry.dax_addr)) = static_cast<unsigned char>(entry.data);
+        *(static_cast<uint8_t*>(entry.dax_addr)) = static_cast<uint8_t>(entry.data);
 
         #ifdef STRICT_CONSISTENCY
         _mm_clflushopt(static_cast<void*>(dev_addr));
@@ -107,6 +107,8 @@ inline void write_movnti_32(const TraceEntry& entry, const bool is_sampling, str
 
 inline void write_movntq_64(const TraceEntry& entry, const bool is_sampling, struct io_sample *const cur_sample)
 {
+    const __m64 v = _mm_set_pi64x(entry.data);
+
     #ifdef ENABLE_DCOLLECTION
     if (is_sampling) {
         const unsigned long long start_ticks = __builtin_ia32_rdtsc();
@@ -114,7 +116,7 @@ inline void write_movntq_64(const TraceEntry& entry, const bool is_sampling, str
         _mm_sfence();
         #endif
 
-        _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), reinterpret_cast<__m64>(entry.data));
+        _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), v);
         
 
         #ifdef STRICT_CONSISTENCY
@@ -128,7 +130,7 @@ inline void write_movntq_64(const TraceEntry& entry, const bool is_sampling, str
         _mm_sfence();
         #endif
 
-        _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), reinterpret_cast<__m64>(entry.data));
+        _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), v);
         
 
         #ifdef STRICT_CONSISTENCY
@@ -141,7 +143,7 @@ inline void write_movntq_64(const TraceEntry& entry, const bool is_sampling, str
         _mm_sfence();
         #endif
 
-        _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), reinterpret_cast<__m64>(entry.data));
+        _mm_stream_pi(static_cast<__m64*>(entry.dax_addr), v);
         
         #ifdef STRICT_CONSISTENCY
         _mm_clflushopt(static_cast<void*>(dev_addr));

@@ -14,6 +14,7 @@ public:
     
     size_t bytes_read = 0;
     size_t bytes_written = 0;
+    size_t total_bytes_read_write = 0;
 
     unsigned long long read_inst_cycles = 0;
     unsigned long long write_inst_cycles = 0;
@@ -43,7 +44,8 @@ Stream& operator<<(Stream& os, const io_sample& sample) {
        << sample.rpq_inserts << ","
        << sample.wpq_occupancy << ","
        << sample.rpq_occupancy << ","
-       << sample.unc_ticks;
+       << sample.unc_ticks << ","
+       << sample.total_bytes_read_write;
     
     return os;
 }

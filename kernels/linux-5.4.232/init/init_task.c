@@ -179,7 +179,7 @@ struct task_struct init_task
 #endif
 #ifdef CONFIG_MMIOTRACE
 	.is_kmmio_sampling = 0,
-	.has_kmmio_probes = 0,
+	.has_pmem_probes = 0,
 #endif
 #ifdef CONFIG_LIVEPATCH
 	.patch_state	= KLP_UNDEFINED,

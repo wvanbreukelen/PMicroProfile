@@ -1209,8 +1209,8 @@ struct task_struct {
 
 
 	#ifdef CONFIG_MMIOTRACE
-	unsigned int 			is_kmmio_sampling;
-	unsigned int			has_kmmio_probes;
+	unsigned int 			is_pmem_sampling;
+	unsigned int			has_pmem_probes;
 	#endif
 #endif /* CONFIG_TRACING */
 
