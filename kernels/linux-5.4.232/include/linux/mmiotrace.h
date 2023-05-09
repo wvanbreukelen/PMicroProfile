@@ -45,6 +45,8 @@ extern void kmmio_cleanup(void);
 #ifdef CONFIG_MMIOTRACE
 
 extern atomic_t kmmio_miss_counter;
+
+
 /* Called from page fault handler. */
 extern int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_error_code);
 

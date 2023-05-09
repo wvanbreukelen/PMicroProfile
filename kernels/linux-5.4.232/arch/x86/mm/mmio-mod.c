@@ -26,6 +26,7 @@
 #include <linux/cpu.h>
 #include <linux/kthread.h>
 #include <linux/delay.h>
+#include <linux/syscalls.h>
 #include <asm/traps.h>			/* dotraplinkage, ...		*/
 
 #include "pf_in.h"
@@ -108,6 +109,13 @@ bool mmiotrace_is_enabled(void)
 bool mmiotrace_probes_enabled(void)
 {
 	return atomic_read(&probes_enabled);
+}
+
+SYSCALL_DEFINE1(trace_fence, unsigned int, is_sfence)
+{
+	pr_info("Got a fence operation, is_sfence: %d!\n", is_sfence);
+
+	return 0;
 }
 
 
@@ -353,7 +361,7 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 	}
 
 	if (_user_task)
-		_user_task->has_kmmio_probes = 1;
+		_user_task->has_pmem_probes = 1;
 
 not_enabled:
 	spin_unlock_irq(&trace_lock);
@@ -577,7 +585,7 @@ static void leave_uniprocessor(void)
 }
 #endif
 
-void mmiotrace_sync_sampler_status(void)
+void mmiotrace_attach_user_probes(void)
 {
 	struct remap_trace *trace;
 	//struct remap_trace *tmp;
@@ -597,10 +605,10 @@ void mmiotrace_sync_sampler_status(void)
 		goto not_enabled;
 
 
-	if (current->has_kmmio_probes) {
+	if (current->has_pmem_probes) {
 		is_probes_enabled = mmiotrace_probes_enabled();
 
-		if (is_probes_enabled != current->is_kmmio_sampling) {
+		if (is_probes_enabled != current->is_pmem_sampling) {
 			list_for_each_entry(trace, &trace_list, list) {
 				if (trace->probe.user_task_pid == current->pid) {
 					if (is_probes_enabled) {
@@ -639,7 +647,7 @@ void mmiotrace_sync_sampler_status(void)
 					do_require_rcu_sync = 1;
 				}
 			}
-			current->is_kmmio_sampling = is_probes_enabled;
+			current->is_pmem_sampling = is_probes_enabled;
 			//pr_info("%u\n", is_probes_enabled);
 		}
 

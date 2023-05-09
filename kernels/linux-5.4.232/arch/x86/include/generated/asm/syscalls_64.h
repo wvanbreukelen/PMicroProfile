@@ -2466,6 +2466,14 @@ __SYSCALL_64(335, sys_dynamic_remap, )
 __SYSCALL_X32(335, __x64_sys_dynamic_remap, )
 #endif
 #ifdef CONFIG_X86
+__SYSCALL_64(350, __x64_sys_trace_fence, )
+#else /* CONFIG_UML */
+__SYSCALL_64(350, sys_trace_fence, )
+#endif
+#ifdef CONFIG_X86_X32_ABI
+__SYSCALL_X32(350, __x64_sys_trace_fence, )
+#endif
+#ifdef CONFIG_X86
 __SYSCALL_64(424, __x64_sys_pidfd_send_signal, )
 #else /* CONFIG_UML */
 __SYSCALL_64(424, sys_pidfd_send_signal, )
