@@ -107,15 +107,17 @@ struct Bye : PassInfoMixin<Bye> {
               BasicBlock::iterator IP = BB.getFirstInsertionPt();
 
               insert_asm_instruction(BB, &(*IP), M, "push %rax");
-              insert_asm_instruction(BB, &(*IP), M, "movl $$1, %eax");
+              insert_asm_instruction(BB, &(*IP), M, "push %rdx");
+              insert_asm_instruction(BB, &(*IP), M, "movl $$350, %eax"); // Syscall 350
 
               if (Callee->getName() == "llvm.x86.sse2.mfence") {
-                insert_asm_instruction(BB, &(*IP), M, "movl $$0, %ebx"); // FIXME: set number to 0 for mfence, 1 for sfence.
+                insert_asm_instruction(BB, &(*IP), M, "movl $$0, %edi"); // FIXME: set number to 0 for mfence, 1 for sfence.
               } else {
-                insert_asm_instruction(BB, &(*IP), M, "movl $$1, %ebx");
+                insert_asm_instruction(BB, &(*IP), M, "movl $$1, %edi");
               }
               
-              insert_asm_instruction(BB, &(*IP), M, "int $$0x80"); // Return value is stored in 
+              insert_asm_instruction(BB, &(*IP), M, "syscall"); // Return value is stored in 
+              insert_asm_instruction(BB, &(*IP), M, "pop %rdx");
               insert_asm_instruction(BB, &(*IP), M, "pop %rax");
               
           } else if (isa<FenceInst>(&I)) {
@@ -124,10 +126,14 @@ struct Bye : PassInfoMixin<Bye> {
             BasicBlock::iterator IP = BB.getFirstInsertionPt();
 
               insert_asm_instruction(BB, &(*IP), M, "push %rax");
-              insert_asm_instruction(BB, &(*IP), M, "movl $$1, %eax");
-              insert_asm_instruction(BB, &(*IP), M, "xorl %ebx, %ebx");
-              insert_asm_instruction(BB, &(*IP), M, "int $$0x80");
-              insert_asm_instruction(BB, &(*IP), M, "pop %rax");
+              insert_asm_instruction(BB, &(*IP), M, "push %rdx");
+
+              insert_asm_instruction(BB, &(*IP), M, "movl $$350, %eax"); // Syscall 350
+              
+              insert_asm_instruction(BB, &(*IP), M, "movl $$0, %edi");
+              insert_asm_instruction(BB, &(*IP), M, "syscall");
+
+              insert_asm_instruction(BB, &(*IP), M, "pop %rdx");
               insert_asm_instruction(BB, &(*IP), M, "pop %rax");
           }
         }

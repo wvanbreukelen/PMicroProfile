@@ -33,7 +33,7 @@ run_command "sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_relea
 run_command "sudo apt update" ""
 run_command "sudo apt install -y -V libarrow-dev" "installed libarrow-dev"
 run_command "sudo apt install -y -V libarrow-dataset-dev" "installed libarrow-dataset-dev"
-run_command "sudo apt install -y -V libparquet-dev" "installed libparquet-dev"
+run_command "sudo apt install -y -V libparquet-dev" "installed libparquet-dev"l
 
 echo "Building perf from source..."
 
@@ -41,6 +41,19 @@ cd $cwd/kernels/linux-5.4.232/
 
 run_command "sudo apt install -y libbabeltrace-dev libcap-dev libelf-dev libnuma-dev libunwind-dev libaio-dev binutils-dev liblzma-dev libzstd-dev zlib1g-dev" ""
 run_command "sudo make -C tools/ perf_install prefix=/usr/" "installed perf in /usr/ directory"
+
+cd $cwd
+
+echo "Building LLVM..."
+
+run_command "sudo apt install -y ninja-build" ""
+run_command "true | git clone --depth 1 --branch llvmorg-16.0.3 https://github.com/llvm/llvm-project.git"
+run_command "cp llvm_patch/Bye.cpp llvm-project/llvm/examples/Bye/"
+
+cd $cwd/llvm-project
+run_command "cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_ENABLE_PROJECTS='clang'" ""
+run_command "cmake --build build -j16" ""
+run_command "sudo cmake --build build --target install" ""
 
 cd $cwd
 
