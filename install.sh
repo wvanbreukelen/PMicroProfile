@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cwd=$(pwd)
+cwd=$(readlink -f .)
 
 function run_command {
     local cmd="$1"
@@ -34,6 +34,15 @@ run_command "sudo apt update" ""
 run_command "sudo apt install -y -V libarrow-dev" "installed libarrow-dev"
 run_command "sudo apt install -y -V libarrow-dataset-dev" "installed libarrow-dataset-dev"
 run_command "sudo apt install -y -V libparquet-dev" "installed libparquet-dev"
+
+echo "Building perf from source..."
+
+cd $cwd/kernels/linux-5.4.232/
+
+run_command "sudo apt install -y libbabeltrace-dev libcap-dev libelf-dev libnuma-dev libunwind-dev libaio-dev binutils-dev liblzma-dev libzstd-dev zlib1g-dev" ""
+run_command "sudo make -C tools/ perf_install prefix=/usr/" "installed perf in /usr/ directory"
+
+cd $cwd
 
 echo "Building pmemtrace"
 
