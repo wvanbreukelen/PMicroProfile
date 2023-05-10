@@ -48,7 +48,7 @@ echo "Building LLVM..."
 
 run_command "sudo apt install -y ninja-build" ""
 run_command "true | git clone --depth 1 --branch llvmorg-16.0.3 https://github.com/llvm/llvm-project.git"
-run_command "cp llvm_patch/Bye.cpp llvm-project/llvm/examples/Bye/"
+run_command "cp llvm_patch/FenceInstrument.cpp llvm-project/llvm/examples/Bye/"
 
 cd $cwd/llvm-project
 run_command "cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_ENABLE_PROJECTS='clang'" ""
