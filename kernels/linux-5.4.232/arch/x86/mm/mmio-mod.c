@@ -26,6 +26,7 @@
 #include <linux/cpu.h>
 #include <linux/kthread.h>
 #include <linux/delay.h>
+#include <linux/syscalls.h>
 #include <asm/traps.h>			/* dotraplinkage, ...		*/
 
 #include "pf_in.h"
@@ -108,6 +109,57 @@ bool mmiotrace_is_enabled(void)
 bool mmiotrace_probes_enabled(void)
 {
 	return atomic_read(&probes_enabled);
+}
+
+SYSCALL_DEFINE1(trace_fence, unsigned int, fence_type)
+{
+	struct mmiotrace_rw *my_trace;
+	unsigned char type;
+	unsigned int opcode;
+
+	if (likely(!is_enabled()))
+		return 0;
+
+	preempt_disable();
+	rcu_read_lock();
+
+	// FIXME: proper locking
+	my_trace = &get_cpu_var(cpu_trace);
+
+	switch (fence_type) {
+		case 0:
+			type = MMIO_MFENCE;
+			opcode = 0x0FAE6;
+			break;
+		case 1:
+			type = MMIO_SFENCE;
+			opcode = 0x0FAE7;
+			break;
+		case 2:
+			type = MMIO_LFENCE;
+			opcode = 0x0FAE5;
+			break;
+		default:
+			type = MMIO_UNKNOWN_OP;
+			opcode = 0x0;
+	}
+
+	my_trace->phys = 0;
+	my_trace->value = 0;
+	my_trace->pc = 0;
+	my_trace->opcode_cpu = opcode;
+	my_trace->opcode = type;
+	my_trace->width = 0;
+
+	mmio_trace_rw(my_trace);
+	put_cpu_var(cpu_trace);
+
+	rcu_read_unlock();
+	preempt_enable();
+
+	//pr_info("Got a fence operation, opcode: 0x%x!\n", opcode);
+
+	return 0;
 }
 
 
@@ -219,7 +271,7 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 	} else if (type == INS_CACHE_OP) {
 		my_trace->opcode = MMIO_CLFLUSH;
 	} else { // (hw_error_code & X86_PF_WRITE) 
-		pr_info_ratelimited("Unknown instruction: %x addr: 0x%lx, instptr: %p\n", my_trace->opcode_cpu, addr, instptr);
+		pr_info_ratelimited("Unknown instruction: %x addr: 0x%lx, instptr: 0x%lx\n", my_trace->opcode_cpu, addr, instptr);
 		dump_stack();
 		//pr_info("Unknown instruction\n");
 	}
@@ -294,6 +346,8 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 
 	struct remap_trace *tmp;
 	struct remap_trace *trace = kmalloc(sizeof(*trace), GFP_KERNEL);
+	struct remap_trace *trace_in_list;
+
 	/* These are page-unaligned. */
 	struct mmiotrace_map map = {
 		.phys = offset,
@@ -328,7 +382,6 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 		goto not_enabled;
 	}
 
-	struct remap_trace *trace_in_list;
 	list_for_each_entry_safe(trace_in_list, tmp, &trace_list, list) {
 		if ((unsigned long)addr == trace_in_list->probe.addr) {
 			if (!nommiotrace)
@@ -347,13 +400,13 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 	if (!nommiotrace && !defer) {
 		int ret;
 		if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
-			pr_warn("Unable to map probe at address 0x%lx!, errcode: %d\n", addr, ret);
+			pr_warn("Unable to map probe at address %p!, errcode: %d\n", addr, ret);
 		}
 		trace->enabled = 1;
 	}
 
 	if (_user_task)
-		_user_task->has_kmmio_probes = 1;
+		_user_task->has_pmem_probes = 1;
 
 not_enabled:
 	spin_unlock_irq(&trace_lock);
@@ -577,7 +630,7 @@ static void leave_uniprocessor(void)
 }
 #endif
 
-void mmiotrace_sync_sampler_status(void)
+void mmiotrace_attach_user_probes(void)
 {
 	struct remap_trace *trace;
 	//struct remap_trace *tmp;
@@ -597,17 +650,17 @@ void mmiotrace_sync_sampler_status(void)
 		goto not_enabled;
 
 
-	if (current->has_kmmio_probes) {
+	if (current->has_pmem_probes) {
 		is_probes_enabled = mmiotrace_probes_enabled();
 
-		if (is_probes_enabled != current->is_kmmio_sampling) {
+		if (is_probes_enabled != current->is_pmem_sampling) {
 			list_for_each_entry(trace, &trace_list, list) {
 				if (trace->probe.user_task_pid == current->pid) {
 					if (is_probes_enabled) {
 						// Turn on probing.
 						if (!trace->enabled) {
 							if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
-								pr_warn_once("mmiotrace_sync_sampler_status: Unable to arm probe %p (ret: %d, addr: %p)\n", &trace->probe);
+								pr_warn_once("mmiotrace_sync_sampler_status: Unable to arm probe %p\n", &trace->probe);
 							}
 							//pr_info("Enabled probe %p task %d!\n", &trace->probe, current->pid);
 							trace->enabled = 1;
@@ -639,7 +692,7 @@ void mmiotrace_sync_sampler_status(void)
 					do_require_rcu_sync = 1;
 				}
 			}
-			current->is_kmmio_sampling = is_probes_enabled;
+			current->is_pmem_sampling = is_probes_enabled;
 			//pr_info("%u\n", is_probes_enabled);
 		}
 

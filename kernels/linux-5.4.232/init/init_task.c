@@ -178,7 +178,7 @@ struct task_struct init_task
 	.trace_recursion = 0,
 #endif
 #ifdef CONFIG_MMIOTRACE
-	.is_kmmio_sampling = 0,
+	.is_pmem_sampling = 0,
 	.has_pmem_probes = 0,
 #endif
 #ifdef CONFIG_LIVEPATCH

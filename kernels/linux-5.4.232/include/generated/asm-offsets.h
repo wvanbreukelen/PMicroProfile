@@ -42,10 +42,10 @@
 #define __NR_syscall_compat_max 435 /* sizeof(syscalls_ia32) - 1 */
 #define IA32_NR_syscalls 436 /* sizeof(syscalls_ia32) */
 
-#define TASK_threadsp 5912 /* offsetof(struct task_struct, thread.sp) */
-#define TASK_stack_canary 1192 /* offsetof(struct task_struct, stack_canary) */
+#define TASK_threadsp 2328 /* offsetof(struct task_struct, thread.sp) */
+#define TASK_stack_canary 992 /* offsetof(struct task_struct, stack_canary) */
 
-#define TASK_addr_limit 6040 /* offsetof(struct task_struct, thread.addr_limit) */
+#define TASK_addr_limit 2456 /* offsetof(struct task_struct, thread.addr_limit) */
 
 #define crypto_tfm_ctx_offset 64 /* offsetof(struct crypto_tfm, __crt_ctx) */
 

@@ -200,6 +200,27 @@ static enum print_line_t mmio_print_rw(struct trace_iterator *iter)
 			(unsigned long long)rw->phys,
 			rw->value, rw->pc, proc_id);
 		break;
+	case MMIO_MFENCE:
+		trace_seq_printf(s,
+			"M %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d\n",
+			rw->width, rw->opcode_cpu, secs, usec_rem, rw->map_id,
+			(unsigned long long)rw->phys,
+			rw->value, rw->pc, proc_id);
+		break;
+	case MMIO_SFENCE:
+		trace_seq_printf(s,
+			"S %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d\n",
+			rw->width, rw->opcode_cpu, secs, usec_rem, rw->map_id,
+			(unsigned long long)rw->phys,
+			rw->value, rw->pc, proc_id);
+		break;
+	case MMIO_LFENCE:
+		trace_seq_printf(s,
+			"L %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d\n",
+			rw->width, rw->opcode_cpu, secs, usec_rem, rw->map_id,
+			(unsigned long long)rw->phys,
+			rw->value, rw->pc, proc_id);
+		break;
 	case MMIO_UNKNOWN_OP:
 		trace_seq_printf(s,
 			"UNKNOWN %u.%06lu %d 0x%x 0x%llx %02llx,%02llx,"
