@@ -5,11 +5,11 @@
 #include "trace.hpp"
 #include "bench_suite.hpp"
 
-#define BENCH_MAP_SIZE (30UL * 1024 * 1024 * 1024)
+#define BENCH_MAP_SIZE (28UL * 1024 * 1024 * 1024)
 
 int main(int argc, char** argv)
 {
-    CLI::App app{"App description"};
+    CLI::App app{"pmemreplay - A Persistent Memory Trace Replaying Tool"};
 
     bool is_verbose = false;
     const unsigned int num_threads = 1;
