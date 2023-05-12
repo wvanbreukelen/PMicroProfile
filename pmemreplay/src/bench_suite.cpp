@@ -362,6 +362,11 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     write_movntqd_128(entry, is_sampling, (*cur_sample));
                     break;
                 }
+                case 0x2B0F: // 16 bytes - MOVNTPS/MOVNTPD
+                {
+                    write_movntps_128(entry, is_sampling, (*cur_sample));
+                    break;
+                }
 
                 default:
                     std::cerr << "Unsupported operation 0x" << std::hex << entry.opcode << "!" << std::endl;

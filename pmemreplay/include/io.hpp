@@ -185,6 +185,38 @@ inline void write_movntqd_128(const TraceEntry& entry, const bool is_sampling, s
     #endif
 }
 
+inline void write_movntps_128(const TraceEntry& entry, const bool is_sampling, struct io_sample *const cur_sample)
+{
+    const __m128d _stream_data = _mm_set_pd(0, entry.data);
+
+    #ifdef ENABLE_DCOLLECTION
+    const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+    #ifdef STRICT_CONSISTENCY
+    _mm_sfence();
+    #endif
+
+    _mm_stream_pd(static_cast<double*>(entry.dax_addr), _stream_data);
+
+    #ifdef STRICT_CONSISTENCY
+    _mm_clflushopt(static_cast<void*>(dev_addr));
+    _mm_sfence();
+    #endif
+
+    cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+    #else
+        #ifdef STRICT_CONSISTENCY
+        _mm_sfence();
+        #endif
+
+        _mm_stream_si128(static_cast<__m128i*>(entry.dax_addr), _stream_data);
+            
+        #ifdef STRICT_CONSISTENCY
+        _mm_clflushopt(static_cast<void*>(dev_addr));
+        _mm_sfence();
+        #endif
+    #endif
+}
+
 inline void flush_clflush(const TraceEntry& entry, const bool is_sampling, struct io_sample *const cur_sample)
 {
     #ifdef ENABLE_DCOLLECTION
