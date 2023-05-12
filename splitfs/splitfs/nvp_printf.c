@@ -213,7 +213,7 @@ static int getnum( charptr* linep)
     return(n);
 }
 
-print_trace (void)
+void print_trace (void)
 {
   void *array[10];
   char **strings;

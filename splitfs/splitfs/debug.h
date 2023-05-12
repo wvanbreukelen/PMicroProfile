@@ -56,6 +56,11 @@ void print_trace();
 	while(asdf) {}; \
 }
 
+extern int _nv_error_count;
+extern FILE *debug_fd;
+#define DEBUG_FD debug_fd
+
+
 
 //void outbyte(char c);
 
@@ -73,8 +78,7 @@ void print_trace();
 //#define MSG(format, ...) do{PRINTFUNC(NVP_PRINT_FD, "MSG: "); PRINTFUNC (NVP_PRINT_FD, format, ##__VA_ARGS__); fflush(NVP_PRINT_FD); }while(0)
 #define ERROR(format, ...) do{PRINTFUNC(NVP_PRINT_FD, "\033[01;33mNVP_ERROR\e[m (pid %i): " format, getpid(), ##__VA_ARGS__); PRINTFUNC(NVP_PRINT_FD, "ROHAN HERE\n"); _nv_error_count++; if(SPIN_ON_ERROR){ _nvp_debug_handoff(); } }while(0)
 
-FILE *debug_fd;
-#define DEBUG_FD debug_fd
+
 
 //#if PRINT_DEBUG_FILE
 #define DEBUG_FILE(format, ...) do {PRINTFUNC(DEBUG_FD, "\033[01;33mNVP_DEBUG\
@@ -83,7 +87,7 @@ FILE *debug_fd;
 #define DEBUG_FILE(format, ...) do{}while(0)
 //#endif
 
-int _nv_error_count;
+
 
 #if SHOW_DEBUG
 	#define DEBUG(format, ...)   do{char loc; PRINTFUNC(NVP_PRINT_FD, "NVP_DEBUG (PID %i SP %p): "   format, getpid(), &loc, ##__VA_ARGS__); fflush(NVP_PRINT_FD); } while(0)

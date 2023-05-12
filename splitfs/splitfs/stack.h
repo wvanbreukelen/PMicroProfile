@@ -1,5 +1,4 @@
-#ifndef LEDGER_SRC_STACK_H_
-#define LEDGER_SRC_STACK_H_
+#pragma once
 
 #include "fileops_nvp.h"
 
@@ -18,15 +17,13 @@ struct stack_lru_lockfree {
 /*
  * Global variables to hold the head and tail of LRU list 
  */
-struct StackNode *_nvp_free_node_list[NUM_NODE_LISTS];
-struct StackNode *_nvp_free_lru_list;
-int _nvp_free_node_list_head[NUM_NODE_LISTS];
-int _nvp_free_lru_list_head;
-struct NVNode *_nvp_node_lookup[NUM_NODE_LISTS];
-struct backupRoots *_nvp_backup_roots[NUM_NODE_LISTS];
-pthread_spinlock_t stack_lock;
+extern struct StackNode *_nvp_free_node_list[NUM_NODE_LISTS];
+extern struct StackNode *_nvp_free_lru_list;
+extern int _nvp_free_node_list_head[NUM_NODE_LISTS];
+extern int _nvp_free_lru_list_head;
+extern struct NVNode *_nvp_node_lookup[NUM_NODE_LISTS];
+extern struct backupRoots *_nvp_backup_roots[NUM_NODE_LISTS];
+extern pthread_spinlock_t stack_lock;
 
 void push_in_stack(int free_node_list, int free_lru_list, int idx_in_list, int list_idx);
 int pop_from_stack(int free_node_list, int free_lru_list, int list_idx);
-
-#endif

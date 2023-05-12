@@ -199,7 +199,7 @@ static inline void create_dr_mmap(struct NVNode *node, int is_overwrite)
 		sprintf(dr_fname, "%s%s", NVMM_PATH, "DR-OVER-XXXXXX");
 	else
 		sprintf(dr_fname, "%s%s", NVMM_PATH, "DR-XXXXXX");
-	dr_fd = _hub_find_fileop("posix")->OPEN(mktemp(dr_fname), O_RDWR | O_CREAT, 0666);
+	dr_fd = _hub_find_fileop("posix")->OPEN(mktemp(dr_fname), O_RDWR | O_CREAT, 0666);  // was mktemp.
 	if (dr_fd < 0) {
 		MSG("%s: mkstemp of DR file failed. Err = %s\n",
 		    __func__, strerror(errno));
@@ -1285,7 +1285,7 @@ void _nvp_init2(void)
 
 	for (i = 0; i < INIT_NUM_DR; i++) {
 		sprintf(dr_fname, "%s%s", NVMM_PATH, "DR-XXXXXX");
-		dr_fd = _hub_find_fileop("posix")->OPEN(mktemp(dr_fname), O_RDWR | O_CREAT, 0666);
+		dr_fd = _hub_find_fileop("posix")->OPEN(mktemp(dr_fname), O_RDWR | O_CREAT, 0666); // was mktemp.
 		if (dr_fd < 0) {
 			MSG("%s: mkstemp of DR file failed. Err = %s\n",
 			    __func__, strerror(errno));
@@ -1365,7 +1365,7 @@ void _nvp_init2(void)
 
 	for (i = 0; i < INIT_NUM_DR_OVER; i++) {
 		sprintf(dr_fname, "%s%s", NVMM_PATH, "DR-OVER-XXXXXX");
-		dr_fd = _hub_find_fileop("posix")->OPEN(mktemp(dr_fname), O_RDWR | O_CREAT, 0666);
+		dr_fd = _hub_find_fileop("posix")->OPEN(mktempdr_fname), O_RDWR | O_CREAT, 0666); // was mktemp.
 		if (dr_fd < 0) {
 			MSG("%s: mkstemp of DR file failed. Err = %s\n",
 			    __func__, strerror(errno));
@@ -2632,7 +2632,7 @@ not_found:
 		DEBUG_FILE("%s: DR not found in global pool. Allocated dr_file variable\n", __func__);
 
 		sprintf(dr_fname, "%s%s", NVMM_PATH, "DR-OVER-XXXXXX");
-		dr_fd = _nvp_fileops->OPEN(mktemp(dr_fname), O_RDWR | O_CREAT, 0666);
+		dr_fd = _nvp_fileops->OPEN(mktemp(dr_fname), O_RDWR | O_CREAT, 0666); // was mktemp.
 		if (dr_fd < 0) {
 			MSG("%s: mkstemp of DR file failed. Err = %s\n",
 			    __func__, strerror(errno));
@@ -2865,7 +2865,7 @@ not_found:
 		DEBUG_FILE("%s: DR not found in global pool. Allocated dr_file variable\n", __func__);
 
 		sprintf(dr_fname, "%s%s", NVMM_PATH, "DR-XXXXXX");
-		dr_fd = _nvp_fileops->OPEN(mktemp(dr_fname), O_RDWR | O_CREAT, 0666);
+		dr_fd = _nvp_fileops->OPEN(mktemp(dr_fname), O_RDWR | O_CREAT, 0666); // was mktemp.
 		if (dr_fd < 0) {
 			MSG("%s: mkstemp of DR file failed. Err = %s\n",
 			    __func__, strerror(errno));
