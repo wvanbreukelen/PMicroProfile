@@ -362,6 +362,11 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     write_movntqd_128(entry, is_sampling, (*cur_sample));
                     break;
                 }
+                case 0x2B0F: // 16 bytes - MOVNTPS/MOVNTPD
+                {
+                    write_movntps_128(entry, is_sampling, (*cur_sample));
+                    break;
+                }
 
                 default:
                     std::cerr << "Unsupported operation 0x" << std::hex << entry.opcode << "!" << std::endl;
@@ -380,15 +385,29 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 
                 break;
             }
-
             case TraceOperation::CLFLUSH:
             {
                 flush_clflush(entry, is_sampling, *cur_sample);
                 break;
             }
+            case TraceOperation::MFENCE:
+            {
+                _mm_mfence();
+                break;
+            }
+            case TraceOperation::SFENCE:
+            {
+                _mm_sfence();
+                break;
+            }
+            case TraceOperation::LFENCE:
+            {
+                _mm_lfence();
+                break;
+            }
 
             default:
-                std::cerr << "Unknown operation" << std::endl;
+                std::cerr << "Error: Unknown operation" << std::endl;
                 assert(false);
                 break;
         }

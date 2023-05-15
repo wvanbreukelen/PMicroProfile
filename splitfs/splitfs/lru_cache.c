@@ -1,6 +1,18 @@
 #include "lru_cache.h"
 
 
+struct InodeClosedFile *inode_to_closed_file;
+atomic_uint_fast64_t* dr_mem_closed_files;
+atomic_uint_fast64_t* dr_mem_allocated;
+atomic_uint_fast64_t* num_files_closed;
+pthread_spinlock_t global_lock_lru_head;
+
+struct ClosedFiles *_nvp_closed_files;
+int lru_head;
+int lru_tail;
+int lru_tail_serialno;
+
+
 int insert_in_seq_list(struct ClosedFiles *node, ino_t *stale_serialno, int fd, ino_t serialno) {
 
 	int stale_fd = -1;

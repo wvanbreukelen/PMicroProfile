@@ -1,5 +1,13 @@
 #include "stack.h"
 
+struct StackNode *_nvp_free_node_list[NUM_NODE_LISTS];
+struct StackNode *_nvp_free_lru_list;
+int _nvp_free_node_list_head[NUM_NODE_LISTS];
+int _nvp_free_lru_list_head;
+struct NVNode *_nvp_node_lookup[NUM_NODE_LISTS];
+struct backupRoots *_nvp_backup_roots[NUM_NODE_LISTS];
+pthread_spinlock_t stack_lock;
+
 void push_in_stack(int free_node_list, int free_lru_list, int idx_in_list, int list_idx) {
 
 	if (free_lru_list)

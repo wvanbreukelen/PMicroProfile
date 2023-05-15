@@ -3,6 +3,18 @@
 #include "log.h"
 #include "tbl_mmaps.h"
 
+uint8_t clearing_app_log;
+uint8_t clearing_op_log;
+loff_t app_log_tail;
+loff_t op_log_tail;
+loff_t app_log_lim;
+loff_t op_log_lim;
+int app_log_fd;
+int op_log_fd;
+unsigned long app_log;
+unsigned long op_log;
+struct inode_path *ino_path_head;
+
 uint32_t crc32_for_byte(uint32_t r) {
 	for(int j = 0; j < 8; ++j)
 		r = (r & 1? 0: (uint32_t)0xEDB88320L) ^ r >> 1;
@@ -81,8 +93,8 @@ void persist_op_entry(uint32_t op_type,
 	op_entry.op_type = op_type;
 	op_entry.mode = mode;
 	op_entry.flags = flags;
-	checksum_pos = (void*)op_log + log_off;
-	checksum_computation_pos = (void*)op_log + log_off + sizeof(uint32_t);
+	checksum_pos =  (loff_t)((void*)op_log + log_off);
+	checksum_computation_pos = (loff_t)((void*)op_log + log_off + sizeof(uint32_t));
 
 	//create_crc32((void *) &(op_entry.entry_size), op_entry.entry_size, &(op_entry.checksum)); 
 	

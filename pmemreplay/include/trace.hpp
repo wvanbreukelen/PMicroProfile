@@ -12,7 +12,10 @@ enum class TraceOperation {
     READ = 0,
     WRITE = 1,
     CLFLUSH = 2,
-    UNKNOWN = 3,
+    MFENCE = 3,
+    SFENCE = 4,
+    LFENCE = 5,
+    UNKNOWN = 6,
 };
 
 struct TraceEntry {

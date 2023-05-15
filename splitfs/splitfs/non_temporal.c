@@ -1,5 +1,13 @@
 #include "non_temporal.h"
 
+
+void (*_mm_flush)(void const* p);
+
+
+char *addr;
+struct timeval start,end;
+int fd; 
+
 static size_t Movnt_threshold_granularity = MOVNT_THRESHOLD_GRANULARITY;
 
 #if 0

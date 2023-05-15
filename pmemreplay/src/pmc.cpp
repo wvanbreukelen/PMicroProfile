@@ -139,6 +139,7 @@ iMCProbe& PMC::get_probe(const unsigned int event_id)
     }
 
     // Just crash the program if we cannot find the probe. Doing runtime checks (std::optional<>) would degrade performance.
+    std::cerr << "Error: Unable to get probe for event id " << event_id << ", exiting..." << std::endl;
     assert(false);
     // This is just a placeholder to keep the compiler happy.
     return this->imc_probes[0];

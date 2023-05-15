@@ -52,12 +52,12 @@
 #define CLFLUSH_SIZE 64
 /* This will point to the right function during startup of 
  splitfs (_nvp_init2) */
-void (*_mm_flush)(void const* p);
+extern void (*_mm_flush)(void const* p);
 
 
-char *addr;
-struct timeval start,end;
-int fd; 
+extern char *addr;
+extern struct timeval start,end;
+extern int fd; 
 void *memmove_nodrain_movnt_granularity(void *pmemdest, const void *src, size_t len);
 
 #if 0
