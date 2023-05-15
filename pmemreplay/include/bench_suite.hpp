@@ -82,7 +82,7 @@ public:
         deallocate_mem_area();
     }
 
-    void run(const size_t replay_rounds);
+    bool run(const size_t replay_rounds);
 
 private:
     void drop_caches();

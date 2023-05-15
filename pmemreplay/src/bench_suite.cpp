@@ -512,13 +512,23 @@ static void* do_work(void *arg)
     pthread_exit(NULL);
 }
 
-void BenchSuite::run(const size_t replay_rounds)
+bool BenchSuite::run(const size_t replay_rounds)
 {
     std::cout << "DAX area: [" << std::hex << this->mem_area << '-' << (void*) ((uintptr_t) this->mem_area + this->mem_size) << ']' << std::endl;
+
+    const uintptr_t max_offset = reinterpret_cast<uintptr_t>(this->mem_area) + this->mem_size;
 
     // Calculate the DAX addresses based on the offset inside the trace PMEM region.
     for (TraceEntry &entry : this->trace_file) {
         entry.dax_addr = static_cast<char*>(this->mem_area) + entry.rel_addr;
+
+        if (reinterpret_cast<uintptr_t>(entry.dax_addr) > max_offset) {
+            std::cerr << "The following operation exteeds the pre-allocated DAX region by "
+                << (static_cast<char*>(entry.dax_addr) - max_offset) << " bytes:" << std::endl;
+            std::cerr << entry << std::endl;
+
+            return false;
+        }
     }
 
     // Spawn the threads
@@ -556,7 +566,7 @@ void BenchSuite::run(const size_t replay_rounds)
         if (rc) {
             std::cerr << "Unable to create thread" << std::endl;
             deallocate_mem_area();
-            return;
+            return false;
         }
     }
 
@@ -585,5 +595,6 @@ void BenchSuite::run(const size_t replay_rounds)
         bench_export.export_io_stat("test.csv");
     }
     
+    return true;
 }
 
