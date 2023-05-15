@@ -341,7 +341,7 @@ static void dax_associate_entry(void *entry, struct address_space *mapping,
 	//pr_info("Inserting DAX hole at 0x%lx, pointing to PA: 0x%lx entry: 0x%lx\n", vmf->address & PMD_MASK, pfn_t_to_phys(pfn), pfn_t_to_phys(pfn_to_pfn_t(dax_to_pfn(*entry))));
 	
 	if (entry && size > 0)
-		mmiotrace_ioremap(pfn_t_to_phys(pfn_to_pfn_t(dax_to_pfn(entry))), size, address & ~(size - 1), current, 1);
+		mmiotrace_ioremap(pfn_t_to_phys(pfn_to_pfn_t(dax_to_pfn(entry))), size, address & ~(size - 1), current, 0);
 
 	index = linear_page_index(vma, address & ~(size - 1));
 	for_each_mapped_pfn(entry, pfn) {
