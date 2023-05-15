@@ -2,12 +2,14 @@
 SCRIPT=$(realpath "$0")
 CUR_PATH=$(dirname "$SCRIPT")
 
+echo $CUR_PATH
+
 qemu-system-x86_64\
 	-s \
 	-cpu host \
 	-enable-kvm \
 	-smp cores=8 \
-	-drive file=$CUR_PATH/disk.qcow2,format=qcow2 \
+	-drive file=$CUR_PATH/ubuntu.img.qcow2,format=qcow2 \
 	-append "root=/dev/sda5 earlyprintk=serial net.ifnames=0 nokaslr nosmap nosmep crashkernel=128M" \
 	-kernel $CUR_PATH/../kernels/linux-5.4.232/arch/x86/boot/bzImage \
 	-machine pc,nvdimm=on \

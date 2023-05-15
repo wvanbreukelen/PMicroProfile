@@ -63,9 +63,12 @@ extern void mmiotrace_attach_user_probes(void);
 extern void mmiotrace_detach_user_probes(void);
 extern void mmiotrace_task_exit(struct task_struct *task);
 
-extern bool mmiotrace_is_enabled(void);
-extern bool mmiotrace_rrobes_enabled(void);
+extern void enable_mmiotrace_soft(void);
+extern void disable_mmiotrace_soft(void);
 
+extern bool mmiotrace_is_enabled(void);
+// extern bool mmiotrace_rrobes_enabled(void);
+extern bool mmiotrace_probes_enabled(void);
 
 /* For anyone to insert markers. Remember trailing newline. */
 extern __printf(1, 2) int mmiotrace_printk(const char *fmt, ...);
@@ -130,6 +133,7 @@ extern void enable_mmiotrace(void);
 extern void disable_mmiotrace(void);
 
 extern int enable_pmemtrace_sampler(unsigned int freq, unsigned int duty_cycle, unsigned int is_time_triggered);
+extern int enable_pmemtrace_sampler_default(void);
 extern int disable_pmemtrace_sampler(void);
 extern int set_pmemtrace_multicore(unsigned int is_on);
 
