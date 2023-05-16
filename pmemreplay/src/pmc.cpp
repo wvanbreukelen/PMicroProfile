@@ -57,14 +57,14 @@ void PMC::print_imcs(std::ostream &os) const
         os << std::dec << this->imc_ids[i] << " ";
 }
 
-int PMC::add_probe(const int imc_id, const unsigned int event_id) const
+int PMC::add_probe(const unsigned int event_id, const int imc_id) const
 {
     struct perf_event_attr pe;
     int fd;
 
     memset(&pe, 0, sizeof(struct perf_event_attr));
 
-    pe.type = imc_id;
+    pe.type = (imc_id == -1) ? PERF_TYPE_RAW : imc_id;
     pe.size = sizeof(struct perf_event_attr);
     pe.config = event_id;
     pe.sample_type = PERF_SAMPLE_IDENTIFIER;
@@ -101,8 +101,9 @@ int PMC::add_probe(const int imc_id, const unsigned int event_id) const
 
 bool PMC::add_imc_probe(const unsigned int event_id)
 {
-    struct iMCProbe& imc_probe = this->imc_probes[this->num_imc_probes++];
-    assert(this->num_imc_probes < this->imc_probes.size());
+    struct Probe& probe = this->probes[this->num_probes++];
+    probe.set_imc();
+    assert(this->num_probes < this->probes.size());
 
     int fd;
 
@@ -110,18 +111,18 @@ bool PMC::add_imc_probe(const unsigned int event_id)
         return false;
 
     for (size_t i = 0; i < this->num_imcs; ++i) {
-        if ((fd = this->add_probe(this->imc_ids[i], event_id)) < 0) {
+        if ((fd = this->add_probe(event_id, this->imc_ids[i])) < 0) {
             return false;
         }
 
-        ++(imc_probe.num_probes);
-        imc_probe.fd_probes[i] = fd;
+        ++(probe.num_probes);
+        probe.fd_probes[i] = fd;
         #ifdef PMC_VERBOSE
         std::cout << std::dec << fd << " ";
         #endif
     }
 
-    imc_probe.event_id = event_id;
+    probe.event_id = event_id;
 
     #ifdef PMC_VERBOSE
     std::cout << "\nNum probes: " << imc_probe.num_probes << std::endl;
@@ -130,37 +131,59 @@ bool PMC::add_imc_probe(const unsigned int event_id)
     return true;
 }
 
-iMCProbe& PMC::get_probe(const unsigned int event_id)
+bool PMC::add_oncore_probe(const unsigned int event_id)
 {
-    for (size_t i = 0; i < this->num_imc_probes; ++i)
+    struct Probe& probe = this->probes[this->num_probes++];
+    probe.set_oncore();
+    assert(this->num_probes < this->probes.size());
+
+    int fd;
+
+    if ((fd = this->add_probe(event_id)) < 0) {
+        this->num_probes--;
+        return false;
+    }
+
+    ++(probe.num_probes);
+    probe.fd_probes[0] = fd;
+    probe.event_id = event_id;
+
+    assert(probe.num_probes == 1);
+
+    return true;
+}
+
+Probe& PMC::get_probe(const unsigned int event_id)
+{
+    for (size_t i = 0; i < this->num_probes; ++i)
     {
-        if (this->imc_probes[i].event_id == event_id)
-            return this->imc_probes[i];
+        if (this->probes[i].event_id == event_id)
+            return this->probes[i];
     }
 
     // Just crash the program if we cannot find the probe. Doing runtime checks (std::optional<>) would degrade performance.
     std::cerr << "Error: Unable to get probe for event id " << event_id << ", exiting..." << std::endl;
     assert(false);
     // This is just a placeholder to keep the compiler happy.
-    return this->imc_probes[0];
+    return this->probes[0];
 }
 
-void PMC::enable_imc_probes() const
+void PMC::enable_probes() const
 {
-    for (size_t i = 0; i < this->num_imc_probes; ++i)
-        this->imc_probes[i].probe_enable();
+    for (size_t i = 0; i < this->num_probes; ++i)
+        this->probes[i].probe_enable();
 }
 
-void PMC::disable_imc_probes() const
+void PMC::disable_probes() const
 {
-    for (size_t i = 0; i < this->num_imc_probes; ++i)
-        this->imc_probes[i].probe_disable();
+    for (size_t i = 0; i < this->num_probes; ++i)
+        this->probes[i].probe_disable();
 }
 
-void PMC::reset_imc_probes() const
+void PMC::reset_probes() const
 {
-    for (size_t i = 0; i < this->num_imc_probes; ++i)
-        this->imc_probes[i].probe_reset();
+    for (size_t i = 0; i < this->num_probes; ++i)
+        this->probes[i].probe_reset();
 }
 
 
@@ -182,9 +205,9 @@ bool PMC::remove_imc_probes() const
 {
     bool res = true;
 
-    for (size_t z = 0; z < this->num_imc_probes; ++z) {
-        for (size_t i = 0; i < this->imc_probes[z].num_probes; ++i) {
-            res &= this->remove_probe(this->imc_probes[z].fd_probes[i]);
+    for (size_t z = 0; z < this->num_probes; ++z) {
+        for (size_t i = 0; i < this->probes[z].num_probes; ++i) {
+            res &= this->remove_probe(this->probes[z].fd_probes[i]);
         }
     }
 

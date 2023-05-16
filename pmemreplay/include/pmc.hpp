@@ -13,8 +13,9 @@
 //#define PMC_VERBOSE
 
 
-struct iMCProbe {
+struct Probe {
 public:
+    bool is_imc;
     size_t num_probes;
     std::array<unsigned int, 16> fd_probes;
     unsigned int event_id = 0;
@@ -48,11 +49,19 @@ public:
         }
     }
 
-    inline void probe_count_single_imc(unsigned long long *count) const
+    inline void probe_count_single(unsigned long long *count) const
     {
         ssize_t bytes_read;
         if (this->num_probes > 0)
             bytes_read = read(this->fd_probes[0], count, sizeof(count));
+    }
+
+    inline void set_imc() {
+        is_imc = true;
+    }
+
+    inline void set_oncore() {
+        is_imc = false;
     }
 };
 
@@ -63,30 +72,31 @@ public:
     bool init();
     void print_imcs(std::ostream &os) const;
     
-    int add_probe(const int imc_id, const unsigned int event_id) const;
     bool add_imc_probe(const unsigned int event_id);
+    bool add_oncore_probe(const unsigned int event_id);
     
-    void enable_imc_probes() const;
-    void disable_imc_probes() const;
-    void reset_imc_probes() const;
+    void enable_probes() const;
+    void disable_probes() const;
+    void reset_probes() const;
 
     bool remove_probe(const int fd) const;
     bool remove_imc_probes() const;
-    iMCProbe& get_probe(const unsigned int event_id);
+    Probe& get_probe(const unsigned int event_id);
 
     // inline void probe_reset(const struct iMCProbe& iMCProbe) const;
     // inline void probe_enable(const struct iMCProbe& iMCProbe) const;
     // inline void probe_disable(const struct iMCProbe& iMCProbe) const;
 
 private:
+    int add_probe(const unsigned int event_id, const int imc_id = -1) const;
     void find_imcs();
 
 private:
     std::array<unsigned int, 16> imc_ids;
-    std::array<iMCProbe, 32> imc_probes = {};
+    std::array<Probe, 32> probes = {};
 
     size_t num_imcs = 0;
-    size_t num_imc_probes = 0;
+    size_t num_probes = 0;
 };
 
 

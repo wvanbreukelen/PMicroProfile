@@ -226,6 +226,7 @@ static __inline__ unsigned long long rdtsc(void)
 
 static inline uint64_t next_pow2_fast(uint64_t x)
 {
+
     #if defined(__GNUC__) || defined(__GNUG___)
     // ref: https://jameshfisher.com/2018/03/30/round-up-power-2/
     return (x == 1) ? 1 : 1 << (64 - __builtin_clzl(x - 1));
@@ -259,16 +260,19 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 
             if (is_sampling) {
                 if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_ON) {
-                    pmc.disable_imc_probes();
+                    pmc.disable_probes();
 
                     is_sampling = false;
                     (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
 
-                    pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single_imc(&((*cur_sample)->unc_ticks));
+                    pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single(&((*cur_sample)->unc_ticks));
                     pmc.get_probe(EVENT_UNC_M_PMM_RPQ_INSERTS).probe_count(&((*cur_sample)->rpq_inserts));
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_INSERTS).probe_count(&((*cur_sample)->wpq_inserts));
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->wpq_occupancy));
                     pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->rpq_occupancy));
+
+                    pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_count_single(&((*cur_sample)->l3_misses_local_pmm));
+                    pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM).probe_count_single(&((*cur_sample)->l3_misses_remote_pmm));
 
                     (*cur_sample)->total_bytes_read_write = *(total_bytes);
 
@@ -287,8 +291,8 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     is_sampling = true;
                     latest_sample_time = cur_time;
 
-                    pmc.reset_imc_probes();
-                    pmc.enable_imc_probes();
+                    pmc.reset_probes();
+                    pmc.enable_probes();
                 }
             }
         }
@@ -466,13 +470,23 @@ static void* do_work(void *arg)
         //pthread_exit(NULL);
     }
 
+    if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM)) {
+        std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM probe!" << std::endl;
+        //pthread_exit(NULL);
+    }
+
+    if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM)) {
+        std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM probe!" << std::endl;
+        //pthread_exit(NULL);
+    }
+
 
     // unc_ticks_probe.probe_reset();
     // wpq_probe.probe_reset();
     // rpq_probe.probe_reset();
     // wpq_occupancy_probe.probe_reset();
     // rpq_occupancy_probe.probe_reset();
-    pmc.reset_imc_probes();
+    pmc.reset_probes();
     #endif
     //probe_enable(wpq_probe);
 
@@ -499,7 +513,7 @@ static void* do_work(void *arg)
     const auto time_stop = std::chrono::high_resolution_clock::now();
 
     #ifdef ENABLE_DCOLLECTION
-    pmc.disable_imc_probes();
+    pmc.disable_probes();
     pmc.remove_imc_probes();
     #endif
 
