@@ -18,5 +18,12 @@ add_executable(pmemreplay src/trace.cpp src/bench_suite.cpp src/bench_export.cpp
 
 
 target_include_directories(pmemreplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
 target_link_libraries(pmemreplay PRIVATE pthread Arrow::arrow_shared Parquet::parquet_shared)
+
+install(TARGETS pmemreplay DESTINATION /usr/local/bin)
+
+add_custom_target(uninstall
+    COMMAND ${CMAKE_COMMAND} -E remove /usr/local/bin/pmemreplay
+)
+
+

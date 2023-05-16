@@ -26,7 +26,7 @@ void enqueue(concurrent_queue *q, void *value);
 void *dequeue(concurrent_queue *q);
 void display(queue_node *head);
 
-volatile concurrent_queue *append_staging_mmap_queue;
-volatile concurrent_queue *over_staging_mmap_queue;
+extern volatile concurrent_queue *append_staging_mmap_queue;
+extern volatile concurrent_queue *over_staging_mmap_queue;
 
 #endif

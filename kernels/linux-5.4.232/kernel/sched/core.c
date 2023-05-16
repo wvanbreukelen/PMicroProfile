@@ -3488,7 +3488,7 @@ context_switch(struct rq *rq, struct task_struct *prev,
 
 	// #ifdef CONFIG_MMIOTRACE
 	if (unlikely(mmiotrace_is_enabled()))
-	 	mmiotrace_sync_sampler_status();
+	 	mmiotrace_attach_user_probes();
 
 	return finish_task_switch(prev);
 }

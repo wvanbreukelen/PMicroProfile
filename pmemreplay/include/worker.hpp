@@ -11,9 +11,16 @@ public:
     size_t num_reads = 0;
     size_t num_writes = 0;
     size_t num_flushes = 0;
+
+    size_t num_classic_rw = 0;
+    size_t num_movnti = 0;
+    size_t num_movntq = 0;
+    size_t num_movntqd = 0;
+    size_t num_movntps = 0;
     
     size_t bytes_read = 0;
     size_t bytes_written = 0;
+    size_t total_bytes_read_write = 0;
 
     unsigned long long read_inst_cycles = 0;
     unsigned long long write_inst_cycles = 0;
@@ -26,6 +33,9 @@ public:
 
     unsigned long long rpq_occupancy = 0;
     unsigned long long wpq_occupancy = 0;
+
+    unsigned long long l3_misses_local_pmm = 0;
+    unsigned long long l3_misses_remote_pmm = 0;
 };
 
 template<typename Stream>
@@ -39,11 +49,22 @@ Stream& operator<<(Stream& os, const io_sample& sample) {
        << sample.flush_inst_cycles << ","
        << sample.bytes_read << ","
        << sample.bytes_written << ","
+
+       << sample.num_classic_rw << ","
+       << sample.num_movnti << ","
+       << sample.num_movntq << ","
+       << sample.num_movntqd << ","
+       << sample.num_movntps << ","
+
        << sample.wpq_inserts << ","
        << sample.rpq_inserts << ","
        << sample.wpq_occupancy << ","
        << sample.rpq_occupancy << ","
-       << sample.unc_ticks;
+       << sample.unc_ticks << ","
+       << sample.total_bytes_read_write << ","
+
+       << sample.l3_misses_local_pmm << ","
+       << sample.l3_misses_remote_pmm;
     
     return os;
 }

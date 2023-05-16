@@ -254,7 +254,7 @@ static int clear_page_presence(struct kmmio_fault_page *f, bool clear)
 	pte_t *pte = lookup_address(f->addr, &level);
 
 	if (!pte) {
-		pte = lookup_user_address(f->addr, &level, current->active_mm);
+		pte = lookup_user_address(f->addr, &level, current->mm);
 
 		if (!pte) {
 			pr_err("no pte for addr 0x%08lx\n", f->addr);
@@ -273,7 +273,7 @@ static int clear_page_presence(struct kmmio_fault_page *f, bool clear)
 		break;
 	case PG_LEVEL_4K:
 		if (is_user)
-			clear_pte_presence(pte, clear, &f->old_presence, current->active_mm);
+			clear_pte_presence(pte, clear, &f->old_presence, current->mm);
 		else
 			clear_pte_presence(pte, clear, &f->old_presence, NULL);
 		break;
@@ -759,7 +759,7 @@ static void remove_kmmio_fault_pages(struct rcu_head *head)
  * 3. rcu_free_kmmio_fault_pages()
  *    Actually free the kmmio_fault_page structs as with RCU.
  */
-int unregister_kmmio_probe(struct kmmio_probe *p)
+int unregister_kmmio_probe(struct kmmio_probe *p, int dirty)
 {
 	unsigned long flags;
 	unsigned long size = 0;
@@ -773,7 +773,23 @@ int unregister_kmmio_probe(struct kmmio_probe *p)
 	int experienced_vm_switch = 0;
 	int res = -EFAULT;
 
-	
+	if (dirty) {
+		if ((&p->list))
+			list_del_rcu(&p->list);
+		kmmio_count--;
+
+		if (!release_list)
+			goto out;
+
+		drelease = kmalloc(sizeof(*drelease), GFP_ATOMIC);
+		if (!drelease) {
+			pr_crit("leaking kmmio_fault_page objects.\n");
+			goto out;
+		}
+		drelease->release_list = release_list;
+
+		return 0;
+	}
 
 	pte = lookup_address(addr, &l);
 
@@ -805,8 +821,8 @@ int unregister_kmmio_probe(struct kmmio_probe *p)
 			// 	}
 			// }
 
-			if (!pte && current->active_mm)
-				pte = lookup_user_address(addr, &l, current->active_mm);
+			if (!pte && current->mm)
+				pte = lookup_user_address(addr, &l, current->mm);
 		}
 
 		// if (experienced_vm_switch)

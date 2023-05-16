@@ -1,11 +1,22 @@
 
-CC = gcc -g
-LD = g++
-CXX=g++
+#CC = gcc -g
+#LD = g++
+#CXX=g++
+#MAKE = make
+
+#LD = g++
+#CXX = g++
+
+CARGS = -O3 -std=gnu11 -gdwarf-4 -fpass-plugin=../../llvm-project/build/lib/Bye.so
+
+
+CC = clang -g -Wno-return-type $(CARGS)
+LD = clang++
+CXX=clang++ $(CARGS)
 MAKE = make
 
-LD = g++
-CXX = g++
+LD = clang++
+CXX = clang++ $(CARGS)
 
 SYSTEM_TYPE ?= SYSTEM_TYPE_BEE3 # SYSTEM_TYPE_BEE3 or SYSTEM_TYPE_XUPV5
 

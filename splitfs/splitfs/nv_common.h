@@ -74,7 +74,7 @@ typedef int bool;
 #define true 1
 #endif
 
-int execv_done;
+extern int execv_done;
 
 // maximum number of file operations to support simultaneously
 #define MAX_FILEOPS 32

@@ -41,7 +41,10 @@ using parquet::WriterProperties;
 enum class TraceOperation {
     READ = 0,
     WRITE = 1,
-    CLFLUSH = 2
+    CLFLUSH = 2,
+	MFENCE = 3,
+	SFENCE = 4,
+	LFENCE = 5
 };
 
 
@@ -446,12 +449,19 @@ bool compress_trace(std::filesystem::path read_path, std::filesystem::path write
 			op = TraceOperation::WRITE;
 		} else if (tokens_line[0] == "F") {
 			op = TraceOperation::CLFLUSH;
+		} else if (tokens_line[0] == "M") {
+			op = TraceOperation::MFENCE;
+		} else if (tokens_line[0] == "S") {
+			op = TraceOperation::SFENCE;
+		} else if (tokens_line[0] == "L") {
+			op = TraceOperation::LFENCE;
 		} else {
-			//std::cerr << "Unknown trace operation: " << tokens_line[0] << std::endl;
+			std::cerr << "Unknown trace operation: " << tokens_line[0] << std::endl;
 
 			continue;
 			//return false;
 		}
+
 
 		const double timestamp_sec = std::stod(tokens_line[3]);
 		const unsigned int opcode = std::stoi(tokens_line[2], nullptr, 16);
@@ -678,8 +688,8 @@ int main(int argc, char** argv)
 	std::cout << std::fixed;
 	std::cout.precision(3);
 	std::cout << "Program execution took " << ((static_cast<double>(tprog_end.tv_sec) + 1.0e-9 * tprog_end.tv_nsec) - (static_cast<double>(tprog_start.tv_sec) + 1.0e-9 * tprog_start.tv_nsec)) << " sec" << std::endl;
-	std::cout << "ns: " << time_single_stepping << std::endl;
-	std::cout << "Time spent on single stepping: " << (static_cast<double>(time_single_stepping) / static_cast<double>(1000'000'000)) << " sec" << std::endl;
+	//std::cout << "ns: " << time_single_stepping << std::endl;
+	//std::cout << "Time spent on single stepping: " << (static_cast<double>(time_single_stepping) / static_cast<double>(1000'000'000)) << " sec" << std::endl;
 
 
 	close(fd);

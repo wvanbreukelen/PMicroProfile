@@ -14,6 +14,9 @@ enum reason_type {
 	REG_WRITE,	/* write from reg to addr */
 	IMM_WRITE,	/* write from imm to addr */
 	INS_CACHE_OP, /* cache operation */
+	INS_MFENCE,
+	INS_SFENCE,
+	INS_LFENCE,
 	OTHERS	/* Other instructions can not intercept */
 };
 

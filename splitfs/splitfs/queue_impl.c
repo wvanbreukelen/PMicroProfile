@@ -3,6 +3,10 @@
 #include <pthread.h>
 #include "queue_impl.h"
 
+volatile concurrent_queue *append_staging_mmap_queue;
+volatile concurrent_queue *over_staging_mmap_queue;
+
+
 void queue_initialize(concurrent_queue *q)
 {
   q->count = 0;

@@ -5,11 +5,11 @@
 #include "trace.hpp"
 #include "bench_suite.hpp"
 
-#define BENCH_MAP_SIZE (30UL * 1024 * 1024 * 1024)
+//#define BENCH_MAP_SIZE (28UL * 1024 * 1024 * 1024)
 
 int main(int argc, char** argv)
 {
-    CLI::App app{"App description"};
+    CLI::App app{"pmemreplay - A Persistent Memory Trace Replaying Tool"};
 
     bool is_verbose = false;
     const unsigned int num_threads = 1;
@@ -20,6 +20,8 @@ int main(int argc, char** argv)
     bool force_dram = false;
     bool do_cache_warming = false;
     const uint64_t num_samples = 2000;
+    size_t bench_map_size_gib = 28;
+
 
     app.add_option("trace file", trace_file, "Trace file to execute (must have .parquet extension)")
         ->required()
@@ -33,6 +35,8 @@ int main(int argc, char** argv)
     //     ->default_val(1);
     app.add_option("-r, --replay-rounds", replay_rounds, "Number of replay rounds.")
         ->default_val(0);
+    app.add_option("-s, --dax-size", bench_map_size_gib, "DAX mapping size, should match the PMEM device size of the trace origin machine. The default setting (28 GiB) should be sufficient in most cases.")
+        ->default_val(28)->expected(1, 256);
     app.add_flag("-v,--verbose", is_verbose, "Enable verbose output.")
         ->default_val(false);
     app.add_flag("--fallback-ram", do_fallback_ram, "Fallback to RAM in case Persistent Memory is not available.")
@@ -63,9 +67,12 @@ int main(int argc, char** argv)
     std::cout << "Trace: #reads: " << trace.get_total(TraceOperation::READ) << " #writes: " << trace.get_total(TraceOperation::WRITE) << " #flushes: " << trace.get_total(TraceOperation::CLFLUSH);
     std::cout << " (size: " << (trace.size() * sizeof(TraceEntry)) / (1024 * 1024) << " MiB)" << std::endl;
 
-    BenchSuite bsuite(trace, pmem_device_loc, BENCH_MAP_SIZE, num_threads, num_samples, force_dram, do_fallback_ram, do_cache_warming);
+    BenchSuite bsuite(trace, pmem_device_loc, (bench_map_size_gib * 1024 * 1024 * 1024), num_threads, num_samples, force_dram, do_fallback_ram, do_cache_warming);
 
-    bsuite.run(replay_rounds);
+    if (!bsuite.run(replay_rounds)) {
+        std::cerr << "Error occured, exiting..." << std::endl;
+        return 1;
+    }
 
     // std::cout << std::dec;
     // std::cout << "Total bytes read: " << trace->get_total(TraceOperation::READ) << " total bytes write: " << trace->get_total(TraceOperation::WRITE) << std::endl;

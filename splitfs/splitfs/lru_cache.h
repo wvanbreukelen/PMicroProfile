@@ -25,19 +25,19 @@ struct InodeClosedFile {
 /*
  * Declare the hash table that will map inode number to the node in the LRU list 
  */
-struct InodeClosedFile *inode_to_closed_file;
-atomic_uint_fast64_t dr_mem_closed_files;
-atomic_uint_fast64_t dr_mem_allocated;
-atomic_uint_fast64_t num_files_closed;
-pthread_spinlock_t global_lock_lru_head;
+extern struct InodeClosedFile *inode_to_closed_file;
+extern atomic_uint_fast64_t* dr_mem_closed_files;
+extern atomic_uint_fast64_t* dr_mem_allocated;
+extern atomic_uint_fast64_t* num_files_closed;
+extern pthread_spinlock_t global_lock_lru_head;
 
 /*
  * Global variables to hold the head and tail of LRU list 
  */
-struct ClosedFiles *_nvp_closed_files;
-int lru_head;
-int lru_tail;
-int lru_tail_serialno;
+extern struct ClosedFiles *_nvp_closed_files;
+extern int lru_head;
+extern int lru_tail;
+extern int lru_tail_serialno;
 
 int insert_in_seq_list(struct ClosedFiles *node, ino_t *stale_serialno, int fd, ino_t serialno);
 int insert_in_lru_list(int fd, ino_t serialno, ino_t *stale_serialno);

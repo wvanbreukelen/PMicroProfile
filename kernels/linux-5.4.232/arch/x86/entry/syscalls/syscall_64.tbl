@@ -344,6 +344,7 @@
 333	common	io_pgetevents		__x64_sys_io_pgetevents
 334	common	rseq			__x64_sys_rseq
 335	common	dynamic_remap		__x64_sys_dynamic_remap
+350 common  trace_fence         __x64_sys_trace_fence
 
 # don't use numbers 387 through 423, add new calls after the last
 # 'common' entry

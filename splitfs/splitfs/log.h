@@ -53,17 +53,17 @@ struct inode_path {
 	struct inode_path *next;
 };
 
-uint8_t clearing_app_log;
-uint8_t clearing_op_log;
-loff_t app_log_tail;
-loff_t op_log_tail;
-loff_t app_log_lim;
-loff_t op_log_lim;
-int app_log_fd;
-int op_log_fd;
-unsigned long app_log;
-unsigned long op_log;
-struct inode_path *ino_path_head;
+extern uint8_t clearing_app_log;
+extern uint8_t clearing_op_log;
+extern loff_t app_log_tail;
+extern loff_t op_log_tail;
+extern loff_t app_log_lim;
+extern loff_t op_log_lim;
+extern int app_log_fd;
+extern int op_log_fd;
+extern unsigned long app_log;
+extern unsigned long op_log;
+extern struct inode_path *ino_path_head;
 
 void init_append_log();
 void init_op_log();

@@ -34,7 +34,7 @@ struct kmmio_probe {
 extern unsigned int kmmio_count;
 
 extern int register_kmmio_probe(struct kmmio_probe *p);
-extern int unregister_kmmio_probe(struct kmmio_probe *p);
+extern int unregister_kmmio_probe(struct kmmio_probe *p, int dirty);
 extern int kmmio_init(void);
 extern void kmmio_cleanup(void);
 
@@ -45,6 +45,8 @@ extern void kmmio_cleanup(void);
 #ifdef CONFIG_MMIOTRACE
 
 extern atomic_t kmmio_miss_counter;
+
+
 /* Called from page fault handler. */
 extern int kmmio_handler(struct pt_regs *regs, unsigned long addr, unsigned long hw_error_code);
 
@@ -57,13 +59,16 @@ extern void mmiotrace_ioremap(resource_size_t offset, unsigned long size,
 extern void mmiotrace_iounmap(volatile void __iomem *addr, volatile void __iomem *size, struct task_struct *task);
 
 extern void mmiotrace_disarm_trace_probe(volatile void __iomem *addr);
-extern void mmiotrace_sync_sampler_status(void);
+extern void mmiotrace_attach_user_probes(void);
 extern void mmiotrace_detach_user_probes(void);
 extern void mmiotrace_task_exit(struct task_struct *task);
 
-extern bool mmiotrace_is_enabled(void);
-extern bool mmiotrace_rrobes_enabled(void);
+extern void enable_mmiotrace_soft(void);
+extern void disable_mmiotrace_soft(void);
 
+extern bool mmiotrace_is_enabled(void);
+// extern bool mmiotrace_rrobes_enabled(void);
+extern bool mmiotrace_probes_enabled(void);
 
 /* For anyone to insert markers. Remember trailing newline. */
 extern __printf(1, 2) int mmiotrace_printk(const char *fmt, ...);
@@ -100,6 +105,9 @@ enum mm_io_opcode {
 	MMIO_UNPROBE	= 0x4,	/* struct mmiotrace_map */
 	MMIO_UNKNOWN_OP = 0x5,	/* struct mmiotrace_rw */
 	MMIO_CLFLUSH = 0x6,
+	MMIO_MFENCE = 0x7,
+	MMIO_SFENCE = 0x8,
+	MMIO_LFENCE = 0x9
 };
 
 struct mmiotrace_rw {
@@ -125,6 +133,7 @@ extern void enable_mmiotrace(void);
 extern void disable_mmiotrace(void);
 
 extern int enable_pmemtrace_sampler(unsigned int freq, unsigned int duty_cycle, unsigned int is_time_triggered);
+extern int enable_pmemtrace_sampler_default(void);
 extern int disable_pmemtrace_sampler(void);
 extern int set_pmemtrace_multicore(unsigned int is_on);
 

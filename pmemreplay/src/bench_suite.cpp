@@ -226,6 +226,7 @@ static __inline__ unsigned long long rdtsc(void)
 
 static inline uint64_t next_pow2_fast(uint64_t x)
 {
+
     #if defined(__GNUC__) || defined(__GNUG___)
     // ref: https://jameshfisher.com/2018/03/30/round-up-power-2/
     return (x == 1) ? 1 : 1 << (64 - __builtin_clzl(x - 1));
@@ -259,16 +260,21 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 
             if (is_sampling) {
                 if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_ON) {
-                    pmc.disable_imc_probes();
+                    pmc.disable_probes();
 
                     is_sampling = false;
                     (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
 
-                    pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single_imc(&((*cur_sample)->unc_ticks));
+                    pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single(&((*cur_sample)->unc_ticks));
                     pmc.get_probe(EVENT_UNC_M_PMM_RPQ_INSERTS).probe_count(&((*cur_sample)->rpq_inserts));
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_INSERTS).probe_count(&((*cur_sample)->wpq_inserts));
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->wpq_occupancy));
                     pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->rpq_occupancy));
+
+                    pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_count_single(&((*cur_sample)->l3_misses_local_pmm));
+                    pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM).probe_count_single(&((*cur_sample)->l3_misses_remote_pmm));
+
+                    (*cur_sample)->total_bytes_read_write = *(total_bytes);
 
                     (*cur_sample)++;
                     ++(stat->num_collected_samples);
@@ -285,8 +291,8 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     is_sampling = true;
                     latest_sample_time = cur_time;
 
-                    pmc.reset_imc_probes();
-                    pmc.enable_imc_probes();
+                    pmc.reset_probes();
+                    pmc.enable_probes();
                 }
             }
         }
@@ -360,6 +366,11 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     write_movntqd_128(entry, is_sampling, (*cur_sample));
                     break;
                 }
+                case 0x2B0F: // 16 bytes - MOVNTPS/MOVNTPD
+                {
+                    write_movntps_128(entry, is_sampling, (*cur_sample));
+                    break;
+                }
 
                 default:
                     std::cerr << "Unsupported operation 0x" << std::hex << entry.opcode << "!" << std::endl;
@@ -378,15 +389,29 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 
                 break;
             }
-
             case TraceOperation::CLFLUSH:
             {
                 flush_clflush(entry, is_sampling, *cur_sample);
                 break;
             }
+            case TraceOperation::MFENCE:
+            {
+                _mm_mfence();
+                break;
+            }
+            case TraceOperation::SFENCE:
+            {
+                _mm_sfence();
+                break;
+            }
+            case TraceOperation::LFENCE:
+            {
+                _mm_lfence();
+                break;
+            }
 
             default:
-                std::cerr << "Unknown operation" << std::endl;
+                std::cerr << "Error: Unknown operation" << std::endl;
                 assert(false);
                 break;
         }
@@ -445,13 +470,23 @@ static void* do_work(void *arg)
         //pthread_exit(NULL);
     }
 
+    if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM)) {
+        std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM probe!" << std::endl;
+        //pthread_exit(NULL);
+    }
+
+    if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM)) {
+        std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM probe!" << std::endl;
+        //pthread_exit(NULL);
+    }
+
 
     // unc_ticks_probe.probe_reset();
     // wpq_probe.probe_reset();
     // rpq_probe.probe_reset();
     // wpq_occupancy_probe.probe_reset();
     // rpq_occupancy_probe.probe_reset();
-    pmc.reset_imc_probes();
+    pmc.reset_probes();
     #endif
     //probe_enable(wpq_probe);
 
@@ -478,7 +513,7 @@ static void* do_work(void *arg)
     const auto time_stop = std::chrono::high_resolution_clock::now();
 
     #ifdef ENABLE_DCOLLECTION
-    pmc.disable_imc_probes();
+    pmc.disable_probes();
     pmc.remove_imc_probes();
     #endif
 
@@ -491,13 +526,23 @@ static void* do_work(void *arg)
     pthread_exit(NULL);
 }
 
-void BenchSuite::run(const size_t replay_rounds)
+bool BenchSuite::run(const size_t replay_rounds)
 {
     std::cout << "DAX area: [" << std::hex << this->mem_area << '-' << (void*) ((uintptr_t) this->mem_area + this->mem_size) << ']' << std::endl;
+
+    const uintptr_t max_offset = reinterpret_cast<uintptr_t>(this->mem_area) + this->mem_size;
 
     // Calculate the DAX addresses based on the offset inside the trace PMEM region.
     for (TraceEntry &entry : this->trace_file) {
         entry.dax_addr = static_cast<char*>(this->mem_area) + entry.rel_addr;
+
+        if (reinterpret_cast<uintptr_t>(entry.dax_addr) > max_offset) {
+            std::cerr << "The following operation exteeds the pre-allocated DAX region by "
+                << (static_cast<char*>(entry.dax_addr) - max_offset) << " bytes:" << std::endl;
+            std::cerr << entry << std::endl;
+
+            return false;
+        }
     }
 
     // Spawn the threads
@@ -535,7 +580,7 @@ void BenchSuite::run(const size_t replay_rounds)
         if (rc) {
             std::cerr << "Unable to create thread" << std::endl;
             deallocate_mem_area();
-            return;
+            return false;
         }
     }
 
@@ -564,5 +609,6 @@ void BenchSuite::run(const size_t replay_rounds)
         bench_export.export_io_stat("test.csv");
     }
     
+    return true;
 }
 

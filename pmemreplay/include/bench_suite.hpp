@@ -24,12 +24,14 @@ static constexpr size_t CACHE_LINE_SIZE = 64;
 static constexpr unsigned long SAMPLE_PERIOD_ON = (SAMPLE_RATE * SAMPLE_DUTY_CYCLE) / 100;
 static constexpr unsigned long SAMPLE_PERIOD_OFF = (SAMPLE_RATE * (100 - SAMPLE_DUTY_CYCLE)) / 100;
 
-// See: https://perfmon-events.intel.com/
+// See: https://perfmon-events.intel.com/cascadelake_server.html
 #define EVENT_UNC_M_CLOCKTICKS 0x00 // umask=0x0,event=0x0 
 #define EVENT_UNC_M_PMM_WPQ_INSERTS 0xE7
 #define EVENT_UNC_M_PMM_RPQ_INSERTS 0xE3
 #define EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL 0x1E0 // umask=0x1,event=0xE0
 #define EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL 0x1E4  // umask=0x1,event=0xE4
+#define EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM 0x80D1 // umash=0x80,event=D1
+#define EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM 0x10D3 // umash=0x10,event=D3
 
 
 // from: https://github.com/hpides/perma-bench/blob/75b6e3ceea6895fdb779b4981aa43a2ff6185104/src/read_write_ops.hpp
@@ -82,7 +84,7 @@ public:
         deallocate_mem_area();
     }
 
-    void run(const size_t replay_rounds);
+    bool run(const size_t replay_rounds);
 
 private:
     void drop_caches();
