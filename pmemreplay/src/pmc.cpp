@@ -7,7 +7,7 @@
 
 
 
-//#define PMC_VERBOSE
+#define PMC_VERBOSE
 
 
 static long perf_event_open(struct perf_event_attr* event_attr, pid_t pid, int cpu,
@@ -71,11 +71,21 @@ int PMC::add_probe(const unsigned int event_id, const int imc_id) const
  
     pe.disabled = 1;
     pe.inherit = 1;
-    pe.exclude_guest = 0;
-    pe.exclude_host = 0;
 
-    fd = perf_event_open(&pe, -1, 0, -1, 0);
+    if (imc_id == -1) {
+        pe.exclude_guest = 1;
+        //pe.exclude_host = 1;
+	pe.enable_on_exec = 1;
+    } else {
+	pe.exclude_guest = 0;
+	pe.exclude_host = 0;
+    }
 
+    if (imc_id == -1) {
+	fd = perf_event_open(&pe, getpid(), -1, -1, 0x8);
+    } else {
+        fd = perf_event_open(&pe, -1, 0, -1, 0);
+    }
     if (fd == -1) {
         #ifdef PMC_VERBOSE
         std::cerr << "[iMC " << imc_id << "] Unable to open perf event monitor for event config: 0x" << std::hex << pe.config << " errno: " << std::dec << errno << std::endl;
@@ -125,7 +135,7 @@ bool PMC::add_imc_probe(const unsigned int event_id)
     probe.event_id = event_id;
 
     #ifdef PMC_VERBOSE
-    std::cout << "\nNum probes: " << imc_probe.num_probes << std::endl;
+    std::cout << "\nNum probes: " << probe.num_probes << std::endl;
     #endif
 
     return true;

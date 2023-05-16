@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <cassert>
 
 #include <sys/syscall.h>
 
@@ -54,6 +55,10 @@ public:
         ssize_t bytes_read;
         if (this->num_probes > 0)
             bytes_read = read(this->fd_probes[0], count, sizeof(count));
+
+	if (bytes_read != sizeof(count))
+		assert(false);
+	//std::cout << "Bytes read: " << bytes_read << std::endl;
     }
 
     inline void set_imc() {
