@@ -78,7 +78,7 @@ public:
     void print_imcs(std::ostream &os) const;
     
     bool add_imc_probe(const unsigned int event_id);
-    bool add_oncore_probe(const unsigned int event_id);
+    bool add_oncore_probe(const unsigned int event_id, const int pid);
     
     void enable_probes() const;
     void disable_probes() const;
@@ -93,7 +93,7 @@ public:
     // inline void probe_disable(const struct iMCProbe& iMCProbe) const;
 
 private:
-    int add_probe(const unsigned int event_id, const int imc_id = -1) const;
+    int add_probe(const unsigned int event_id, const int imc_id, const int pid) const;
     void find_imcs();
 
 private:

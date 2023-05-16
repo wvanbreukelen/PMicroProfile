@@ -470,12 +470,12 @@ static void* do_work(void *arg)
         //pthread_exit(NULL);
     }
 
-    if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM)) {
+    if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM, pthread_self())) {
         std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM probe!" << std::endl;
         //pthread_exit(NULL);
     }
 
-    if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM)) {
+    if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM, pthread_self())) {
         std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM probe!" << std::endl;
         //pthread_exit(NULL);
     }
