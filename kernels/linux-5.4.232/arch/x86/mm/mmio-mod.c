@@ -507,13 +507,15 @@ static void iounmap_trace_core(volatile void __iomem *addr, volatile void __iome
 							unregister_kmmio_probe(&trace->probe, 1);
 						} else if (!tsk) {
 							unregister_kmmio_probe(&trace->probe, 1);
+						} else {
+							unregister_kmmio_probe(&trace->probe, 0);
 						}
 
-						trace->enabled = 0;
-						trace->do_remove = 1;
+						//trace->enabled = 0;
+						//trace->do_remove = 1;
 
-						//list_del(&trace->list);
-						//found_trace = trace;
+						list_del(&trace->list);
+						found_trace = trace;
 						break;
 					}
 				} else {
