@@ -844,7 +844,7 @@ void __noreturn do_exit(long code)
 	taskstats_exit(tsk, group_dead);
 
 	// if (unlikely(mmiotrace_is_enabled()))
-	// 	mmiotrace_task_exit(tsk);
+	//  	mmiotrace_task_exit(tsk);
 
 	exit_mm();
 
