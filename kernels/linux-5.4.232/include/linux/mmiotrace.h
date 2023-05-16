@@ -34,7 +34,7 @@ struct kmmio_probe {
 extern unsigned int kmmio_count;
 
 extern int register_kmmio_probe(struct kmmio_probe *p);
-extern int unregister_kmmio_probe(struct kmmio_probe *p);
+extern int unregister_kmmio_probe(struct kmmio_probe *p, int dirty);
 extern int kmmio_init(void);
 extern void kmmio_cleanup(void);
 
