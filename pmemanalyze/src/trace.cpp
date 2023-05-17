@@ -59,8 +59,8 @@ bool parse_trace(const std::filesystem::path &path, TraceFile &trace)
             std::cout.flush();
         }
 
-	if (loaded_rows > 1000000)
-		return true;
+	//if (loaded_rows > 1000000)
+	//	return true;
     }
     
     std::cout << std::endl;

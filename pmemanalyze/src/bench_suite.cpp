@@ -622,7 +622,7 @@ bool BenchSuite::run(const size_t replay_rounds)
     for (size_t i = 0; i < this->num_threads; ++i) {
         BenchExport bench_export(thread_args[i]);
 
-        bench_export.export_io_stat("out.csv");
+        bench_export.export_io_stat("./out.csv");
     }
     
     return true;
