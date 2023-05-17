@@ -26,7 +26,6 @@ else
     echo "--> Will not build LLVM by default, may be enabled by passing --build-llvm flag (compiling may take long time)."
 fi
 
-
 echo "--> Installing package dependencies..."
 
 run_command "sudo apt update" ""
@@ -78,13 +77,13 @@ run_command "sudo make install -j4" "built pmemtrace"
 
 cd $cwd
 
-echo "--> Building pmemreplay"
+echo "--> Building pmemanalyze"
 
-run_command "rm -rf pmemreplay/build" ""
-run_command "mkdir pmemreplay/build" ""
-cd pmemreplay/build
+run_command "rm -rf pmemanalyze/build" ""
+run_command "mkdir pmemanalyze/build" ""
+cd pmemanalyze/build
 run_command "cmake .." ""
-run_command "sudo make install -j4" "built pmemreplay"
+run_command "sudo make install -j4" "built pmemanalyze"
 
 cd $cwd
 

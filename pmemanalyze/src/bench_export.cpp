@@ -6,7 +6,7 @@
 
 bool BenchExport::export_io_stat(const std::string &filename) const {
 
-    std::filesystem::path export_path("../output/" + filename);
+    std::filesystem::path export_path(filename);
     std::filesystem::create_directories(export_path.parent_path());
 
     std::ofstream file_handle(export_path, std::ofstream::out| std::ofstream::trunc);
