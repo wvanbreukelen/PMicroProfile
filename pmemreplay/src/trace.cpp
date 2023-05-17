@@ -58,6 +58,9 @@ bool parse_trace(const std::filesystem::path &path, TraceFile &trace)
             std::cout << "\rLoading trace, please wait (" << static_cast<int>(percent_loaded) << "%)";
             std::cout.flush();
         }
+
+	if (loaded_rows > 1000000)
+		return true;
     }
     
     std::cout << std::endl;

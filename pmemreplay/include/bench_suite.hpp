@@ -12,8 +12,8 @@
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
-#define SAMPLE_RATE  5000000L  //50000000
-#define SAMPLE_DUTY_CYCLE 25
+#define SAMPLE_RATE  50000000L  //50000000
+#define SAMPLE_DUTY_CYCLE 50
 //#define SAMPLE_LENGTH 8000000  //500000
 #define ENABLE_DCOLLECTION
 
@@ -32,7 +32,7 @@ static constexpr unsigned long SAMPLE_PERIOD_OFF = (SAMPLE_RATE * (100 - SAMPLE_
 #define EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL 0x1E4  // umask=0x1,event=0xE4
 #define EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM 0x80D1 // umash=0x80,event=D1
 #define EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM 0x10D3 // umash=0x10,event=D3
-
+#define EVENT_MEM_PMM_HIT_LOCAL_ANY_SCOOP 0x1b7 // ocr.all_reads.pmm_hit_local_pmm.any_snoop
 
 // from: https://github.com/hpides/perma-bench/blob/75b6e3ceea6895fdb779b4981aa43a2ff6185104/src/read_write_ops.hpp
 #define READ_SIMD_512(mem_addr, offset) _mm512_load_si512((void*)((mem_addr) + ((offset)*CACHE_LINE_SIZE)))

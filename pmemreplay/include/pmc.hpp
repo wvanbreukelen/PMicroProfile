@@ -16,7 +16,7 @@
 
 struct Probe {
 public:
-    bool is_imc;
+    bool _is_imc;
     size_t num_probes;
     std::array<unsigned int, 16> fd_probes;
     unsigned int event_id = 0;
@@ -62,11 +62,15 @@ public:
     }
 
     inline void set_imc() {
-        is_imc = true;
+        _is_imc = true;
     }
 
     inline void set_oncore() {
-        is_imc = false;
+        _is_imc = false;
+    }
+
+    inline bool is_imc() const {
+	return _is_imc;
     }
 };
 
@@ -78,7 +82,7 @@ public:
     void print_imcs(std::ostream &os) const;
     
     bool add_imc_probe(const unsigned int event_id);
-    bool add_oncore_probe(const unsigned int event_id, const int pid);
+    bool add_oncore_probe(const unsigned int event_id, const int pid, const unsigned long msr = 0x0);
     
     void enable_probes() const;
     void disable_probes() const;
@@ -93,7 +97,7 @@ public:
     // inline void probe_disable(const struct iMCProbe& iMCProbe) const;
 
 private:
-    int add_probe(const unsigned int event_id, const int imc_id, const int pid) const;
+    int add_probe(const unsigned int event_id, const int imc_id, const int pid, const unsigned long msr_reg = 0x0) const;
     void find_imcs();
 
 private:

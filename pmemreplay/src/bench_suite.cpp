@@ -252,6 +252,13 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
     size_t z = 0;
 
 
+	pmc.reset_probes();
+	pmc.enable_probes();
+	pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_reset();
+	pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_reset();
+
+	pmc.get_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SCOOP).probe_reset();
+	pmc.get_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SCOOP).probe_enable();
 
     for (const TraceEntry& entry : trace_file) {
         #ifdef ENABLE_DCOLLECTION
@@ -260,7 +267,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 
             if (is_sampling) {
                 if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_ON) {
-                    pmc.disable_probes();
+                    //pmc.disable_probes();
 
                     is_sampling = false;
                     (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
@@ -270,9 +277,13 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_INSERTS).probe_count(&((*cur_sample)->wpq_inserts));
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->wpq_occupancy));
                     pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->rpq_occupancy));
+		    unsigned long long temp = 0;
 
                     pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_count_single(&((*cur_sample)->l3_misses_local_pmm));
-                    pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM).probe_count_single(&((*cur_sample)->l3_misses_remote_pmm));
+		    pmc.get_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SCOOP).probe_count_single(&temp);
+
+		    std::cout << (*cur_sample)->l3_misses_local_pmm << " " << (*cur_sample)->wpq_inserts << " " << temp << std::endl;
+                    //pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM).probe_count_single(&((*cur_sample)->l3_misses_remote_pmm));
 
                     (*cur_sample)->total_bytes_read_write = *(total_bytes);
 
@@ -281,7 +292,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 
                     if (stat->num_collected_samples > MAX_SAMPLES) {
                         std::cerr << "Number of collected sample exteeds MAX_SAMPLES (= " << std::dec << MAX_SAMPLES << "), please increase!" << std::endl;
-                        pthread_exit(NULL);
+                        //pthread_exit(NULL);
                     }
                     
                     latest_sample_time = cur_time;
@@ -328,7 +339,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     default:
                         std::cerr << "Unsupported op size " << std::dec << entry.op_size << "!" << std::endl;
                         
-                        pthread_exit(NULL);
+                        //pthread_exit(NULL);
                         break;
                 }
 
@@ -376,7 +387,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     std::cerr << "Unsupported operation 0x" << std::hex << entry.opcode << "!" << std::endl;
                     std::cout << entry << std::endl;
 
-                    pthread_exit(NULL);
+                    //pthread_exit(NULL);
                     break;
                 }
 
@@ -439,7 +450,8 @@ static void* do_work(void *arg)
 
     if (!pmc.init()) {
         std::cerr << "Failed to initialize PMC!" << std::endl;
-        pthread_exit(NULL);
+        return nullptr;
+        //pthread_exit(NULL);
     }
 
     #ifdef ENABLE_DCOLLECTION
@@ -470,15 +482,17 @@ static void* do_work(void *arg)
         //pthread_exit(NULL);
     }
 
-    if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM, pthread_self())) {
+    if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM, syscall(SYS_gettid))) {
         std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM probe!" << std::endl;
         //pthread_exit(NULL);
     }
 
-    if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM, pthread_self())) {
-        std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM probe!" << std::endl;
+    pmc.add_oncore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SCOOP, syscall(SYS_gettid), 0x3f804007f7); // L2: 0x3f80400010  0x804007F7
+
+    //if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM, syscall(SYS_gettid))) {
+    //    std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM probe!" << std::endl;
         //pthread_exit(NULL);
-    }
+    //}
 
 
     // unc_ticks_probe.probe_reset();
@@ -523,7 +537,8 @@ static void* do_work(void *arg)
     stat->write_bytes += (args->trace_file->get_total(TraceOperation::WRITE) * i);
     stat->total_bytes += (stat->read_bytes + stat->write_bytes);
 
-    pthread_exit(NULL);
+    //pthread_exit(NULL);
+    return nullptr;
 }
 
 bool BenchSuite::run(const size_t replay_rounds)
@@ -575,7 +590,9 @@ bool BenchSuite::run(const size_t replay_rounds)
         // https://www.strchr.com/performance_measurements_with_rdtsc
         // !!! We might need to fix CPU frequency, maybe we can set the CPU governor to performance and disable turbo?
         // Disabling hyperthreading will be difficult though.
-        rc = pthread_create(&threads[i], &attr, do_work, static_cast<void*>(&(thread_args[i])));
+        //rc = pthread_create(&threads[i], &attr, do_work, static_cast<void*>(&(thread_args[i])));
+
+	do_work(static_cast<void*>(&(thread_args[i])));
 
         if (rc) {
             std::cerr << "Unable to create thread" << std::endl;
@@ -585,7 +602,7 @@ bool BenchSuite::run(const size_t replay_rounds)
     }
 
     for (size_t i = 0; i < this->num_threads; ++i) {
-        pthread_join(threads[i], NULL);
+        //pthread_join(threads[i], NULL);
     }
 
     const struct io_stat* thread_stat = nullptr;

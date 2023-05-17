@@ -57,7 +57,9 @@ void PMC::print_imcs(std::ostream &os) const
         os << std::dec << this->imc_ids[i] << " ";
 }
 
-int PMC::add_probe(const unsigned int event_id, const int imc_id, const int pid) const
+static int temp_fd = -1;
+
+int PMC::add_probe(const unsigned int event_id, const int imc_id, const int pid, const unsigned long msr_reg) const
 {
     struct perf_event_attr pe;
     int fd;
@@ -68,27 +70,46 @@ int PMC::add_probe(const unsigned int event_id, const int imc_id, const int pid)
     pe.size = sizeof(struct perf_event_attr);
     pe.config = event_id;
     pe.sample_type = PERF_SAMPLE_IDENTIFIER;
+	
  
     pe.disabled = 1;
     pe.inherit = 1;
 
     if (imc_id == -1) {
+	//pe.disabled = 1;
         pe.exclude_guest = 1;
-        //pe.exclude_host = 1;
-	    pe.enable_on_exec = 1;
+        //pe.exclude_host = 0;
+	//pe.exclude_user = 0;
+	//pe.exclude_hv = 0;
+
+	if (msr_reg)
+		pe.bp_addr = msr_reg;
+	//pe.enable_on_exec = 0;
     } else {
-	    pe.exclude_guest = 0;
-	    pe.exclude_host = 0;
+	pe.exclude_guest = 0;
+	pe.exclude_host = 0;
     }
 
     if (imc_id == -1) {
-	    fd = perf_event_open(&pe, pid, -1, -1, 0x8);
+	if (temp_fd >= 0) {
+	 fd = perf_event_open(&pe, pid, -1, -1, 0x8);
+	} else {
+	 fd = perf_event_open(&pe, pid, -1, -1, 0x8);
+	}
     } else {
-        fd = perf_event_open(&pe, pid, 0, -1, 0);
+	//if (temp_fd >= 0) {
+       	 fd = perf_event_open(&pe, pid, 0, -1, 0);
+	//}
+	 //fd = perf_event_open(&pe, pid, 0, -1, 0);
     }
+
+    if (temp_fd < 0)
+	temp_fd = fd;
+
     if (fd == -1) {
         #ifdef PMC_VERBOSE
         std::cerr << "[iMC " << imc_id << "] Unable to open perf event monitor for event config: 0x" << std::hex << pe.config << " errno: " << std::dec << errno << std::endl;
+        std::cout << "config: 0x" << pe.config << " type: 0x" << pe.type << " size: " << pe.size << "sample_type: 0x" << pe.sample_type << "pid: " << pid << std::endl;
         #endif
 
         return -1;
@@ -141,7 +162,7 @@ bool PMC::add_imc_probe(const unsigned int event_id)
     return true;
 }
 
-bool PMC::add_oncore_probe(const unsigned int event_id, const int pid)
+bool PMC::add_oncore_probe(const unsigned int event_id, const int pid, const unsigned long msr_reg)
 {
     struct Probe& probe = this->probes[this->num_probes++];
     probe.set_oncore();
@@ -149,7 +170,7 @@ bool PMC::add_oncore_probe(const unsigned int event_id, const int pid)
 
     int fd;
 
-    if ((fd = this->add_probe(event_id, -1, pid)) < 0) {
+    if ((fd = this->add_probe(event_id, -1, pid, msr_reg)) < 0) {
         this->num_probes--;
         return false;
     }
@@ -181,19 +202,22 @@ Probe& PMC::get_probe(const unsigned int event_id)
 void PMC::enable_probes() const
 {
     for (size_t i = 0; i < this->num_probes; ++i)
-        this->probes[i].probe_enable();
+	if (this->probes[i].is_imc())
+        	this->probes[i].probe_enable();
 }
 
 void PMC::disable_probes() const
 {
     for (size_t i = 0; i < this->num_probes; ++i)
-        this->probes[i].probe_disable();
+	if (this->probes[i].is_imc())
+        	this->probes[i].probe_disable();
 }
 
 void PMC::reset_probes() const
 {
     for (size_t i = 0; i < this->num_probes; ++i)
-        this->probes[i].probe_reset();
+	if (this->probes[i].is_imc())
+        	this->probes[i].probe_reset();
 }
 
 
