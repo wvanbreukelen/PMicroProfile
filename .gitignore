@@ -1,4 +1,6 @@
 .vscode/
+pmemanalyze/.vscode
+pmemtrace/.vscode
 
 kernels/linux
 kernels/linux-5.4.232-orig
