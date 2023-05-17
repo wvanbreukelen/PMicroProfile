@@ -21,7 +21,7 @@ bool BenchExport::export_io_stat(const std::string &filename) const {
     file_handle << "timestamp,num_reads,read_cycles,num_writes,write_cycles,num_flushes,flush_cycles,bytes_read,bytes_written,";
     file_handle << "retired_rw,retired_movnti,retired_movntq,retired_movntqd,retired_movntps,";
     file_handle << "wpq_inserts,rpq_inserts,wpq_occupancy,rpq_occupancy,unc_ticks,total_read_write,";
-    file_handle << "l3_misses_local_pmm,l3_misses_remote_pmm";
+    file_handle << "l3_misses_local_pmm,l3_misses_remote_pmm,any_scoop_pmm";
     file_handle << std::endl;
 
     const struct io_sample * samples = this->worker_args.stat.samples;

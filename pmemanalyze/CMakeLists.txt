@@ -23,7 +23,7 @@ target_link_libraries(pmemanalyze PRIVATE pthread Arrow::arrow_shared Parquet::p
 install(TARGETS pmemanalyze DESTINATION /usr/local/bin)
 
 add_custom_command(TARGET pmemanalyze POST_BUILD
-    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/plot/setup.py install
+    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/plot/setup.py install || (exit 0)
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/plot
     COMMENT "Installing plotting tool..."
 )

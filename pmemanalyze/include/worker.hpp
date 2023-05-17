@@ -36,6 +36,8 @@ public:
 
     unsigned long long l3_misses_local_pmm = 0;
     unsigned long long l3_misses_remote_pmm = 0;
+
+    unsigned long long pmm_any_snoop = 0;
 };
 
 template<typename Stream>
@@ -64,7 +66,8 @@ Stream& operator<<(Stream& os, const io_sample& sample) {
        << sample.total_bytes_read_write << ","
 
        << sample.l3_misses_local_pmm << ","
-       << sample.l3_misses_remote_pmm;
+       << sample.l3_misses_remote_pmm << ","
+       << sample.pmm_any_snoop;
     
     return os;
 }

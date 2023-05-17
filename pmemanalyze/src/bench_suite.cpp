@@ -257,8 +257,8 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 	pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_reset();
 	pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_reset();
 
-	pmc.get_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SCOOP).probe_reset();
-	pmc.get_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SCOOP).probe_enable();
+	pmc.get_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP).probe_reset();
+	pmc.get_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP).probe_enable();
 
     for (const TraceEntry& entry : trace_file) {
         #ifdef ENABLE_DCOLLECTION
@@ -277,12 +277,11 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_INSERTS).probe_count(&((*cur_sample)->wpq_inserts));
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->wpq_occupancy));
                     pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->rpq_occupancy));
-		    unsigned long long temp = 0;
 
                     pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_count_single(&((*cur_sample)->l3_misses_local_pmm));
-		    pmc.get_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SCOOP).probe_count_single(&temp);
+		            pmc.get_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP).probe_count_single(&((*cur_sample)->pmm_any_snoop));
 
-		    std::cout << (*cur_sample)->l3_misses_local_pmm << " " << (*cur_sample)->wpq_inserts << " " << temp << std::endl;
+
                     //pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM).probe_count_single(&((*cur_sample)->l3_misses_remote_pmm));
 
                     (*cur_sample)->total_bytes_read_write = *(total_bytes);
@@ -487,7 +486,7 @@ static void* do_work(void *arg)
         //pthread_exit(NULL);
     }
 
-    pmc.add_oncore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SCOOP, syscall(SYS_gettid), 0x3f804007f7); // L2: 0x3f80400010  0x804007F7
+    pmc.add_oncore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), 0x3f804007f7); // L2: 0x3f80400010  0x804007F7
 
     //if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM, syscall(SYS_gettid))) {
     //    std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM probe!" << std::endl;
