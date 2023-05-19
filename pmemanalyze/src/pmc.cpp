@@ -199,27 +199,40 @@ Probe& PMC::get_probe(const unsigned int event_id)
     return this->probes[0];
 }
 
-void PMC::enable_probes() const
+Probe& PMC::get_probe_msr(const unsigned int event_id, const unsigned long msr_reg)
+{
+    for (size_t i = 0; i < this->num_probes; ++i)
+    {
+        if (this->probes[i].event_id == event_id && this->probes[i].msr_reg == msr_reg)
+            return this->probes[i];
+    }
+
+    std::cerr << "Error: Unable to get probe for event id " << event_id << ", msr: 0x" << std::hex << msr_reg << std::dec <<  ", exiting..." << std::endl;
+    assert(false);
+    // This is just a placeholder to keep the compiler happy.
+    return this->probes[0];
+}
+
+void PMC::enable_imc_probes() const
 {
     for (size_t i = 0; i < this->num_probes; ++i)
 	if (this->probes[i].is_imc())
         	this->probes[i].probe_enable();
 }
 
-void PMC::disable_probes() const
+void PMC::disable_imc_probes() const
 {
     for (size_t i = 0; i < this->num_probes; ++i)
 	if (this->probes[i].is_imc())
         	this->probes[i].probe_disable();
 }
 
-void PMC::reset_probes() const
+void PMC::reset_imc_probes() const
 {
     for (size_t i = 0; i < this->num_probes; ++i)
 	if (this->probes[i].is_imc())
         	this->probes[i].probe_reset();
 }
-
 
 bool PMC::remove_probe(const int fd) const
 {

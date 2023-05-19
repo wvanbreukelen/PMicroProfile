@@ -20,6 +20,7 @@ public:
     size_t num_probes;
     std::array<unsigned int, 16> fd_probes;
     unsigned int event_id = 0;
+    unsigned long msr_reg = 0x0;
 
     inline void probe_reset() const
     {
@@ -70,7 +71,7 @@ public:
     }
 
     inline bool is_imc() const {
-	return _is_imc;
+	    return _is_imc;
     }
 };
 
@@ -84,13 +85,14 @@ public:
     bool add_imc_probe(const unsigned int event_id);
     bool add_oncore_probe(const unsigned int event_id, const int pid, const unsigned long msr = 0x0);
     
-    void enable_probes() const;
-    void disable_probes() const;
-    void reset_probes() const;
+    void enable_imc_probes() const;
+    void disable_imc_probes() const;
+    void reset_imc_probes() const;
 
     bool remove_probe(const int fd) const;
     bool remove_imc_probes() const;
     Probe& get_probe(const unsigned int event_id);
+    Probe& get_probe_msr(const unsigned int event_id, const unsigned long msr_reg);
 
     // inline void probe_reset(const struct iMCProbe& iMCProbe) const;
     // inline void probe_enable(const struct iMCProbe& iMCProbe) const;

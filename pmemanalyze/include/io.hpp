@@ -267,3 +267,45 @@ inline void flush_clflush(const TraceEntry& entry, const bool is_sampling, struc
     _mm_clflushopt(entry.dax_addr);
     #endif
 }
+
+inline void barrier_mfence(const TraceEntry& entry, const bool is_sampling, struct io_sample *const cur_sample)
+{
+    #ifdef ENABLE_DCOLLECTION
+        if (is_sampling) {
+            _mm_mfence();
+            ++(cur_sample->num_mfence);
+        } else {
+            _mm_mfence();
+        }
+    #else
+    _mm_mfence();
+    #endif
+}
+
+inline void barrier_sfence(const TraceEntry& entry, const bool is_sampling, struct io_sample *const cur_sample)
+{
+    #ifdef ENABLE_DCOLLECTION
+        if (is_sampling) {
+            _mm_sfence();
+            ++(cur_sample->num_sfence);
+        } else {
+            _mm_sfence();
+        }
+    #else
+    _mm_sfence();
+    #endif
+}
+
+inline void barrier_lfence(const TraceEntry& entry, const bool is_sampling, struct io_sample *const cur_sample)
+{
+    #ifdef ENABLE_DCOLLECTION
+        if (is_sampling) {
+            _mm_lfence();
+            ++(cur_sample->num_lfence);
+        } else {
+            _mm_lfence();
+        }
+    #else
+    _mm_lfence();
+    #endif
+}

@@ -249,16 +249,17 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
     bool is_sampling = false;
     unsigned long long cur_time;
     unsigned long long latest_sample_time = *(_latest_sample_time);
+    void* prev_addr = nullptr;
     size_t z = 0;
 
 
-	pmc.reset_probes();
-	pmc.enable_probes();
-	pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_reset();
-	pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_reset();
+	pmc.reset_imc_probes();
+	pmc.enable_imc_probes();
 
-	pmc.get_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP).probe_reset();
-	pmc.get_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP).probe_enable();
+	pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_reset();
+	pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_reset();
+	pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_reset();
+	pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_enable();
 
     for (const TraceEntry& entry : trace_file) {
         #ifdef ENABLE_DCOLLECTION
@@ -267,7 +268,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 
             if (is_sampling) {
                 if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_ON) {
-                    //pmc.disable_probes();
+                    pmc.disable_imc_probes();
 
                     is_sampling = false;
                     (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
@@ -279,7 +280,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->rpq_occupancy));
 
                     pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_count_single(&((*cur_sample)->l3_misses_local_pmm));
-		            pmc.get_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP).probe_count_single(&((*cur_sample)->pmm_any_snoop));
+		            pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_count_single(&((*cur_sample)->pmm_any_snoop));
 
 
                     //pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM).probe_count_single(&((*cur_sample)->l3_misses_remote_pmm));
@@ -300,9 +301,10 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_OFF) {
                     is_sampling = true;
                     latest_sample_time = cur_time;
+                    prev_addr = nullptr;
 
-                    pmc.reset_probes();
-                    pmc.enable_probes();
+                    pmc.reset_imc_probes();
+                    pmc.enable_imc_probes();
                 }
             }
         }
@@ -346,6 +348,13 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 if (is_sampling) {
                     ++((*cur_sample)->num_reads);
                     (*cur_sample)->bytes_read += entry.op_size;
+
+                    // Determine absolute distance between addresses and sum.
+                    if (prev_addr != nullptr) {
+                        const std::ptrdiff_t ptr_distance = reinterpret_cast<char*>(entry.dax_addr) - reinterpret_cast<char*>(prev_addr);
+                        (*cur_sample)->total_addr_distance += (ptr_distance < 0) ? (-ptr_distance) : ptr_distance;
+                    }
+                    prev_addr = entry.dax_addr;
                 }
                 #endif
 
@@ -394,6 +403,13 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 if (is_sampling) {
                     ++((*cur_sample)->num_writes);
                     (*cur_sample)->bytes_written += entry.op_size;
+
+                    // Determine absolute distance between addresses and sum.
+                    if (prev_addr != nullptr) {
+                        const std::ptrdiff_t ptr_distance = reinterpret_cast<char*>(entry.dax_addr) - reinterpret_cast<char*>(prev_addr);
+                        (*cur_sample)->total_addr_distance += (ptr_distance < 0) ? (-ptr_distance) : ptr_distance;
+                    }
+                    prev_addr = entry.dax_addr;
                 }
                 #endif
 
@@ -406,17 +422,20 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
             }
             case TraceOperation::MFENCE:
             {
-                _mm_mfence();
+                //_mm_mfence();
+                barrier_mfence(entry, is_sampling, *cur_sample);
                 break;
             }
             case TraceOperation::SFENCE:
             {
-                _mm_sfence();
+                //_mm_sfence();
+                barrier_sfence(entry, is_sampling, *cur_sample);
                 break;
             }
             case TraceOperation::LFENCE:
             {
-                _mm_lfence();
+                barrier_lfence(entry, is_sampling, *cur_sample);
+                //_mm_lfence();
                 break;
             }
 
@@ -486,7 +505,7 @@ static void* do_work(void *arg)
         //pthread_exit(NULL);
     }
 
-    pmc.add_oncore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), 0x3f804007f7); // L2: 0x3f80400010  0x804007F7
+    pmc.add_oncore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_PMM_HIT_LOCAL_ANY_SNOOP); // L2: 0x3f80400010  0x804007F7
 
     //if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM, syscall(SYS_gettid))) {
     //    std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM probe!" << std::endl;
@@ -499,7 +518,7 @@ static void* do_work(void *arg)
     // rpq_probe.probe_reset();
     // wpq_occupancy_probe.probe_reset();
     // rpq_occupancy_probe.probe_reset();
-    pmc.reset_probes();
+    pmc.reset_imc_probes();
     #endif
     //probe_enable(wpq_probe);
 
@@ -526,7 +545,7 @@ static void* do_work(void *arg)
     const auto time_stop = std::chrono::high_resolution_clock::now();
 
     #ifdef ENABLE_DCOLLECTION
-    pmc.disable_probes();
+    pmc.disable_imc_probes();
     pmc.remove_imc_probes();
     #endif
 
@@ -591,7 +610,7 @@ bool BenchSuite::run(const size_t replay_rounds)
         // Disabling hyperthreading will be difficult though.
         //rc = pthread_create(&threads[i], &attr, do_work, static_cast<void*>(&(thread_args[i])));
 
-	do_work(static_cast<void*>(&(thread_args[i])));
+	    do_work(static_cast<void*>(&(thread_args[i])));
 
         if (rc) {
             std::cerr << "Unable to create thread" << std::endl;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #include "trace.hpp"
 #define MAX_SAMPLES 1000000
 
@@ -17,6 +19,10 @@ public:
     size_t num_movntq = 0;
     size_t num_movntqd = 0;
     size_t num_movntps = 0;
+
+    size_t num_mfence = 0;
+    size_t num_sfence = 0;
+    size_t num_lfence = 0;
     
     size_t bytes_read = 0;
     size_t bytes_written = 0;
@@ -38,6 +44,9 @@ public:
     unsigned long long l3_misses_remote_pmm = 0;
 
     unsigned long long pmm_any_snoop = 0;
+
+    unsigned long prev_addr = 0;
+    unsigned long total_addr_distance = 0;
 };
 
 template<typename Stream>
@@ -58,6 +67,10 @@ Stream& operator<<(Stream& os, const io_sample& sample) {
        << sample.num_movntqd << ","
        << sample.num_movntps << ","
 
+       << sample.num_mfence << ","
+       << sample.num_sfence << ","
+       << sample.num_lfence << ","
+
        << sample.wpq_inserts << ","
        << sample.rpq_inserts << ","
        << sample.wpq_occupancy << ","
@@ -67,7 +80,9 @@ Stream& operator<<(Stream& os, const io_sample& sample) {
 
        << sample.l3_misses_local_pmm << ","
        << sample.l3_misses_remote_pmm << ","
-       << sample.pmm_any_snoop;
+       << sample.pmm_any_snoop << ","
+
+       << sample.total_addr_distance;
     
     return os;
 }
