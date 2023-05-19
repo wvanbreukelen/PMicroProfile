@@ -33,8 +33,10 @@ static constexpr unsigned long SAMPLE_PERIOD_OFF = (SAMPLE_RATE * (100 - SAMPLE_
 #define EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM 0x80D1 // umash=0x80,event=D1
 #define EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM 0x10D3 // umash=0x10,event=D3
 #define EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP 0x1b7 // ocr.all_reads.pmm_hit_local_pmm.any_snoop
+#define EVENT_MEM_INST_RETIRED_ALL_STORES 0x82d0
 
 #define MSR_PMM_HIT_LOCAL_ANY_SNOOP 0x3f804007f7
+#define MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP 0x3f84000491
 
 // from: https://github.com/hpides/perma-bench/blob/75b6e3ceea6895fdb779b4981aa43a2ff6185104/src/read_write_ops.hpp
 #define READ_SIMD_512(mem_addr, offset) _mm512_load_si512((void*)((mem_addr) + ((offset)*CACHE_LINE_SIZE)))

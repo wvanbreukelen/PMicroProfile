@@ -57,8 +57,6 @@ void PMC::print_imcs(std::ostream &os) const
         os << std::dec << this->imc_ids[i] << " ";
 }
 
-static int temp_fd = -1;
-
 int PMC::add_probe(const unsigned int event_id, const int imc_id, const int pid, const unsigned long msr_reg) const
 {
     struct perf_event_attr pe;
@@ -76,35 +74,20 @@ int PMC::add_probe(const unsigned int event_id, const int imc_id, const int pid,
     pe.inherit = 1;
 
     if (imc_id == -1) {
-	//pe.disabled = 1;
         pe.exclude_guest = 1;
-        //pe.exclude_host = 0;
-	//pe.exclude_user = 0;
-	//pe.exclude_hv = 0;
 
-	if (msr_reg)
-		pe.bp_addr = msr_reg;
-	//pe.enable_on_exec = 0;
+        if (msr_reg)
+            pe.bp_addr = msr_reg;
     } else {
-	pe.exclude_guest = 0;
-	pe.exclude_host = 0;
+	    pe.exclude_guest = 0;
+	    pe.exclude_host = 0;
     }
 
     if (imc_id == -1) {
-	if (temp_fd >= 0) {
-	 fd = perf_event_open(&pe, pid, -1, -1, 0x8);
-	} else {
-	 fd = perf_event_open(&pe, pid, -1, -1, 0x8);
-	}
+        fd = perf_event_open(&pe, pid, -1, -1, 0x8);
     } else {
-	//if (temp_fd >= 0) {
-       	 fd = perf_event_open(&pe, pid, 0, -1, 0);
-	//}
-	 //fd = perf_event_open(&pe, pid, 0, -1, 0);
+        fd = perf_event_open(&pe, pid, 0, -1, 0);
     }
-
-    if (temp_fd < 0)
-	temp_fd = fd;
 
     if (fd == -1) {
         #ifdef PMC_VERBOSE
@@ -113,11 +96,10 @@ int PMC::add_probe(const unsigned int event_id, const int imc_id, const int pid,
         #endif
 
         return -1;
-        //exit(EXIT_FAILURE);
     } else {
-	#ifdef PMC_VERBOSE
-	std::cout << "[iMC " << imc_id << "] Added probe for event 0x" << std::hex << event_id << " type " << std::dec << imc_id << std::endl;
-	#endif
+        #ifdef PMC_VERBOSE
+        std::cout << "[iMC " << imc_id << "] Added probe for event 0x" << std::hex << event_id << " type " << std::dec << imc_id << std::endl;
+        #endif
     }
 
     int flags = fcntl(fd, F_GETFD);

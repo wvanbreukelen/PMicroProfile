@@ -40,10 +40,13 @@ public:
     unsigned long long rpq_occupancy = 0;
     unsigned long long wpq_occupancy = 0;
 
+    unsigned long long retired_all_stores = 0;
+
     unsigned long long l3_misses_local_pmm = 0;
     unsigned long long l3_misses_remote_pmm = 0;
 
     unsigned long long pmm_any_snoop = 0;
+    unsigned long long dram_l3_miss_any_snoop = 0;
 
     unsigned long prev_addr = 0;
     unsigned long total_addr_distance = 0;
@@ -78,9 +81,11 @@ Stream& operator<<(Stream& os, const io_sample& sample) {
        << sample.unc_ticks << ","
        << sample.total_bytes_read_write << ","
 
+       << sample.retired_all_stores << ","
        << sample.l3_misses_local_pmm << ","
        << sample.l3_misses_remote_pmm << ","
        << sample.pmm_any_snoop << ","
+       << sample.dram_l3_miss_any_snoop << ","
 
        << sample.total_addr_distance;
     
