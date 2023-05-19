@@ -9,6 +9,7 @@
 struct io_sample {
 public:
     std::chrono::duration<long, std::nano> time_since_start;
+    std::chrono::duration<long, std::nano> sample_duration;
 
     size_t num_reads = 0;
     size_t num_writes = 0;
@@ -57,6 +58,7 @@ public:
 template<typename Stream>
 Stream& operator<<(Stream& os, const io_sample& sample) {
     os << sample.time_since_start.count() << ","
+       << sample.sample_duration.count() << ","
        << sample.num_reads << ","
        << sample.read_inst_cycles << ","
        << sample.num_writes << ","

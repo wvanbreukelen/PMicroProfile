@@ -249,6 +249,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
     bool is_sampling = false;
     unsigned long long cur_time;
     unsigned long long latest_sample_time = *(_latest_sample_time);
+    auto latest_sample_time_us = std::chrono::high_resolution_clock::now();
     void* prev_addr = nullptr;
     size_t z = 0;
 
@@ -279,7 +280,11 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_disable();
 
                     is_sampling = false;
-                    (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
+
+                    const auto time_now = std::chrono::high_resolution_clock::now();
+                    
+                    (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - time_start));
+                    (*cur_sample)->sample_duration = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - latest_sample_time_us));
 
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_INSERTS).probe_count(&((*cur_sample)->wpq_inserts));
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->wpq_occupancy));
@@ -316,6 +321,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_OFF) {
                     is_sampling = true;
                     latest_sample_time = cur_time;
+                    latest_sample_time_us = std::chrono::high_resolution_clock::now();
                     prev_addr = nullptr;
 
                     pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
