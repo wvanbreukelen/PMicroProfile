@@ -427,6 +427,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     const std::ptrdiff_t ptr_distance = reinterpret_cast<char*>(entry.dax_addr) - reinterpret_cast<char*>(prev_addr);
                     (*cur_sample)->total_addr_distance += (ptr_distance < 0) ? (-ptr_distance) : ptr_distance;
                 }
+                prev_addr = entry.dax_addr;
                 #endif
                 break;
             }

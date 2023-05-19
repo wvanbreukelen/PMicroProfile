@@ -259,7 +259,6 @@ inline void flush_clflush(const TraceEntry& entry, const bool is_sampling, struc
             unsigned long long start_ticks = __builtin_ia32_rdtsc();
             _mm_clflushopt(entry.dax_addr);
             cur_sample->flush_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
-            ++(cur_sample->num_flushes);
         } else {
             _mm_clflushopt(entry.dax_addr);
         }
