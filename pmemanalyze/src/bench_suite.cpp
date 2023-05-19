@@ -245,7 +245,7 @@ static inline uint64_t next_pow2_fast(uint64_t x)
 
 static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur_sample, ssize_t* total_bytes, unsigned long long *_latest_sample_time, struct io_stat* stat)
 {
-    constexpr uint64_t sample_mask = (1024 - 1);
+    constexpr uint64_t sample_mask = (16384 - 1);
     bool is_sampling = false;
     unsigned long long cur_time;
     unsigned long long latest_sample_time = *(_latest_sample_time);
@@ -255,10 +255,6 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 
 
     #ifdef ENABLE_DCOLLECTION
-	pmc.reset_imc_probes();
-	pmc.enable_imc_probes();
-    #endif
-
 	pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_reset();
 	pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_enable();
     pmc.get_probe(EVENT_MEM_INST_RETIRED_ALL_STORES).probe_reset();
@@ -268,6 +264,10 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 	pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_enable();
     pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
 	pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_enable();
+
+    pmc.reset_imc_probes();
+	pmc.enable_imc_probes();
+    #endif
 
     for (const TraceEntry& entry : trace_file) {
         #ifdef ENABLE_DCOLLECTION
@@ -310,7 +310,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     (*cur_sample)++;
                     ++(stat->num_collected_samples);
 
-                    if (stat->num_collected_samples > MAX_SAMPLES) {
+                    if (unlikely(stat->num_collected_samples > MAX_SAMPLES)) {
                         std::cerr << "Number of collected sample exteeds MAX_SAMPLES (= " << std::dec << MAX_SAMPLES << "), please increase!" << std::endl;
                         //pthread_exit(NULL);
                     }
@@ -460,20 +460,17 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
             }
             case TraceOperation::MFENCE:
             {
-                //_mm_mfence();
                 barrier_mfence(entry, is_sampling, *cur_sample);
                 break;
             }
             case TraceOperation::SFENCE:
             {
-                //_mm_sfence();
                 barrier_sfence(entry, is_sampling, *cur_sample);
                 break;
             }
             case TraceOperation::LFENCE:
             {
                 barrier_lfence(entry, is_sampling, *cur_sample);
-                //_mm_lfence();
                 break;
             }
 
