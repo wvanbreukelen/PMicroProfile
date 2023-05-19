@@ -141,7 +141,7 @@ bool PMC::add_imc_probe(const unsigned int event_id, const bool is_single)
     if (!this->num_imcs)
         return false;
 
-    for (size_t i = 0; i < (is_single) ? 1 : this->num_imcs; ++i) {
+    for (size_t i = 0; i < this->num_imcs; ++i) {
         if ((fd = this->add_probe(event_id, this->imc_ids[i], -1)) < 0) {
             return false;
         }
