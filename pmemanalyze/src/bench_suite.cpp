@@ -276,6 +276,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
             if (is_sampling) {
                 if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_ON) {
                     pmc.disable_imc_probes();
+                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_disable();
 
                     is_sampling = false;
                     (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
@@ -313,6 +314,9 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     is_sampling = true;
                     latest_sample_time = cur_time;
                     prev_addr = nullptr;
+
+                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
+                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_enable();
 
                     pmc.reset_imc_probes();
                     pmc.enable_imc_probes();
