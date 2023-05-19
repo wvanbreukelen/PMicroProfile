@@ -175,6 +175,9 @@ bool PMC::add_oncore_probe(const unsigned int event_id, const int pid, const uns
         return false;
     }
 
+    if (msr_reg)
+        probe.msr_reg = msr_reg;
+
     ++(probe.num_probes);
     probe.fd_probes[0] = fd;
     probe.event_id = event_id;
