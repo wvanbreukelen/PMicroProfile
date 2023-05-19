@@ -287,6 +287,9 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     pmc.get_probe(EVENT_UNC_M_PMM_RPQ_INSERTS).probe_count(&((*cur_sample)->rpq_inserts));
                     pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->rpq_occupancy));
 
+                    pmc.get_probe(EVENT_UNC_M_RPQ_INSERTS).probe_count(&((*cur_sample)->dram_rpq_inserts));
+                    pmc.get_probe(EVENT_UNC_M_RPQ_OCCUPANCY).probe_count(&((*cur_sample)->dram_rpq_occupancy));
+
                     pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single(&((*cur_sample)->unc_ticks));
 
                     pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_count_single(&((*cur_sample)->l3_misses_local_pmm));
@@ -514,6 +517,16 @@ static void* do_work(void *arg)
 
     if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_INSERTS)) {
         std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_INSERTS probe!" << std::endl;
+        //pthread_exit(NULL);
+    }
+
+    if (!pmc.add_imc_probe(EVENT_UNC_M_RPQ_INSERTS)) {
+        std::cerr << "Unable to add EVENT_UNC_M_RPQ_INSERTS probe!" << std::endl;
+        //pthread_exit(NULL);
+    }
+
+    if (!pmc.add_imc_probe(EVENT_UNC_M_RPQ_OCCUPANCY)) {
+        std::cerr << "Unable to add EVENT_UNC_M_RPQ_OCCUPANCY probe!" << std::endl;
         //pthread_exit(NULL);
     }
 

@@ -36,9 +36,11 @@ public:
 
     unsigned long long rpq_inserts = 0;
     unsigned long long wpq_inserts = 0;
+    unsigned long long dram_rpq_inserts = 0;
 
     unsigned long long rpq_occupancy = 0;
     unsigned long long wpq_occupancy = 0;
+    unsigned long long dram_rpq_occupancy = 0;
 
     unsigned long long retired_all_stores = 0;
 
@@ -78,6 +80,8 @@ Stream& operator<<(Stream& os, const io_sample& sample) {
        << sample.rpq_inserts << ","
        << sample.wpq_occupancy << ","
        << sample.rpq_occupancy << ","
+       << sample.dram_rpq_inserts << ","
+       << sample.dram_rpq_occupancy << ","
        << sample.unc_ticks << ","
        << sample.total_bytes_read_write << ","
 
