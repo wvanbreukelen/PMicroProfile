@@ -109,7 +109,7 @@ bool mmiotrace_is_enabled(void)
 
 bool mmiotrace_probes_enabled(void)
 {
-	return atomic_read(&probes_enabled);
+	return atomic_read(&probes_enabled) > 0;
 }
 
 SYSCALL_DEFINE1(trace_fence, unsigned int, fence_type)
@@ -120,6 +120,7 @@ SYSCALL_DEFINE1(trace_fence, unsigned int, fence_type)
 
 	if (likely(!is_enabled()))
 		return 0;
+
 
 	if (!mmiotrace_probes_enabled())
 		return 0;
@@ -161,7 +162,7 @@ SYSCALL_DEFINE1(trace_fence, unsigned int, fence_type)
 	rcu_read_unlock();
 	preempt_enable();
 
-	//pr_info("Got a fence operation, opcode: 0x%x!\n", opcode);
+	
 
 	return 0;
 }
@@ -353,6 +354,7 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 	struct remap_trace *trace_in_list;
 
 	unsigned int do_rcu_sync = 0;
+	int ret;
 
 	/* These are page-unaligned. */
 	struct mmiotrace_map map = {
@@ -395,7 +397,9 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 				pr_warn_ratelimited("Existing probe at virtual address 0x%lx, removing...\n", (unsigned long) addr);
 
 				if (!trace->probe.user_task_pid) {
-					unregister_kmmio_probe(&trace_in_list->probe, 0);
+					if ((ret = unregister_kmmio_probe(&trace_in_list->probe, 0) < 0)) {
+						pr_warn_ratelimited("ioremap_trace_core: Unable to unmap probe at address %p!, errcode: %d\n", addr, ret);
+					}
 					list_del(&trace_in_list->list);
 					kfree(trace_in_list);
 
@@ -406,7 +410,7 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 			}
 			
 			//goto not_enabled;
-			// unregister_kmmio_probe(&trace_in_list->probe);
+			// unregister_kmmio_probe(&trace_in_list->probe);>
 			// list_del(&trace_in_list->list);
 		}
 	}
@@ -417,8 +421,9 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 		int ret;
 		if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
 			pr_warn("Unable to map probe at address %p!, errcode: %d\n", addr, ret);
+		} else {
+			trace->enabled = 1;
 		}
-		trace->enabled = 1;
 	}
 
 	if (_user_task)
@@ -452,6 +457,7 @@ void mmiotrace_disarm_trace_probe(volatile void __iomem *addr)
 	struct remap_trace *trace;
 	struct remap_trace *tmp;
 	struct remap_trace *found_trace = NULL;
+	int ret;
 
 	spin_lock_irq(&trace_lock);
 	if (!is_enabled())
@@ -461,7 +467,11 @@ void mmiotrace_disarm_trace_probe(volatile void __iomem *addr)
 		if ((unsigned long)addr == trace->probe.addr) {
 			if (!nommiotrace && trace->enabled) {
 				//pr_debug("Unmapping %p.\n", addr);
-				unregister_kmmio_probe(&trace->probe, 0);
+				if ((ret = unregister_kmmio_probe(&trace->probe, 0)) < 0) {
+					pr_warn_ratelimited("mmiotrace_disarm_trace_probe: Unable to unmap probe at address %p!, errcode: %d\n", addr, ret);
+				} else {
+					trace->enabled = 0;
+				}
 			}
 			
 			found_trace = trace;
@@ -491,6 +501,7 @@ static void iounmap_trace_core(volatile void __iomem *addr, volatile void __iome
 	struct task_struct *tsk = NULL;
 
 	unsigned int do_rcu_sync = 0;
+	int ret;
 
 	//pr_debug("Unmapping %p.\n", addr);
 
@@ -506,13 +517,20 @@ static void iounmap_trace_core(volatile void __iomem *addr, volatile void __iome
 
 					// If task is already dead, just dirty unmap.
 					if (tsk && task->state == TASK_DEAD) {
-						unregister_kmmio_probe(&trace->probe, 1);
+						if ((ret = unregister_kmmio_probe(&trace->probe, 1)) < 0) {
+							pr_warn_ratelimited("iounmap_trace_core: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);
+						}
 					} else if (!tsk) {
-						unregister_kmmio_probe(&trace->probe, 1);
+						if ((ret = unregister_kmmio_probe(&trace->probe, 1)) < 0) {
+							pr_warn_ratelimited("iounmap_trace_core: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);
+						}
 					} else {
-						unregister_kmmio_probe(&trace->probe, 0);
-						do_rcu_sync = 1;
+						if ((ret = unregister_kmmio_probe(&trace->probe, 0)) < 0) {
+							pr_warn_ratelimited("iounmap_trace_core: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);
+						}
 					}
+
+					do_rcu_sync = 1;
 
 					//trace->enabled = 0;
 					//trace->do_remove = 1;
@@ -521,7 +539,10 @@ static void iounmap_trace_core(volatile void __iomem *addr, volatile void __iome
 					found_trace = trace;
 					break;
 				} else {
-					unregister_kmmio_probe(&trace->probe, 0);
+					if ((ret = unregister_kmmio_probe(&trace->probe, 0)) < 0) {
+						pr_warn_ratelimited("iounmap_trace_core: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);
+					}
+
 					trace->enabled = 0;
 
 					list_del(&trace->list);
@@ -692,14 +713,14 @@ void mmiotrace_attach_user_probes(void)
 				if (mmiotrace_probes_enabled()) {
 					if (!trace->enabled && !trace->do_remove) {
 						if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
-							pr_warn_once("mmiotrace_sync_sampler_status: Unable to arm probe %p (ret: %d)\n", &trace->probe, ret);
+							pr_warn_ratelimited("mmiotrace_sync_sampler_status: Unable to arm probe %p (ret: %d)\n", &trace->probe, ret);
 						} else {
 							trace->enabled = 1;
 						}
 					}
 				} else if (trace->enabled) {
 					if ((ret = unregister_kmmio_probe(&trace->probe, 0)) < 0) {
-						pr_warn("mmiotrace_sync_sampler_status: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);
+						pr_warn_ratelimited("mmiotrace_sync_sampler_status: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);
 					} else {
 						trace->enabled = 0;
 						do_require_rcu_sync = 1;
@@ -783,7 +804,7 @@ void mmiotrace_detach_user_probes(void)
 		if (trace->probe.user_task_pid > 0 && trace->probe.user_task_pid == current->pid) {
 			if (trace->enabled) {
 				if ((ret = unregister_kmmio_probe(&trace->probe, 0)) < 0) {
-					pr_warn("mmiotrace_detach_user_probes: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);
+					pr_warn_ratelimited("mmiotrace_detach_user_probes: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);
 				}
 
 				if (ret >= 0) {
@@ -793,8 +814,14 @@ void mmiotrace_detach_user_probes(void)
 			}
 
 			if (trace->do_remove) {
-				if (trace->enabled)
-					unregister_kmmio_probe(&trace->probe, 1);
+				if (trace->enabled) {
+					if ((ret = unregister_kmmio_probe(&trace->probe, 1)) < 0) {
+						pr_warn_ratelimited("mmiotrace_detach_user_probes: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);	
+					} else {
+						trace->enabled = 0;
+						do_require_rcu_sync = 1;
+					}
+				}
 
 				list_del(&trace->list);
 				kfree(trace);
@@ -826,11 +853,9 @@ void enable_mmiotrace_soft(void)
 				if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
 					pr_warn_once("Unable to map probe, err code: %d\n", ret);
 				} else {
+					trace->enabled = 1;
 					//pr_info_ratelimited("Enabled probe at address 0x%lx!\n", (unsigned long) trace->probe.addr);
 				}
-
-
-				trace->enabled = 1;
 			}
 		}
 	}
@@ -850,6 +875,7 @@ void disable_mmiotrace_soft(void)
 	struct remap_trace *trace;
 	//struct remap_trace *tmp;
 	unsigned long flags;
+	int ret;
 
 	mutex_lock(&mmiotrace_mutex);
 	spin_lock_irqsave(&trace_lock, flags);
@@ -872,8 +898,11 @@ void disable_mmiotrace_soft(void)
 			// 	continue;
 			// }
 			if (trace->enabled && trace->probe.user_task_pid == 0) {
-				unregister_kmmio_probe(&trace->probe, 0);
-				trace->enabled = 0;	
+				if ((ret = unregister_kmmio_probe(&trace->probe, 0)) < 0) {
+					pr_warn_ratelimited("disable_mmiotrace_soft: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);
+				} else {
+					trace->enabled = 0;	
+				}
 			}
 			
 			//list_del(&trace->list);
@@ -1078,6 +1107,8 @@ void disable_mmiotrace(void)
 	clear_trace_list(); /* guarantees: no more kmmio callbacks */
 
 	//BUG_ON(kmmio_count != 0);
+
+	atomic_set(&probes_enabled, 0);
 
 	if (atomic_read(&is_pmemtrace_multicore) == 0)
 		leave_uniprocessor();
