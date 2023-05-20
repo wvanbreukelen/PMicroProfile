@@ -846,7 +846,11 @@ static const struct nd_cmd_desc __nd_cmd_bus_descs[] = {
 		.out_num = 1,
 		.out_sizes = { 4, },
 	},
-	[ND_CMD_TRACE_TOGGLE] = {
+	[ND_CMD_TRACE_TOGGLE_ON] = {
+		.out_num = 1,
+		.out_sizes = { 4, },
+	},
+	[ND_CMD_TRACE_TOGGLE_OFF] = {
 		.out_num = 1,
 		.out_sizes = { 4, },
 	},
@@ -1149,20 +1153,35 @@ static int __nd_ioctl(struct nvdimm_bus *nvdimm_bus, struct nvdimm *nvdimm,
 		return 0;
 	}
 
-	if (cmd == ND_CMD_TRACE_TOGGLE) {
+	if (cmd == ND_CMD_TRACE_TOGGLE_ON) {
 		nd_device_lock(dev);
 		rc = 0;
 
 		#ifdef CONFIG_MMIOTRACE
 		preempt_disable();
 		if (mmiotrace_is_enabled()) {
-			if (mmiotrace_probes_enabled()) {
-				//disable_pmemtrace_sampler();
-				//disable_mmiotrace_soft();
-			} else {
-				//enable_mmiotrace_soft();
-				//enable_pmemtrace_sampler_default();
-			}
+			enable_mmiotrace_soft();
+			enable_pmemtrace_sampler_default_settings();	
+		} else {
+			rc = -EFAULT;
+		}
+		preempt_enable_no_resched();
+		#endif
+
+		nd_device_unlock(dev);
+
+		return rc;
+	}
+
+	if (cmd == ND_CMD_TRACE_TOGGLE_OFF) {
+		nd_device_lock(dev);
+		rc = 0;
+
+		#ifdef CONFIG_MMIOTRACE
+		preempt_disable();
+		if (mmiotrace_is_enabled()) {
+			disable_pmemtrace_sampler();
+			disable_mmiotrace_soft();
 		} else {
 			rc = -EFAULT;
 		}
