@@ -32,6 +32,7 @@ except Exception as e:
 print(df.columns)
 
 df.insert(1, 'timestamp_sec', df['timestamp'] / 1e9)
+df.insert(1, 'sample_duration_sec', df['sample_duration'] / 1e9)
 
 df['num_barriers'] = df['retired_mfence'] + df['retired_sfence'] + df['retired_lfence']
 
@@ -49,12 +50,22 @@ df[(np.abs(stats.zscore(df['avg_latency_inst_read'])) < 3)]
 # df.loc[df['avg_latency_inst_read'] > threshold, 'avg_latency_inst_read'] = np.nan
 
 # ( #OneBillion * ( UNC_M_PMM_RPQ_OCCUPANCY.ALL / UNC_M_PMM_RPQ_INSERTS ) / UNC_M_CLOCKTICKS:one_unit ) if #PMM_App_Direct else #NA
-df['avg_latency_dev_read'] = (1000000000 * (df['rpq_occupancy'] / df['rpq_inserts']) / df['unc_ticks'])
-df['avg_latency_dev_write'] = (1000000000 * (df['wpq_occupancy'] / df['wpq_inserts']) / df['unc_ticks'])
+
+df['avg_latency_dev_read'] = (1e9 * (df['rpq_occupancy'] / df['rpq_inserts']) / df['unc_ticks'])
+df['avg_latency_dev_write'] = (1e9 * (df['wpq_occupancy'] / df['wpq_inserts']) / df['unc_ticks'])
+
+df['avg_latency_dev_read_dram'] = (1e9 * (df['dram_rpq_occupancy'] / df['dram_rpq_inserts']) / df['unc_ticks'])
 
 # Calculate Read and Write Amplication
 df['ra'] = (df['rpq_inserts'] * 64) / df['bytes_read']
 df['wa'] = (df['wpq_inserts'] * 64) / df['bytes_written']
+
+# Source: https://github.com/andikleen/pmu-tools/blob/master/clx_server_ratios.py (line 661)
+df['pmem_read_bw'] = (df['rpq_inserts'] * 64 / 1e9) / df['sample_duration_sec']
+df['dram_read_bw'] = (df['dram_rpq_inserts'] * 64 / 1e9) / df['sample_duration_sec']
+
+df['pmem_write_bw'] = (df['wpq_inserts'] * 64 / 1e9) / df['sample_duration_sec']
+# df['dram_write_bw'] = (df['dram_wpq_inserts'] * 64 / 1e9) / df['sample_duration_sec']
 
 # Convert from bytes to Mebibyte
 # df['bytes_read'] = df['bytes_read'] / (1024 * 1024)
@@ -99,10 +110,11 @@ ax1.set_ylabel('Number of Operations')
 ax1.set_title("Retired instructions of time")
 ax1.legend()
 
-ax2.plot(df['timestamp_sec'], df['num_barriers'], label='Number of Barriers')
+ax2.plot(df['timestamp_sec'], df['pmem_read_bw'], label='PMEM Read Bandwidth')
+ax2.plot(df['timestamp_sec'], df['pmem_write_bw'], label='PMEM Write Bandwidth')
 ax2.set_xlabel('Time (s)')
-ax2.set_ylabel('Number of Operations')
-ax2.set_title("Retired barrier instructions of time")
+ax2.set_ylabel('GB/s')
+ax2.set_title("PMEM")
 ax2.legend()
 
 # Plot the average latency per write operation on the middle subplot
@@ -114,8 +126,8 @@ ax3.set_title("Instruction Latency: rdtsc timer")
 ax3.legend()
 
 
-ax4.plot(df['timestamp_sec'], df['avg_latency_dev_read'], label='Device Read Latency')
-ax4.plot(df['timestamp_sec'], df['avg_latency_dev_write'], label='Device Write Latency')
+ax4.plot(df['timestamp_sec'], df['avg_latency_dev_read_dram'], label='DRAM Read Latency')
+ax4.plot(df['timestamp_sec'], df['avg_latency_dev_read'], label='PMEM Read Latency')
 ax4.set_xlabel('Time (s)')
 ax4.set_ylabel('Latency (ns)')
 ax4.set_title("Instruction Latency: measured using PEBS PMEM counters")
@@ -140,10 +152,14 @@ ax6.legend()
 
 
 
-ax7.plot(df['timestamp_sec'], df['any_scoop_pmm'], label='Cache snoops')
-ax7.legend()
-ax7.set_title("PMEM direct loads")
+# ax7.plot(df['timestamp_sec'], df['any_scoop_pmm'], label='Cache snoops')
+# ax7.legend()
+# ax7.set_title("PMEM direct loads")
 
+ax7.plot(df['timestamp_sec'], df['any_scoop_l3_miss_dram'], label='Cache miss DRAM')
+ax7.plot(df['timestamp_sec'], df['any_scoop_pmm'], label='Cache miss PMEM')
+ax7.legend()
+ax7.set_title("DRAM")
 
 
 
