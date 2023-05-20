@@ -1297,7 +1297,7 @@ endif
 ifneq "$(KERNELVERSION)" "5.4.232"
 include/config/auto.conf: FORCE
 endif
-ifneq "$(CC_VERSION_TEXT)" "gcc (Ubuntu 11.3.0-1ubuntu1~22.04) 11.3.0"
+ifneq "$(CC_VERSION_TEXT)" "gcc (Ubuntu 11.3.0-1ubuntu1~22.04.1) 11.3.0"
 include/config/auto.conf: FORCE
 endif
 ifneq "$(CC)" "gcc"

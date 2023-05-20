@@ -121,6 +121,9 @@ SYSCALL_DEFINE1(trace_fence, unsigned int, fence_type)
 	if (likely(!is_enabled()))
 		return 0;
 
+	if (!mmiotrace_probes_enabled())
+		return 0;
+
 	preempt_disable();
 	rcu_read_lock();
 
@@ -498,26 +501,25 @@ static void iounmap_trace_core(volatile void __iomem *addr, volatile void __iome
 	list_for_each_entry_safe(trace, tmp, &trace_list, list) {
 		if ((unsigned long)addr == trace->probe.addr) {
 			if (!nommiotrace && trace->enabled) {
-				if (task) {
-					if (task->pid == trace->probe.user_task_pid) {
-						tsk = find_task_by_vpid(trace->probe.user_task_pid);
+				if (trace->probe.user_task_pid) {
+					tsk = find_task_by_vpid(trace->probe.user_task_pid);
 
-						// If task is already dead, just dirty unmap.
-						if (tsk && task->state == TASK_DEAD) {
-							unregister_kmmio_probe(&trace->probe, 1);
-						} else if (!tsk) {
-							unregister_kmmio_probe(&trace->probe, 1);
-						} else {
-							unregister_kmmio_probe(&trace->probe, 0);
-						}
-
-						//trace->enabled = 0;
-						//trace->do_remove = 1;
-
-						list_del(&trace->list);
-						found_trace = trace;
-						break;
+					// If task is already dead, just dirty unmap.
+					if (tsk && task->state == TASK_DEAD) {
+						unregister_kmmio_probe(&trace->probe, 1);
+					} else if (!tsk) {
+						unregister_kmmio_probe(&trace->probe, 1);
+					} else {
+						unregister_kmmio_probe(&trace->probe, 0);
+						do_rcu_sync = 1;
 					}
+
+					//trace->enabled = 0;
+					//trace->do_remove = 1;
+
+					list_del(&trace->list);
+					found_trace = trace;
+					break;
 				} else {
 					unregister_kmmio_probe(&trace->probe, 0);
 					trace->enabled = 0;
@@ -669,7 +671,6 @@ void mmiotrace_attach_user_probes(void)
 {
 	struct remap_trace *trace;
 	//struct remap_trace *tmp;
-	unsigned int is_probes_enabled;
 	int do_require_rcu_sync = 0;
 	int ret;
 	unsigned long flags;
@@ -686,58 +687,25 @@ void mmiotrace_attach_user_probes(void)
 
 
 	if (current->has_pmem_probes) {
-		is_probes_enabled = mmiotrace_probes_enabled();
-
-		if (is_probes_enabled) {
-			list_for_each_entry(trace, &trace_list, list) {
-				if (trace->probe.user_task_pid == current->pid) {
+		list_for_each_entry(trace, &trace_list, list) {
+			if (trace->probe.user_task_pid == current->pid) {
+				if (mmiotrace_probes_enabled()) {
 					if (!trace->enabled && !trace->do_remove) {
 						if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
-							pr_warn_once("mmiotrace_sync_sampler_status: Unable to arm probe %p\n", &trace->probe);
+							pr_warn_once("mmiotrace_sync_sampler_status: Unable to arm probe %p (ret: %d)\n", &trace->probe, ret);
+						} else {
+							trace->enabled = 1;
 						}
-
-						trace->enabled = 1;
 					}
-
-
-					// if (is_probes_enabled) {
-					// 	// Turn on probing.
-					// 	if (!trace->enabled) {
-					// 		if ((ret = register_kmmio_probe(&trace->probe)) < 0) {
-					// 			pr_warn_once("mmiotrace_sync_sampler_status: Unable to arm probe %p\n", &trace->probe);
-					// 		}
-					// 		//pr_info("Enabled probe %p task %d!\n", &trace->probe, current->pid);
-					// 		trace->enabled = 1;
-					// 	} else {
-					// 		//pr_warn("Unable to arm probe %p task %d, already enabled...\n", &trace->probe, cur_task->pid);
-					// 	}
-						
-					// } else {
-					// 	// Turn off probing.
-					// 	if (trace->enabled) {
-					// 		if ((ret = unregister_kmmio_probe(&trace->probe)) < 0) {
-					// 			pr_warn_once("mmiotrace_sync_sampler_status: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);
-					// 		}
-
-					// 		//pr_info("Disabled probe %p task %d!\n", &trace->probe, current->pid);
-					// 		trace->enabled = 0;
-					// 		do_require_rcu_sync = 1;
-					// 	} else {
-					// 		//pr_warn("Unable to disarm probe %p task %d, already disabled...\n", &trace->probe, cur_task->pid);
-					// 	}
-					// }
-				} else if (trace->probe.user_task_pid > 0 && trace->enabled) {
-					// // Disable other user probes.
+				} else if (trace->enabled) {
 					if ((ret = unregister_kmmio_probe(&trace->probe, 0)) < 0) {
 						pr_warn("mmiotrace_sync_sampler_status: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);
+					} else {
+						trace->enabled = 0;
+						do_require_rcu_sync = 1;
 					}
-
-					trace->enabled = 0;
-					do_require_rcu_sync = 1;
 				}
 			}
-			//current->is_pmem_sampling = true;
-			//pr_info("%u\n", is_probes_enabled);
 		}
 
 	}
@@ -825,7 +793,8 @@ void mmiotrace_detach_user_probes(void)
 			}
 
 			if (trace->do_remove) {
-				unregister_kmmio_probe(&trace->probe, 1);
+				if (trace->enabled)
+					unregister_kmmio_probe(&trace->probe, 1);
 
 				list_del(&trace->list);
 				kfree(trace);
@@ -986,6 +955,28 @@ static int pmemtrace_sampler(void *data)
 			//usleep_range(250, 500);
 			msleep_interruptible(1);
 		}
+	}
+
+	return 0;
+}
+
+int enable_pmemtrace_sampler_default_settings(void)
+{
+	if (kth) {
+		return -1;
+	}
+
+	if (is_enabled() && sampling_thread_da.freq > 0) {
+		kth = kthread_create_on_cpu(pmemtrace_sampler, &sampling_thread_da, get_cpu(), "pmemtrace_sampler");
+
+		if (kth != NULL) {
+			wake_up_process(kth);
+			pr_info("pmemtrace sampler enabled.\n");
+
+			return 0;
+		}
+
+		return -1;
 	}
 
 	return 0;
