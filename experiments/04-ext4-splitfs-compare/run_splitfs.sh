@@ -6,7 +6,7 @@ setup_dir=`readlink -f ../../splitfs/scripts/configs`
 
 PRECMD="$source_dir/run_boost.sh -p $source_dir -t nvp_nvp.tree"
 
-args="-s 30 --duty-cycle 0.6"
+args="-s 30 --duty-cycle 0.8 --disable-sampling"
 sudo rm -rf /mnt/pmem_emul/*
 
 date
@@ -26,7 +26,7 @@ cd $current_dir
 #sudo env "PATH=$PATH" $PRECMD fio --name=split-fsfio-randrw-0 --directory=/mnt/pmem_emul --size=2Gb --rw=randrw --bs=4K --rwmixread=0 --rwmixwrite=100 --ioengine=sync
 
 
-$PRECMD fio --name=fio-randrw-50 --directory=/mnt/pmem_emul --size=100M --rw=randrw --bs=4K  --rwmixread=100 --rwmixwrite=0  --ioengine=sync
+#$PRECMD fio --name=fio-randrw-50 --directory=/mnt/pmem_emul --size=100M --rw=randrw --bs=4K  --rwmixread=100 --rwmixwrite=0  --ioengine=sync
 sudo pmemtrace $args splitfs-fio-randrw-50 $PRECMD fio --name=fio-randrw-50 --directory=/mnt/pmem_emul --size=100M --rw=randrw --bs=4K  --rwmixread=100 --rwmixwrite=0  --ioengine=sync
 
 #sudo env "PATH=$PATH" $PRECMD fio --name=splitfs-fio-randrw-0 --directory=/mnt/pmem_emul --size=1Gb --rw=randrw --bs=4K  --rwmixread=50 --rwmixwrite=50  --ioengine=sync
