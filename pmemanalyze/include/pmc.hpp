@@ -7,17 +7,20 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <cassert>
 
 #include <sys/syscall.h>
 
 //#define PMC_VERBOSE
 
 
-struct iMCProbe {
+struct Probe {
 public:
+    bool _is_imc;
     size_t num_probes;
     std::array<unsigned int, 16> fd_probes;
     unsigned int event_id = 0;
+    unsigned long msr_reg = 0x0;
 
     inline void probe_reset() const
     {
@@ -48,11 +51,27 @@ public:
         }
     }
 
-    inline void probe_count_single_imc(unsigned long long *count) const
+    inline void probe_count_single(unsigned long long *count) const
     {
         ssize_t bytes_read;
         if (this->num_probes > 0)
             bytes_read = read(this->fd_probes[0], count, sizeof(count));
+
+	if (bytes_read != sizeof(count))
+		assert(false);
+	//std::cout << "Bytes read: " << bytes_read << std::endl;
+    }
+
+    inline void set_imc() {
+        _is_imc = true;
+    }
+
+    inline void set_oncore() {
+        _is_imc = false;
+    }
+
+    inline bool is_imc() const {
+	    return _is_imc;
     }
 };
 
@@ -63,8 +82,8 @@ public:
     bool init();
     void print_imcs(std::ostream &os) const;
     
-    int add_probe(const int imc_id, const unsigned int event_id) const;
-    bool add_imc_probe(const unsigned int event_id);
+    bool add_imc_probe(const unsigned int event_id, const bool is_single = false);
+    bool add_oncore_probe(const unsigned int event_id, const int pid, const unsigned long msr = 0x0);
     
     void enable_imc_probes() const;
     void disable_imc_probes() const;
@@ -72,21 +91,23 @@ public:
 
     bool remove_probe(const int fd) const;
     bool remove_imc_probes() const;
-    iMCProbe& get_probe(const unsigned int event_id);
+    Probe& get_probe(const unsigned int event_id);
+    Probe& get_probe_msr(const unsigned int event_id, const unsigned long msr_reg);
 
     // inline void probe_reset(const struct iMCProbe& iMCProbe) const;
     // inline void probe_enable(const struct iMCProbe& iMCProbe) const;
     // inline void probe_disable(const struct iMCProbe& iMCProbe) const;
 
 private:
+    int add_probe(const unsigned int event_id, const int imc_id, const int pid, const unsigned long msr_reg = 0x0) const;
     void find_imcs();
 
 private:
     std::array<unsigned int, 16> imc_ids;
-    std::array<iMCProbe, 32> imc_probes = {};
+    std::array<Probe, 32> probes = {};
 
     size_t num_imcs = 0;
-    size_t num_imc_probes = 0;
+    size_t num_probes = 0;
 };
 
 

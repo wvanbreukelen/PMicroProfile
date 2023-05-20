@@ -15,6 +15,7 @@ inline void read_value(const TraceEntry& entry, const bool is_sampling, struct i
         const unsigned long long start_ticks = __builtin_ia32_rdtsc();
         temp_var = *(static_cast<T*>(entry.dax_addr));
         cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        ++(cur_sample->num_classic_rw);
     } else {
         temp_var = *(static_cast<T*>(entry.dax_addr));
     }
@@ -42,6 +43,7 @@ inline void write_mov_8(const TraceEntry& entry, const bool is_sampling, struct 
         #endif
 
         cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        ++(cur_sample->num_classic_rw);
     } else {
         #ifdef STRICT_CONSISTENCY
         _mm_sfence();
@@ -77,6 +79,7 @@ inline void write_movnti_32(const TraceEntry& entry, const bool is_sampling, str
         #endif
 
         cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        ++(cur_sample->num_movnti);
     } else {
         #ifdef STRICT_CONSISTENCY
         _mm_sfence();
@@ -125,6 +128,7 @@ inline void write_movntq_64(const TraceEntry& entry, const bool is_sampling, str
         #endif
 
         cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        ++(cur_sample->num_movntq);
     } else {
         #ifdef STRICT_CONSISTENCY
         _mm_sfence();
@@ -172,6 +176,7 @@ inline void write_movntqd_128(const TraceEntry& entry, const bool is_sampling, s
         #endif
 
         cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        ++(cur_sample->num_movntqd);
     } else {
         #ifdef STRICT_CONSISTENCY
         _mm_sfence();
@@ -219,6 +224,7 @@ inline void write_movntps_128(const TraceEntry& entry, const bool is_sampling, s
         #endif
 
         cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        ++(cur_sample->num_movntps);
     } else {
         #ifdef STRICT_CONSISTENCY
         _mm_sfence();
@@ -253,11 +259,52 @@ inline void flush_clflush(const TraceEntry& entry, const bool is_sampling, struc
             unsigned long long start_ticks = __builtin_ia32_rdtsc();
             _mm_clflushopt(entry.dax_addr);
             cur_sample->flush_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
-            ++(cur_sample->num_flushes);
         } else {
             _mm_clflushopt(entry.dax_addr);
         }
     #else
     _mm_clflushopt(entry.dax_addr);
+    #endif
+}
+
+inline void barrier_mfence(const TraceEntry& entry, const bool is_sampling, struct io_sample *const cur_sample)
+{
+    #ifdef ENABLE_DCOLLECTION
+        if (is_sampling) {
+            _mm_mfence();
+            ++(cur_sample->num_mfence);
+        } else {
+            _mm_mfence();
+        }
+    #else
+    _mm_mfence();
+    #endif
+}
+
+inline void barrier_sfence(const TraceEntry& entry, const bool is_sampling, struct io_sample *const cur_sample)
+{
+    #ifdef ENABLE_DCOLLECTION
+        if (is_sampling) {
+            _mm_sfence();
+            ++(cur_sample->num_sfence);
+        } else {
+            _mm_sfence();
+        }
+    #else
+    _mm_sfence();
+    #endif
+}
+
+inline void barrier_lfence(const TraceEntry& entry, const bool is_sampling, struct io_sample *const cur_sample)
+{
+    #ifdef ENABLE_DCOLLECTION
+        if (is_sampling) {
+            _mm_lfence();
+            ++(cur_sample->num_lfence);
+        } else {
+            _mm_lfence();
+        }
+    #else
+    _mm_lfence();
     #endif
 }

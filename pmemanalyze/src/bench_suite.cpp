@@ -226,6 +226,7 @@ static __inline__ unsigned long long rdtsc(void)
 
 static inline uint64_t next_pow2_fast(uint64_t x)
 {
+
     #if defined(__GNUC__) || defined(__GNUG___)
     // ref: https://jameshfisher.com/2018/03/30/round-up-power-2/
     return (x == 1) ? 1 : 1 << (64 - __builtin_clzl(x - 1));
@@ -244,13 +245,29 @@ static inline uint64_t next_pow2_fast(uint64_t x)
 
 static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur_sample, ssize_t* total_bytes, unsigned long long *_latest_sample_time, struct io_stat* stat)
 {
-    constexpr uint64_t sample_mask = (1024 - 1);
+    constexpr uint64_t sample_mask = (16384 - 1);
     bool is_sampling = false;
     unsigned long long cur_time;
     unsigned long long latest_sample_time = *(_latest_sample_time);
+    auto latest_sample_time_us = std::chrono::high_resolution_clock::now();
+    void* prev_addr = nullptr;
     size_t z = 0;
 
 
+    #ifdef ENABLE_DCOLLECTION
+	pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_reset();
+	pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_enable();
+    pmc.get_probe(EVENT_MEM_INST_RETIRED_ALL_STORES).probe_reset();
+    pmc.get_probe(EVENT_MEM_INST_RETIRED_ALL_STORES).probe_enable();
+    
+	pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_reset();
+	pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_enable();
+    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
+	pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_enable();
+
+    pmc.reset_imc_probes();
+	pmc.enable_imc_probes();
+    #endif
 
     for (const TraceEntry& entry : trace_file) {
         #ifdef ENABLE_DCOLLECTION
@@ -260,24 +277,42 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
             if (is_sampling) {
                 if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_ON) {
                     pmc.disable_imc_probes();
+                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_disable();
 
                     is_sampling = false;
-                    (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time_start));
 
-                    pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single_imc(&((*cur_sample)->unc_ticks));
-                    pmc.get_probe(EVENT_UNC_M_PMM_RPQ_INSERTS).probe_count(&((*cur_sample)->rpq_inserts));
+                    const auto time_now = std::chrono::high_resolution_clock::now();
+                    
+                    (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - time_start));
+                    (*cur_sample)->sample_duration = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - latest_sample_time_us));
+
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_INSERTS).probe_count(&((*cur_sample)->wpq_inserts));
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->wpq_occupancy));
+    
+                    pmc.get_probe(EVENT_UNC_M_PMM_RPQ_INSERTS).probe_count(&((*cur_sample)->rpq_inserts));
                     pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->rpq_occupancy));
+
+                    pmc.get_probe(EVENT_UNC_M_RPQ_INSERTS).probe_count(&((*cur_sample)->dram_rpq_inserts));
+                    pmc.get_probe(EVENT_UNC_M_RPQ_OCCUPANCY).probe_count(&((*cur_sample)->dram_rpq_occupancy));
+
+                    pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single(&((*cur_sample)->unc_ticks));
+
+                    pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_count_single(&((*cur_sample)->l3_misses_local_pmm));
+                    pmc.get_probe(EVENT_MEM_INST_RETIRED_ALL_STORES).probe_count_single(&((*cur_sample)->retired_all_stores));
+		            pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_count_single(&((*cur_sample)->pmm_any_snoop));
+                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_count_single(&((*cur_sample)->dram_l3_miss_any_snoop));
+
+
+                    //pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM).probe_count_single(&((*cur_sample)->l3_misses_remote_pmm));
 
                     (*cur_sample)->total_bytes_read_write = *(total_bytes);
 
                     (*cur_sample)++;
                     ++(stat->num_collected_samples);
 
-                    if (stat->num_collected_samples > MAX_SAMPLES) {
+                    if (unlikely(stat->num_collected_samples > MAX_SAMPLES)) {
                         std::cerr << "Number of collected sample exteeds MAX_SAMPLES (= " << std::dec << MAX_SAMPLES << "), please increase!" << std::endl;
-                        pthread_exit(NULL);
+                        //pthread_exit(NULL);
                     }
                     
                     latest_sample_time = cur_time;
@@ -286,6 +321,11 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_OFF) {
                     is_sampling = true;
                     latest_sample_time = cur_time;
+                    latest_sample_time_us = std::chrono::high_resolution_clock::now();
+                    prev_addr = nullptr;
+
+                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
+                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_enable();
 
                     pmc.reset_imc_probes();
                     pmc.enable_imc_probes();
@@ -324,7 +364,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     default:
                         std::cerr << "Unsupported op size " << std::dec << entry.op_size << "!" << std::endl;
                         
-                        pthread_exit(NULL);
+                        //pthread_exit(NULL);
                         break;
                 }
 
@@ -332,8 +372,17 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 if (is_sampling) {
                     ++((*cur_sample)->num_reads);
                     (*cur_sample)->bytes_read += entry.op_size;
+
+                    // Determine absolute distance between addresses and sum.
+                    if (prev_addr != nullptr) {
+                        const std::ptrdiff_t ptr_distance = reinterpret_cast<char*>(entry.dax_addr) - reinterpret_cast<char*>(prev_addr);
+                        (*cur_sample)->total_addr_distance += (ptr_distance < 0) ? (-ptr_distance) : ptr_distance;
+                    }
+                    prev_addr = entry.dax_addr;
                 }
                 #endif
+
+                *total_bytes += entry.op_size;
 
                 break;
             }
@@ -372,7 +421,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     std::cerr << "Unsupported operation 0x" << std::hex << entry.opcode << "!" << std::endl;
                     std::cout << entry << std::endl;
 
-                    pthread_exit(NULL);
+                    //pthread_exit(NULL);
                     break;
                 }
 
@@ -380,29 +429,48 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 if (is_sampling) {
                     ++((*cur_sample)->num_writes);
                     (*cur_sample)->bytes_written += entry.op_size;
+
+                    // Determine absolute distance between addresses and sum.
+                    if (prev_addr != nullptr) {
+                        const std::ptrdiff_t ptr_distance = reinterpret_cast<char*>(entry.dax_addr) - reinterpret_cast<char*>(prev_addr);
+                        (*cur_sample)->total_addr_distance += (ptr_distance < 0) ? (-ptr_distance) : ptr_distance;
+                    }
+                    prev_addr = entry.dax_addr;
                 }
                 #endif
+                *total_bytes += entry.op_size;
 
                 break;
             }
             case TraceOperation::CLFLUSH:
             {
                 flush_clflush(entry, is_sampling, *cur_sample);
+
+                #ifdef ENABLE_DCOLLECTION
+                ++((*cur_sample)->num_flushes);
+
+                // Determine absolute distance between addresses and sum.
+                if (prev_addr != nullptr) {
+                    const std::ptrdiff_t ptr_distance = reinterpret_cast<char*>(entry.dax_addr) - reinterpret_cast<char*>(prev_addr);
+                    (*cur_sample)->total_addr_distance += (ptr_distance < 0) ? (-ptr_distance) : ptr_distance;
+                }
+                prev_addr = entry.dax_addr;
+                #endif
                 break;
             }
             case TraceOperation::MFENCE:
             {
-                _mm_mfence();
+                barrier_mfence(entry, is_sampling, *cur_sample);
                 break;
             }
             case TraceOperation::SFENCE:
             {
-                _mm_sfence();
+                barrier_sfence(entry, is_sampling, *cur_sample);
                 break;
             }
             case TraceOperation::LFENCE:
             {
-                _mm_lfence();
+                barrier_lfence(entry, is_sampling, *cur_sample);
                 break;
             }
 
@@ -411,8 +479,6 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 assert(false);
                 break;
         }
-
-        *total_bytes += entry.op_size;
     }
 
     *(_latest_sample_time) = latest_sample_time;
@@ -435,13 +501,14 @@ static void* do_work(void *arg)
 
     if (!pmc.init()) {
         std::cerr << "Failed to initialize PMC!" << std::endl;
-        pthread_exit(NULL);
+        return nullptr;
+        //pthread_exit(NULL);
     }
 
     #ifdef ENABLE_DCOLLECTION
     //struct iMCProbe unc_ticks_probe{}, wpq_probe{}, rpq_probe{}, wpq_occupancy_probe{}, rpq_occupancy_probe{};
 
-    if (!pmc.add_imc_probe(EVENT_UNC_M_CLOCKTICKS)) {
+    if (!pmc.add_imc_probe(EVENT_UNC_M_CLOCKTICKS, true)) {
         std::cerr << "Unable to add EVENT_UNC_M_CLOCKTICKS probe!" << std::endl;
         //pthread_exit(NULL);
     }
@@ -456,6 +523,16 @@ static void* do_work(void *arg)
         //pthread_exit(NULL);
     }
 
+    if (!pmc.add_imc_probe(EVENT_UNC_M_RPQ_INSERTS)) {
+        std::cerr << "Unable to add EVENT_UNC_M_RPQ_INSERTS probe!" << std::endl;
+        //pthread_exit(NULL);
+    }
+
+    if (!pmc.add_imc_probe(EVENT_UNC_M_RPQ_OCCUPANCY)) {
+        std::cerr << "Unable to add EVENT_UNC_M_RPQ_OCCUPANCY probe!" << std::endl;
+        //pthread_exit(NULL);
+    }
+
     if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL)) {
         std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL probe!" << std::endl;
         //pthread_exit(NULL);
@@ -465,6 +542,23 @@ static void* do_work(void *arg)
         std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL probe!" << std::endl;
         //pthread_exit(NULL);
     }
+
+    if (!pmc.add_oncore_probe(EVENT_MEM_INST_RETIRED_ALL_STORES, syscall(SYS_gettid))) {
+        std::cerr << "Unable to add EVENT_MEM_INST_RETIRED_ALL_STORES probe!" << std::endl;
+    }
+
+    if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM, syscall(SYS_gettid))) {
+        std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM probe!" << std::endl;
+        //pthread_exit(NULL);
+    }
+
+    pmc.add_oncore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_PMM_HIT_LOCAL_ANY_SNOOP); // L2: 0x3f80400010  0x804007F7
+    pmc.add_oncore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP);
+
+    //if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM, syscall(SYS_gettid))) {
+    //    std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM probe!" << std::endl;
+        //pthread_exit(NULL);
+    //}
 
 
     // unc_ticks_probe.probe_reset();
@@ -509,7 +603,8 @@ static void* do_work(void *arg)
     stat->write_bytes += (args->trace_file->get_total(TraceOperation::WRITE) * i);
     stat->total_bytes += (stat->read_bytes + stat->write_bytes);
 
-    pthread_exit(NULL);
+    //pthread_exit(NULL);
+    return nullptr;
 }
 
 bool BenchSuite::run(const size_t replay_rounds)
@@ -561,7 +656,9 @@ bool BenchSuite::run(const size_t replay_rounds)
         // https://www.strchr.com/performance_measurements_with_rdtsc
         // !!! We might need to fix CPU frequency, maybe we can set the CPU governor to performance and disable turbo?
         // Disabling hyperthreading will be difficult though.
-        rc = pthread_create(&threads[i], &attr, do_work, static_cast<void*>(&(thread_args[i])));
+        //rc = pthread_create(&threads[i], &attr, do_work, static_cast<void*>(&(thread_args[i])));
+
+	    do_work(static_cast<void*>(&(thread_args[i])));
 
         if (rc) {
             std::cerr << "Unable to create thread" << std::endl;
@@ -571,7 +668,7 @@ bool BenchSuite::run(const size_t replay_rounds)
     }
 
     for (size_t i = 0; i < this->num_threads; ++i) {
-        pthread_join(threads[i], NULL);
+        //pthread_join(threads[i], NULL);
     }
 
     const struct io_stat* thread_stat = nullptr;
@@ -592,7 +689,7 @@ bool BenchSuite::run(const size_t replay_rounds)
     for (size_t i = 0; i < this->num_threads; ++i) {
         BenchExport bench_export(thread_args[i]);
 
-        bench_export.export_io_stat("test.csv");
+        bench_export.export_io_stat("./out.csv");
     }
     
     return true;

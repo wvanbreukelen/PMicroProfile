@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #include "trace.hpp"
 #define MAX_SAMPLES 1000000
 
@@ -7,10 +9,21 @@
 struct io_sample {
 public:
     std::chrono::duration<long, std::nano> time_since_start;
+    std::chrono::duration<long, std::nano> sample_duration;
 
     size_t num_reads = 0;
     size_t num_writes = 0;
     size_t num_flushes = 0;
+
+    size_t num_classic_rw = 0;
+    size_t num_movnti = 0;
+    size_t num_movntq = 0;
+    size_t num_movntqd = 0;
+    size_t num_movntps = 0;
+
+    size_t num_mfence = 0;
+    size_t num_sfence = 0;
+    size_t num_lfence = 0;
     
     size_t bytes_read = 0;
     size_t bytes_written = 0;
@@ -24,14 +37,28 @@ public:
 
     unsigned long long rpq_inserts = 0;
     unsigned long long wpq_inserts = 0;
+    unsigned long long dram_rpq_inserts = 0;
 
     unsigned long long rpq_occupancy = 0;
     unsigned long long wpq_occupancy = 0;
+    unsigned long long dram_rpq_occupancy = 0;
+
+    unsigned long long retired_all_stores = 0;
+
+    unsigned long long l3_misses_local_pmm = 0;
+    unsigned long long l3_misses_remote_pmm = 0;
+
+    unsigned long long pmm_any_snoop = 0;
+    unsigned long long dram_l3_miss_any_snoop = 0;
+
+    unsigned long prev_addr = 0;
+    unsigned long total_addr_distance = 0;
 };
 
 template<typename Stream>
 Stream& operator<<(Stream& os, const io_sample& sample) {
     os << sample.time_since_start.count() << ","
+       << sample.sample_duration.count() << ","
        << sample.num_reads << ","
        << sample.read_inst_cycles << ","
        << sample.num_writes << ","
@@ -40,12 +67,33 @@ Stream& operator<<(Stream& os, const io_sample& sample) {
        << sample.flush_inst_cycles << ","
        << sample.bytes_read << ","
        << sample.bytes_written << ","
+
+       << sample.num_classic_rw << ","
+       << sample.num_movnti << ","
+       << sample.num_movntq << ","
+       << sample.num_movntqd << ","
+       << sample.num_movntps << ","
+
+       << sample.num_mfence << ","
+       << sample.num_sfence << ","
+       << sample.num_lfence << ","
+
        << sample.wpq_inserts << ","
        << sample.rpq_inserts << ","
        << sample.wpq_occupancy << ","
        << sample.rpq_occupancy << ","
+       << sample.dram_rpq_inserts << ","
+       << sample.dram_rpq_occupancy << ","
        << sample.unc_ticks << ","
-       << sample.total_bytes_read_write;
+       << sample.total_bytes_read_write << ","
+
+       << sample.retired_all_stores << ","
+       << sample.l3_misses_local_pmm << ","
+       << sample.l3_misses_remote_pmm << ","
+       << sample.pmm_any_snoop << ","
+       << sample.dram_l3_miss_any_snoop << ","
+
+       << sample.total_addr_distance;
     
     return os;
 }

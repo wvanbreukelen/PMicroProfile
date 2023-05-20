@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 
+def NormalizeData(data):
+    return (data - np.min(data)) / (np.max(data) - np.min(data))
+
 # Get the script name
 script_name = os.path.basename(__file__)
 
@@ -26,7 +29,11 @@ except Exception as e:
     print(f'Error: {e}')
     sys.exit(1)
 
+print(df.columns)
+
 df.insert(1, 'timestamp_sec', df['timestamp'] / 1e9)
+
+df['num_barriers'] = df['retired_mfence'] + df['retired_sfence'] + df['retired_lfence']
 
 df['avg_latency_inst_write'] = df['write_cycles'] / df['num_writes']
 df['avg_latency_inst_read'] = df['read_cycles'] / df['num_reads']
@@ -50,8 +57,10 @@ df['ra'] = (df['rpq_inserts'] * 64) / df['bytes_read']
 df['wa'] = (df['wpq_inserts'] * 64) / df['bytes_written']
 
 # Convert from bytes to Mebibyte
-df['bytes_read'] = df['bytes_read'] / (1024 * 1024)
-df['bytes_written'] = df['bytes_written'] / (1024 * 1024)
+# df['bytes_read'] = df['bytes_read'] / (1024 * 1024)
+# df['bytes_written'] = df['bytes_written'] / (1024 * 1024)
+
+df['total_addr_distance_normalized'] = df['total_addr_distance'] / (df['num_reads'] + df['num_writes'] + df['num_flushes'])
 
 # Average latency of data read request
 # df['avg_latency_pmem_read'] = df['rpq_occupancy'] / df['rpq_inserts']
@@ -60,9 +69,9 @@ df['bytes_written'] = df['bytes_written'] / (1024 * 1024)
 
 # Smooth the data using a 5-point moving average
 window_size = int(len(df) * 0.005) if int(len(df) * 0.005) > 0 else 5
-df['smoothed_reads'] = df['num_reads'].rolling(window_size, center=True).mean()
-df['smoothed_writes'] = df['num_writes'].rolling(window_size, center=True).mean()
-df['smoothed_flushes'] = df['num_flushes'].rolling(window_size, center=True).mean()
+# df['smoothed_reads'] = df['num_reads'].rolling(window_size, center=True).mean()
+# df['smoothed_writes'] = df['num_writes'].rolling(window_size, center=True).mean()
+# df['smoothed_flushes'] = df['num_flushes'].rolling(window_size, center=True).mean()
 
 df['smoothed_bytes_read'] = df['bytes_read'].rolling(window_size, center=True).mean()
 df['smoothed_bytes_written'] = df['bytes_written'].rolling(window_size, center=True).mean()
@@ -76,44 +85,65 @@ df['smoothed_wa'] = df['wa'].rolling(window_size, center=True).mean()
 
 
 # Print the contents of the DataFrame
-print(df)
+with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+    print(df.loc[[0]])
 
-fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(nrows=5, ncols=1, figsize=(10, 8))
+fig, (ax1, ax2, ax3, ax4, ax5, ax6, ax7) = plt.subplots(nrows=7, ncols=1, figsize=(10, 8))
 
 # Plot the number of reads and writes on the top subplot
-ax1.plot(df['timestamp_sec'], df['smoothed_reads'], label='Number of Reads')
-ax1.plot(df['timestamp_sec'], df['smoothed_writes'], label='Number of Writes')
-ax1.plot(df['timestamp_sec'], df['smoothed_flushes'], label='Number of Flushes')
+ax1.plot(df['timestamp_sec'], df['num_reads'], label='Number of Reads')
+ax1.plot(df['timestamp_sec'], df['num_writes'], label='Number of Writes')
+ax1.plot(df['timestamp_sec'], df['num_flushes'], label='Number of Flushes')
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('Number of Operations')
+ax1.set_title("Retired instructions of time")
 ax1.legend()
 
-# Plot the average latency per write operation on the middle subplot
-ax2.plot(df['timestamp_sec'], df['avg_latency_inst_write'], label='Avg. Latency per Write')
-ax2.plot(df['timestamp_sec'], df['avg_latency_inst_write'], label='Avg. Latency per Read')
+ax2.plot(df['timestamp_sec'], df['num_barriers'], label='Number of Barriers')
 ax2.set_xlabel('Time (s)')
-ax2.set_ylabel('Instruction Latency (cycles)')
+ax2.set_ylabel('Number of Operations')
+ax2.set_title("Retired barrier instructions of time")
 ax2.legend()
 
-# Plot the bytes read and written on the bottom subplot
-ax3.plot(df['timestamp_sec'], df['smoothed_bytes_read'].cumsum(), label='Bytes Read')
-ax3.plot(df['timestamp_sec'], df['smoothed_bytes_written'].cumsum(), label='Bytes Written')
+# Plot the average latency per write operation on the middle subplot
+ax3.plot(df['timestamp_sec'], df['avg_latency_inst_read'], label='Avg. Latency per Read')
+ax3.plot(df['timestamp_sec'], df['avg_latency_inst_write'], label='Avg. Latency per Write')
 ax3.set_xlabel('Time (s)')
-ax3.set_ylabel('Mebibyte (MiB)')
+ax3.set_ylabel('Instruction Latency (cycles)')
+ax3.set_title("Instruction Latency: rdtsc timer")
 ax3.legend()
 
-ax4.plot(df['timestamp_sec'], df['wa'], label='Device Read Amplification')
-ax4.plot(df['timestamp_sec'], df['ra'], label='Device Write Amplification')
+
+ax4.plot(df['timestamp_sec'], df['avg_latency_dev_read'], label='Device Read Latency')
+ax4.plot(df['timestamp_sec'], df['avg_latency_dev_write'], label='Device Write Latency')
 ax4.set_xlabel('Time (s)')
-ax4.set_ylabel('Factor')
+ax4.set_ylabel('Latency (ns)')
+ax4.set_title("Instruction Latency: measured using PEBS PMEM counters")
 ax4.legend()
 
+# Plot the bytes read and written on the bottom subplot
+# ax3.plot(df['timestamp_sec'], df['smoothed_bytes_read'].cumsum(), label='Bytes Read')
+# ax3.plot(df['timestamp_sec'], df['smoothed_bytes_written'].cumsum(), label='Bytes Written')
+# ax3.set_xlabel('Time (s)')
+# ax3.set_ylabel('Mebibyte (MiB)')
+# ax3.legend()
 
-ax5.plot(df['timestamp_sec'], df['avg_latency_dev_read'], label='Device Read Latency')
-ax5.plot(df['timestamp_sec'], df['avg_latency_dev_write'], label='Device Write Latency')
-ax5.set_xlabel('Time (s)')
-ax5.set_ylabel('Latency (ns)')
-ax5.legend()
+ax5.plot(df['timestamp_sec'], NormalizeData(df['total_addr_distance_normalized']), label='Address Distance')
+ax5.set_title("Data Locality (normalized: [0.0, 1.0])")
+
+ax6.plot(df['timestamp_sec'], df['ra'], label='RA')
+ax6.plot(df['timestamp_sec'], df['wa'], label='WA')
+ax6.set_xlabel('Time (s)')
+ax6.set_ylabel('Factor')
+ax6.set_title("Device Read/Write Amplification")
+ax6.legend()
+
+
+
+ax7.plot(df['timestamp_sec'], df['any_scoop_pmm'], label='Cache snoops')
+ax7.legend()
+ax7.set_title("PMEM direct loads")
+
 
 
 
