@@ -133,7 +133,7 @@ extern void enable_mmiotrace(void);
 extern void disable_mmiotrace(void);
 
 extern int enable_pmemtrace_sampler(unsigned int freq, unsigned int duty_cycle, unsigned int is_time_triggered);
-extern int enable_pmemtrace_sampler_default(void);
+extern int enable_pmemtrace_sampler_default_settings(void);
 extern int disable_pmemtrace_sampler(void);
 extern int set_pmemtrace_multicore(unsigned int is_on);
 

@@ -27,6 +27,9 @@
 #include "log.h"
 #include "tbl_mmaps.h"
 
+#define ND_CMD_TRACE_TOGGLE_ON 16
+#define ND_CMD_TRACE_TOGGLE_OFF 17
+
 BOOST_PP_SEQ_FOR_EACH(DECLARE_WITHOUT_ALIAS_FUNCTS_IWRAP, _nvp_, ALLOPS_WPAREN)
 BOOST_PP_SEQ_FOR_EACH(DECLARE_WITHOUT_ALIAS_FUNCTS_IWRAP, _nvp_, SHM_WPAREN)
 BOOST_PP_SEQ_FOR_EACH(DECLARE_WITHOUT_ALIAS_FUNCTS_IWRAP, _nvp_, METAOPS)
@@ -1083,7 +1086,18 @@ int is_clflushopt_supported() {
 void _nvp_init2(void)
 {
 	int i, j;
+	int rc;
 	struct InodeToMapping *tempMapping;
+
+	int fd_dev = open("/dev/ndctl0", O_RDWR);
+	if (fd_dev < 0)
+	{
+		fprintf(stderr, "Failed to open device!\n");
+		exit(EXIT_FAILURE);
+	}
+
+    rc = ioctl(fd_dev, ND_CMD_TRACE_TOGGLE_OFF);
+	MSG("Disabled tracing while setting up update log.\n");
 
 	assert(!posix_memalign(((void**)&_nvp_zbuf), 4096, 4096));
 
@@ -1542,6 +1556,10 @@ void _nvp_init2(void)
 	else
 		execv_done = 0;
 
+	rc = ioctl(fd_dev, ND_CMD_TRACE_TOGGLE_ON);
+	MSG("Enabled tracing.\n");
+
+	close(fd_dev);
 }
 
 void nvp_transfer_to_free_dr_pool(struct NVNode *node)
