@@ -17,7 +17,10 @@
 #include "pmc.hpp"
 #include "io.hpp"
 
+using std::chrono::duration_cast;
+
 std::chrono::time_point<std::chrono::high_resolution_clock> time_start;
+typedef std::chrono::duration<unsigned long long, std::nano> nanoseconds;
 
 inline void flush_clwb(char* addr, const size_t len) {
     const char* end_addr = addr + len;
@@ -37,16 +40,16 @@ inline void flush_clflushopt(char* addr, const size_t len) {
 struct clock
 {
     typedef unsigned long long                 rep;
-    typedef std::ratio<1, 2'800'000'000>       period; // My machine is 2.8 GHz
+    typedef std::ratio<1, 3'500'000'000>       period;
     typedef std::chrono::duration<rep, period> duration;
     typedef std::chrono::time_point<clock>     time_point;
     static const bool is_steady =              true;
 
-    static time_point now() noexcept
+    static unsigned long long now() noexcept
     {
         unsigned lo, hi;
         asm volatile("rdtsc" : "=a" (lo), "=d" (hi));
-        return time_point(duration(static_cast<rep>(hi) << 32 | lo));
+        return duration_cast<nanoseconds>(duration(static_cast<rep>(hi) << 32 | lo)).count();
     }
 };
 
@@ -264,7 +267,8 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 {
     constexpr uint64_t sample_mask = (16384 - 1);
     bool is_sampling = false;
-    unsigned long long cur_time;
+    unsigned long long cur_time_us;
+
     unsigned long long latest_sample_time = *(_latest_sample_time);
     auto latest_sample_time_us = std::chrono::high_resolution_clock::now();
     void* prev_addr = nullptr;
@@ -289,12 +293,13 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
     for (const TraceEntry& entry : trace_file) {
         #ifdef ENABLE_DCOLLECTION
         if (unlikely((z & sample_mask) == 0)) {  // (cur_time - latest_sample_time) >= SAMPLE_LENGTH
-            cur_time = __builtin_ia32_rdtsc();
+            //cur_time = __builtin_ia32_rdtsc();
+            cur_time_us = clock::now();
 
             if (is_sampling) {
-                if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_ON) {
+                if ((cur_time_us - latest_sample_time) >= SAMPLE_PERIOD_ON_US) {
                     const auto time_now = std::chrono::high_resolution_clock::now();
-			(*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - time_start));
+			        (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - time_start));
                     (*cur_sample)->sample_duration = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - latest_sample_time_us));
 
                     pmc.disable_imc_probes();
@@ -336,12 +341,12 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                         //pthread_exit(NULL);
                     }
                     
-                    latest_sample_time = cur_time;
+                    latest_sample_time = cur_time_us;
                 }
             } else {
-                if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_OFF) {
+                if ((cur_time_us - latest_sample_time) >= SAMPLE_PERIOD_OFF_US) {
                     is_sampling = true;
-                    latest_sample_time = cur_time;
+                    latest_sample_time = cur_time_us;
                     latest_sample_time_us = std::chrono::high_resolution_clock::now();
                     prev_addr = nullptr;
 
@@ -596,20 +601,20 @@ static void* do_work(void *arg)
     size_t i = 0;
     //const uint64_t sample_mask = next_pow2_fast(args->trace_file->size() / args->num_samples) - 1;
     
-    unsigned long long latest_sample_time = 0;
+    unsigned long long latest_sample_time_us = 0;
     io_stat dummy_stat;
 
     for (size_t round = 0; round < args->cache_warming_rounds; ++round)
-        replay_trace(*args->trace_file, pmc, &cur_sample, &total_bytes, &latest_sample_time, &dummy_stat);
+        replay_trace(*args->trace_file, pmc, &cur_sample, &total_bytes, &latest_sample_time_us, &dummy_stat);
 
     time_start = std::chrono::high_resolution_clock::now();
-    latest_sample_time = __builtin_ia32_rdtsc();
+    latest_sample_time_us = clock::now();
     total_bytes = 0;
     sample_pos = 0;
     cur_sample = &(stat->samples[0]);
 
     for (; i < args->replay_rounds + 1; ++i)
-        replay_trace(*args->trace_file, pmc, &cur_sample, &total_bytes, &latest_sample_time, stat);
+        replay_trace(*args->trace_file, pmc, &cur_sample, &total_bytes, &latest_sample_time_us, stat);
     
     const auto time_stop = std::chrono::high_resolution_clock::now();
 
