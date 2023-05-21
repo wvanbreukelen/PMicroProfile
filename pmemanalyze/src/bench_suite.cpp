@@ -33,6 +33,23 @@ inline void flush_clflushopt(char* addr, const size_t len) {
     }
 }
 
+// Source: https://stackoverflow.com/questions/275004/timer-function-to-provide-time-in-nano-seconds-using-c/11485388#11485388
+struct clock
+{
+    typedef unsigned long long                 rep;
+    typedef std::ratio<1, 2'800'000'000>       period; // My machine is 2.8 GHz
+    typedef std::chrono::duration<rep, period> duration;
+    typedef std::chrono::time_point<clock>     time_point;
+    static const bool is_steady =              true;
+
+    static time_point now() noexcept
+    {
+        unsigned lo, hi;
+        asm volatile("rdtsc" : "=a" (lo), "=d" (hi));
+        return time_point(duration(static_cast<rep>(hi) << 32 | lo));
+    }
+};
+
 void BenchSuite::drop_caches()
 {
     int fd;
@@ -276,15 +293,19 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 
             if (is_sampling) {
                 if ((cur_time - latest_sample_time) >= SAMPLE_PERIOD_ON) {
+                    const auto time_now = std::chrono::high_resolution_clock::now();
+			(*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - time_start));
+                    (*cur_sample)->sample_duration = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - latest_sample_time_us));
+
                     pmc.disable_imc_probes();
                     pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_disable();
 
                     is_sampling = false;
 
-                    const auto time_now = std::chrono::high_resolution_clock::now();
+                    //const auto time_now = std::chrono::high_resolution_clock::now();
                     
-                    (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - time_start));
-                    (*cur_sample)->sample_duration = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - latest_sample_time_us));
+                    //(*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - time_start));
+                    //(*cur_sample)->sample_duration = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - latest_sample_time_us));
 
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_INSERTS).probe_count(&((*cur_sample)->wpq_inserts));
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->wpq_occupancy));

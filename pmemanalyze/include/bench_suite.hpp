@@ -12,17 +12,17 @@
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
-#define SAMPLE_RATE  25000000L  //50000000
-#define SAMPLE_DUTY_CYCLE 90
+#define SAMPLE_RATE  500000000L  //50000000
+#define SAMPLE_DUTY_CYCLE 85
 //#define SAMPLE_LENGTH 8000000  //500000
 #define ENABLE_DCOLLECTION
 
 // period_on = (period * (thread_data->duty_cycle)) / 100;
 // 	period_off = (period * ((100 - thread_data->duty_cycle))) / 100;
 
-
-static constexpr unsigned long SAMPLE_PERIOD_ON = (SAMPLE_RATE * SAMPLE_DUTY_CYCLE) / 100;
-static constexpr unsigned long SAMPLE_PERIOD_OFF = (SAMPLE_RATE * (100 - SAMPLE_DUTY_CYCLE)) / 100;
+static constexpr unsigned long SAMPLE_PERIOD = 1000000000L / SAMPLE_RATE;
+static constexpr unsigned long SAMPLE_PERIOD_ON = (SAMPLE_PERIOD * SAMPLE_DUTY_CYCLE) / 100;
+static constexpr unsigned long SAMPLE_PERIOD_OFF = (SAMPLE_PERIOD * (100 - SAMPLE_DUTY_CYCLE)) / 100;
 
 // See: https://perfmon-events.intel.com/cascadelake_server.html
 #define EVENT_UNC_M_CLOCKTICKS 0x00 // umask=0x0,event=0x0 
