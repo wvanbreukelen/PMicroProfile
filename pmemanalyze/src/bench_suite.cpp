@@ -40,16 +40,17 @@ inline void flush_clflushopt(char* addr, const size_t len) {
 struct clock
 {
     typedef unsigned long long                 rep;
-    typedef std::ratio<1, 3'500'000'000>       period;
+    typedef std::ratio<1, 2'500'000'000>       period;
     typedef std::chrono::duration<rep, period> duration;
     typedef std::chrono::time_point<clock>     time_point;
     static const bool is_steady =              true;
+    //typedef std::chrono::duration<double, typename clock::period> Cycle;
 
     static unsigned long long now() noexcept
     {
         unsigned lo, hi;
         asm volatile("rdtsc" : "=a" (lo), "=d" (hi));
-        return duration_cast<nanoseconds>(duration(static_cast<rep>(hi) << 32 | lo)).count();
+        return duration_cast<nanoseconds>( duration(static_cast<rep>(hi) << 32 | lo)).count();
     }
 };
 
@@ -265,9 +266,9 @@ static inline uint64_t next_pow2_fast(uint64_t x)
 
 static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur_sample, ssize_t* total_bytes, unsigned long long *_latest_sample_time, struct io_stat* stat)
 {
-    constexpr uint64_t sample_mask = (16384 - 1);
+    constexpr uint64_t sample_mask = (1024 - 1);
     bool is_sampling = false;
-    unsigned long long cur_time_us;
+    unsigned long long cur_time_us = clock::now();
 
     unsigned long long latest_sample_time = *(_latest_sample_time);
     auto latest_sample_time_us = std::chrono::high_resolution_clock::now();
@@ -295,6 +296,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
         if (unlikely((z & sample_mask) == 0)) {  // (cur_time - latest_sample_time) >= SAMPLE_LENGTH
             //cur_time = __builtin_ia32_rdtsc();
             cur_time_us = clock::now();
+	    //std::cout << std::dec << (cur_time_us / 1000000000) << " s" << std::endl;
 
             if (is_sampling) {
                 if ((cur_time_us - latest_sample_time) >= SAMPLE_PERIOD_ON_US) {

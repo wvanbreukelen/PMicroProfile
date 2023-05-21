@@ -12,15 +12,15 @@
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
-#define SAMPLE_RATE  3000  //50000000
-#define SAMPLE_DUTY_CYCLE 85
+#define SAMPLE_RATE  100  //50000000
+#define SAMPLE_DUTY_CYCLE 75
 //#define SAMPLE_LENGTH 8000000  //500000
 #define ENABLE_DCOLLECTION
 
 // period_on = (period * (thread_data->duty_cycle)) / 100;
 // 	period_off = (period * ((100 - thread_data->duty_cycle))) / 100;
 
-static constexpr unsigned long SAMPLE_PERIOD = 1000000L / SAMPLE_RATE;
+static constexpr unsigned long SAMPLE_PERIOD = 1000000000L / SAMPLE_RATE;
 static constexpr unsigned long SAMPLE_PERIOD_ON_US = (SAMPLE_PERIOD * SAMPLE_DUTY_CYCLE) / 100;
 static constexpr unsigned long SAMPLE_PERIOD_OFF_US = (SAMPLE_PERIOD * (100 - SAMPLE_DUTY_CYCLE)) / 100;
 
