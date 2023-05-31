@@ -273,6 +273,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
     unsigned long long latest_sample_time = *(_latest_sample_time);
     auto latest_sample_time_us = std::chrono::high_resolution_clock::now();
     void* prev_addr = nullptr;
+    size_t prev_addr_opsize = 0;
     size_t z = 0;
 
 
@@ -351,6 +352,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     latest_sample_time = cur_time_us;
                     latest_sample_time_us = std::chrono::high_resolution_clock::now();
                     prev_addr = nullptr;
+                    prev_addr_opsize = 0;
 
                     pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
                     pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_enable();
@@ -401,12 +403,13 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     ++((*cur_sample)->num_reads);
                     (*cur_sample)->bytes_read += entry.op_size;
 
-                    // Determine absolute distance between addresses and sum.
+                    // Determine penalty.
                     if (prev_addr != nullptr) {
-                        const std::ptrdiff_t ptr_distance = reinterpret_cast<char*>(entry.dax_addr) - reinterpret_cast<char*>(prev_addr);
-                        (*cur_sample)->total_addr_distance += (ptr_distance < 0) ? (-ptr_distance) : ptr_distance;
+                        if (reinterpret_cast<char*>(entry.dax_addr) - (reinterpret_cast<char*>(prev_addr) + prev_addr_opsize) > 0)
+                            ++((*cur_sample)->total_addr_distance);
                     }
                     prev_addr = entry.dax_addr;
+                    prev_addr_opsize = entry.op_size;
                 }
                 #endif
 
@@ -458,12 +461,13 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     ++((*cur_sample)->num_writes);
                     (*cur_sample)->bytes_written += entry.op_size;
 
-                    // Determine absolute distance between addresses and sum.
+                    // Determine penalty.
                     if (prev_addr != nullptr) {
-                        const std::ptrdiff_t ptr_distance = reinterpret_cast<char*>(entry.dax_addr) - reinterpret_cast<char*>(prev_addr);
-                        (*cur_sample)->total_addr_distance += (ptr_distance < 0) ? (-ptr_distance) : ptr_distance;
+                        if (reinterpret_cast<char*>(entry.dax_addr) - (reinterpret_cast<char*>(prev_addr) + prev_addr_opsize) > 0)
+                            ++((*cur_sample)->total_addr_distance);
                     }
                     prev_addr = entry.dax_addr;
+                    prev_addr_opsize = entry.op_size;
                 }
                 #endif
                 *total_bytes += entry.op_size;
@@ -477,12 +481,13 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 #ifdef ENABLE_DCOLLECTION
                 ++((*cur_sample)->num_flushes);
 
-                // Determine absolute distance between addresses and sum.
+                // Determine penalty.
                 if (prev_addr != nullptr) {
-                    const std::ptrdiff_t ptr_distance = reinterpret_cast<char*>(entry.dax_addr) - reinterpret_cast<char*>(prev_addr);
-                    (*cur_sample)->total_addr_distance += (ptr_distance < 0) ? (-ptr_distance) : ptr_distance;
+                    if (reinterpret_cast<char*>(entry.dax_addr) - (reinterpret_cast<char*>(prev_addr) + prev_addr_opsize) > 0)
+                        ++((*cur_sample)->total_addr_distance);
                 }
                 prev_addr = entry.dax_addr;
+                prev_addr_opsize = entry.op_size;
                 #endif
                 break;
             }
