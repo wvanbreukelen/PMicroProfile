@@ -26,7 +26,7 @@ public:
         opcode(opcode),
         timestamp_sec(timestamp_sec),
         abs_addr(abs_addr),
-        rel_addr(rel_addr),
+        addr_offset(rel_addr),
         dax_addr(nullptr),
         data(data)
     {};
@@ -41,7 +41,7 @@ public:
         this->op_size = 0;
         this->timestamp_sec = 0;
         this->abs_addr = 0;
-        this->rel_addr = 0;
+        this->addr_offset = 0;
         this->dax_addr = nullptr;
         this->data = 0;
     }
@@ -61,7 +61,7 @@ public:
     unsigned int opcode;
     size_t op_size;
     unsigned long abs_addr;
-    unsigned long rel_addr;
+    unsigned long addr_offset;
     unsigned long data;
     unsigned int cpu_id;
     
@@ -75,7 +75,7 @@ inline std::ostream& operator<<(std::ostream& os, const TraceEntry& entry) {
     os << "opcode: 0x" << std::hex << entry.opcode << ", ";
     os << "op_size: " << std::dec << entry.op_size << ", ";
     os << "abs_addr: 0x" << std::hex << entry.abs_addr << ", ";
-    os << "rel_addr: 0x" << std::hex << entry.rel_addr << ", ";
+    os << "rel_addr: 0x" << std::hex << entry.addr_offset << ", ";
     os << "data: 0x" << std::hex << entry.data;
     return os;
 }

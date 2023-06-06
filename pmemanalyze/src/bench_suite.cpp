@@ -427,12 +427,8 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     write_mov_8(entry, is_sampling, (*cur_sample));
                     break;
                 }
-                case 0x4444: // 4 bytes - MOVNTI
-                {
-                    write_movnti_32(entry, is_sampling, (*cur_sample));
-                    break;
-                }
-                case 0xC30F: // 8 bytes - MOVNTQ
+                case 0x4444:
+                case 0xC30F: // 4-8 bytes - MOVNTI
                 {
                     write_movntq_64(entry, is_sampling, (*cur_sample));
                     break;
@@ -576,17 +572,17 @@ static void* do_work(void *arg)
         //pthread_exit(NULL);
     }
 
-    if (!pmc.add_oncore_probe(EVENT_MEM_INST_RETIRED_ALL_STORES, syscall(SYS_gettid))) {
+    if (!pmc.add_offcore_probe(EVENT_MEM_INST_RETIRED_ALL_STORES, syscall(SYS_gettid))) {
         std::cerr << "Unable to add EVENT_MEM_INST_RETIRED_ALL_STORES probe!" << std::endl;
     }
 
-    if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM, syscall(SYS_gettid))) {
+    if (!pmc.add_offcore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM, syscall(SYS_gettid))) {
         std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM probe!" << std::endl;
         //pthread_exit(NULL);
     }
 
-    pmc.add_oncore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_PMM_HIT_LOCAL_ANY_SNOOP); // L2: 0x3f80400010  0x804007F7
-    pmc.add_oncore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP);
+    pmc.add_offcore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_PMM_HIT_LOCAL_ANY_SNOOP); // L2: 0x3f80400010  0x804007F7
+    pmc.add_offcore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP);
 
     //if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM, syscall(SYS_gettid))) {
     //    std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM probe!" << std::endl;
@@ -648,7 +644,7 @@ bool BenchSuite::run(const size_t replay_rounds)
 
     // Calculate the DAX addresses based on the offset inside the trace PMEM region.
     for (TraceEntry &entry : this->trace_file) {
-        entry.dax_addr = static_cast<char*>(this->mem_area) + entry.rel_addr;
+        entry.dax_addr = static_cast<char*>(this->mem_area) + entry.addr_offset;
 
         if (reinterpret_cast<uintptr_t>(entry.dax_addr) > max_offset) {
             std::cerr << "The following operation exteeds the pre-allocated DAX region by "

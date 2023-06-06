@@ -44,7 +44,7 @@ bool parse_trace(const std::filesystem::path &path, TraceFile &trace)
     trace.reserve(total_rows);
 
     while (!(stream.eof())) {
-        stream >> trace_entry.timestamp_sec >> op >> trace_entry.opcode >> trace_entry.op_size >> trace_entry.abs_addr >> trace_entry.rel_addr >> trace_entry.data >> trace_entry.cpu_id >> parquet::EndRow;
+        stream >> trace_entry.timestamp_sec >> op >> trace_entry.opcode >> trace_entry.op_size >> trace_entry.abs_addr >> trace_entry.addr_offset >> trace_entry.data >> trace_entry.cpu_id >> parquet::EndRow;
         //std::cout << "OP: " << op << " opcode: 0x" << std::hex << opcode << " timestamp: " << timestamp_sec << " 0x" << std::hex << abs_addr << " data: 0x" << data << std::endl;
         trace_entry.op = static_cast<TraceOperation>(op);
 

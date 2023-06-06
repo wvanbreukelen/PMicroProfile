@@ -144,7 +144,7 @@ bool PMC::add_imc_probe(const unsigned int event_id, const bool is_single)
     return true;
 }
 
-bool PMC::add_oncore_probe(const unsigned int event_id, const int pid, const unsigned long msr_reg)
+bool PMC::add_offcore_probe(const unsigned int event_id, const int pid, const unsigned long msr_reg)
 {
     struct Probe& probe = this->probes[this->num_probes++];
     probe.set_oncore();

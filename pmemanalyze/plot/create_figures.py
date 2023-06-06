@@ -115,7 +115,9 @@ df['smoothed_wa'] = df['wa'].rolling(window_size, center=True).mean()
 with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
     print(df.loc[[6]])
 
-fig, (ax1, ax2, ax3, ax4, ax5, ax6, ax7) = plt.subplots(nrows=7, ncols=1, figsize=(10, 8))
+fig, (ax1, ax2, ax3, ax4, ax5, ax6) = plt.subplots(nrows=6, ncols=1, figsize=(12, 10))
+
+fig.suptitle("pmemanalyze 200 MiB FIO benchmark, 100% / 0% R/W ratio (repeated 25 times)")
 
 # Plot the number of reads and writes on the top subplot
 ax1.plot(df['timestamp_sec'], df['num_reads'], label='Number of Reads')
@@ -123,28 +125,29 @@ ax1.plot(df['timestamp_sec'], df['num_writes'], label='Number of Writes')
 ax1.plot(df['timestamp_sec'], df['num_flushes'], label='Number of Flushes')
 # ax1.plot(df['timestamp_sec'], df['num_barriers'], label='Number of Barriers')
 ax1.set_xlabel('Time (s)')
-ax1.set_ylabel('Number of Operations')
+ax1.set_ylabel('Number Op.')
 ax1.set_title("Retired instructions of time")
 ax1.legend()
 
-ax2.plot(df['timestamp_sec'], df['pmem_read_bw'], label='PMEM Read Bandwidth')
-ax2.plot(df['timestamp_sec'], df['pmem_write_bw'], label='PMEM Write Bandwidth')
+ax2.plot(df['timestamp_sec'], df['pmem_read_bw'], label='Read')
+ax2.plot(df['timestamp_sec'], df['pmem_write_bw'], label='Write')
 ax2.set_xlabel('Time (s)')
 ax2.set_ylabel('GB/s')
-ax2.set_title("PMEM")
+ax2.set_title("PMEM Bandwidth")
 ax2.legend()
 
 # Plot the average latency per write operation on the middle subplot
-ax3.plot(df['timestamp_sec'], df['avg_latency_inst_read'], label='Avg. Latency per Read')
-ax3.plot(df['timestamp_sec'], df['avg_latency_inst_write'], label='Avg. Latency per Write')
+ax3.plot(df['timestamp_sec'], df['avg_latency_inst_read'], label='Read')
+ax3.plot(df['timestamp_sec'], df['avg_latency_inst_write'], label='Write')
 ax3.set_xlabel('Time (s)')
-ax3.set_ylabel('Instruction Latency (cycles)')
+ax3.set_ylabel('CPU cycles')
 ax3.set_title("Instruction Latency: rdtsc timer")
 ax3.legend()
 
 
-ax4.plot(df['timestamp_sec'], df['avg_latency_dev_read_dram'], label='DRAM Read Latency')
-# ax4.plot(df['timestamp_sec'], df['avg_latency_dev_read'], label='PMEM Read Latency')
+# ax4.plot(df['timestamp_sec'], df['avg_latency_dev_read_dram'], label='DRAM Read Latency')
+ax4.plot(df['timestamp_sec'], df['avg_latency_dev_read'], label='Read')
+ax4.plot(df['timestamp_sec'], df['avg_latency_dev_write'], label='Write')
 ax4.set_xlabel('Time (s)')
 ax4.set_ylabel('Latency (ns)')
 ax4.set_title("Instruction Latency: measured using PEBS PMEM counters")
@@ -158,7 +161,7 @@ ax4.legend()
 # ax3.legend()
 
 ax5.plot(df['timestamp_sec'], NormalizeData(df['total_addr_distance_normalized']), label='Address Distance')
-ax5.set_title("Data Locality (normalized: [0.0, 1.0])")
+ax5.set_title("Data Locality (normalized: [0.0, 1.0])\nClose to 0.0 -> high spacial locality, Close to 1.0 -> low spacial locality)")
 
 ax6.plot(df['timestamp_sec'], df['ra'], label='RA')
 ax6.plot(df['timestamp_sec'], df['wa'], label='WA')
@@ -168,16 +171,30 @@ ax6.set_title("Device Read/Write Amplification")
 ax6.legend()
 
 
+plt.tight_layout()
 
-# ax7.plot(df['timestamp_sec'], df['any_scoop_pmm'], label='Cache snoops')
-# ax7.legend()
-# ax7.set_title("PMEM direct loads")
+# Display the plot
+plt.show()
 
-ax7.plot(df['timestamp_sec'], df['any_scoop_l3_miss_dram'], label='Cache miss DRAM')
-ax7.plot(df['timestamp_sec'], df['l3_misses_local_pmm'], label='Cache miss PMEM')
-ax7.legend()
-ax7.set_title("DRAM")
+fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1, figsize=(6, 4))
 
+fig.suptitle("pmemanalyze cache behavior, same workload")
+
+ax1.plot(df['timestamp_sec'], df['any_scoop_pmm'])
+ax1.set_xlabel('Time (s)')
+ax1.set_title("PMEM direct loads")
+
+ax2.plot(df['timestamp_sec'], df['any_scoop_l3_miss_dram'])
+# ax7.plot(df['timestamp_sec'], df['l3_misses_local_pmm'], label='Cache miss PMEM')
+ax2.set_ylabel('Count')
+ax2.set_xlabel('Time (s)')
+ax2.set_title("Cache Behavior: DRAM L3 Misses")
+
+# ax8.plot(df['timestamp_sec'], df['any_scoop_l3_miss_dram'], label='Cache miss DRAM')
+ax3.plot(df['timestamp_sec'], df['l3_misses_local_pmm'])
+ax3.set_ylabel('Count')
+ax3.set_xlabel('Time (s)')
+ax3.set_title("Cache Behavior: PMEM L3 Misses")
 
 
 plt.tight_layout()

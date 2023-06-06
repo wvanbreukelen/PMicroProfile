@@ -34,7 +34,7 @@ public:
         opcode(opcode),
         timestamp_sec(timestamp_sec),
         abs_addr(abs_addr),
-        rel_addr(rel_addr),
+        addr_offset(rel_addr),
         dax_addr(nullptr),
         data(data)
     {};
@@ -44,7 +44,7 @@ public:
     const unsigned int opcode;
     const double timestamp_sec;
     const unsigned long abs_addr;
-    const unsigned long rel_addr;
+    const unsigned long addr_offset;
     void* dax_addr;
     //const std::vector<uint8_t> data;
     const unsigned long data;
@@ -84,7 +84,7 @@ arrow::Status trace_to_arrow(std::filesystem::path path, const std::vector<Trace
         parquet::ParquetFileWriter::Open(outfile, schema, props)};
 
     for (const auto& entry : trace_entries) {
-        os << entry.timestamp_sec << static_cast<uint32_t>(entry.op) << entry.opcode << entry.op_size << entry.abs_addr << entry.rel_addr << entry.data << parquet::EndRow;
+        os << entry.timestamp_sec << static_cast<uint32_t>(entry.op) << entry.opcode << entry.op_size << entry.abs_addr << entry.addr_offset << entry.data << parquet::EndRow;
     }
     
 
