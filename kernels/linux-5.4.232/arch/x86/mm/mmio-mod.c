@@ -28,6 +28,7 @@
 #include <linux/delay.h>
 #include <linux/syscalls.h>
 #include <asm/traps.h>			/* dotraplinkage, ...		*/
+#include <asm/syscall.h>
 
 #include "pf_in.h"
 
@@ -222,6 +223,8 @@ static void die_kmmio_nesting_error(struct pt_regs *regs, unsigned long addr)
 static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 						unsigned long addr, unsigned long hw_error_code)
 {
+	int syscall_nr;
+
 	struct trap_reason *my_reason = &get_cpu_var(pf_reason);
 	struct mmiotrace_rw *my_trace = &get_cpu_var(cpu_trace);
 	const unsigned long instptr = instruction_pointer(regs);
@@ -277,43 +280,16 @@ static void pre(struct kmmio_probe *p, struct pt_regs *regs,
 		my_trace->opcode = MMIO_CLFLUSH;
 	} else { // (hw_error_code & X86_PF_WRITE) 
 		pr_info_ratelimited("Unknown instruction: %x addr: 0x%lx, instptr: 0x%lx\n", my_trace->opcode_cpu, addr, instptr);
-		dump_stack();
+		//dump_stack();
 		//pr_info("Unknown instruction\n");
 	}
-	// 	my_trace->opcode = MMIO_WRITE;
-	// 	my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
-	// 	my_trace->value = (*ip) << 16 | *(ip + 1) << 8 |
-	// 							*(ip + 2);
-	// 	//my_trace->value = get_ins_imm_val(instptr);
-	// } else {
-	// 	my_trace->opcode = MMIO_READ;
-	// 	my_trace->width = get_ins_mem_width(instptr); // Don't know if the can fetch the width, probably not...
-	// }
+	
+	if ((syscall_nr = syscall_get_nr(current, task_pt_regs(current))) >= 0) {
+		my_trace->syscall_nr = syscall_nr;
+	} else {
+		my_trace->syscall_nr = 0;
+	}
 
-	// switch (type) {
-	// case REG_READ:
-	// 	my_trace->opcode = MMIO_READ;
-	// 	my_trace->width = get_ins_mem_width(instptr);
-	// 	break;
-	// case REG_WRITE:
-	// 	my_trace->opcode = MMIO_WRITE;
-	// 	my_trace->width = get_ins_mem_width(instptr);
-	// 	my_trace->value = get_ins_reg_val(instptr, regs);
-	// 	break;
-	// case IMM_WRITE:
-	// 	my_trace->opcode = MMIO_WRITE;
-	// 	my_trace->width = get_ins_mem_width(instptr);
-	// 	my_trace->value = get_ins_imm_val(instptr);
-	// 	break;
-	// default:
-	// 	{
-	// 		unsigned char *ip = (unsigned char *)instptr;
-	// 		my_trace->opcode = MMIO_UNKNOWN_OP;
-	// 		my_trace->width = 0;
-	// 		my_trace->value = (*ip) << 16 | *(ip + 1) << 8 |
-	// 							*(ip + 2);
-	// 	}
-	// }
 	put_cpu_var(cpu_trace);
 	put_cpu_var(pf_reason);
 }

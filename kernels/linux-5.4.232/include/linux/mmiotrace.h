@@ -118,6 +118,7 @@ struct mmiotrace_rw {
 	unsigned int 	opcode_cpu;
 	unsigned char	opcode;	/* one of MMIO_{READ,WRITE,UNKNOWN_OP} */
 	unsigned char	width;	/* size of register access in bytes */
+	unsigned int 	syscall_nr;
 };
 
 struct mmiotrace_map {
