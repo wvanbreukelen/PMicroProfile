@@ -41,7 +41,7 @@ run_command "sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_relea
 run_command "sudo apt update" ""
 run_command "sudo apt install -y -V libarrow-dev" "installed libarrow-dev"
 run_command "sudo apt install -y -V libarrow-dataset-dev" "installed libarrow-dataset-dev"
-run_command "sudo apt install -y -V libparquet-dev" "installed libparquet-dev"l
+run_command "sudo apt install -y -V libparquet-dev" "installed libparquet-dev"
 
 cd $cwd
 
@@ -55,6 +55,7 @@ if [ "$build_llvm" = true ]; then
     run_command "cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_ENABLE_PROJECTS='clang'" ""
     run_command "cmake --build build -j24" ""
     run_command "sudo cmake --build build --target install" ""
+    echo "LLVM installed in /bin/local/usr directory!"
 else
     echo "--> Skipping LLVM build! Enable by setting --build-llvm flag."
 fi
