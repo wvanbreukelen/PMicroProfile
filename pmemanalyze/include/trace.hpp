@@ -64,6 +64,7 @@ public:
     unsigned long addr_offset;
     unsigned long data;
     unsigned int cpu_id;
+    unsigned int syscall_nr;
     
     void* dax_addr;
     //const std::vector<uint8_t> data;

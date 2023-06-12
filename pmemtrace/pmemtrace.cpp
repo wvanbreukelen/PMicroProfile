@@ -428,6 +428,7 @@ bool compress_trace(std::filesystem::path read_path, std::filesystem::path write
             parquet::schema::PrimitiveNode::Make("rel_addr", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
             parquet::schema::PrimitiveNode::Make("data", parquet::Repetition::REQUIRED, parquet::Type::INT64, parquet::ConvertedType::UINT_64),
 			parquet::schema::PrimitiveNode::Make("cpu_id", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
+			parquet::schema::PrimitiveNode::Make("syscall_nr", parquet::Repetition::REQUIRED, parquet::Type::INT32, parquet::ConvertedType::UINT_32),
         }
     ));
     
@@ -435,7 +436,7 @@ bool compress_trace(std::filesystem::path read_path, std::filesystem::path write
         parquet::ParquetFileWriter::Open(outfile, schema, props)};
 
 	TraceOperation op;
-	std::array<std::string, 9> tokens_line;
+	std::array<std::string, 10> tokens_line;
 	
 
     while (std::getline(trace_handle, line)) {
@@ -474,11 +475,14 @@ bool compress_trace(std::filesystem::path read_path, std::filesystem::path write
 		const unsigned long rel_addr = abs_addr - pmem_range_start;
 		const unsigned long long data = std::stoull(tokens_line[6], nullptr, 16);
 		const unsigned int cpu_id = std::stoi(tokens_line[8]);
+		const unsigned int syscall_nr = std::stoi(tokens_line[9]);
 
 		//std::cout << timestamp_sec << " " << static_cast<uint32_t>(op) << " " << std::hex << opcode << " " << std::dec << opcode_size << " 0x" << std::hex << abs_addr << " 0x" << rel_addr << " 0x" << data << " " << std::dec << cpu_id << std::endl;
 
+		if (syscall_nr > 0)
+			std::cout << std::dec << syscall_nr << std::endl;
 
-		os << timestamp_sec << static_cast<uint32_t>(op) << opcode << opcode_size << abs_addr << rel_addr << static_cast<uint64_t>(data) << cpu_id << parquet::EndRow;
+		os << timestamp_sec << static_cast<uint32_t>(op) << opcode << opcode_size << abs_addr << rel_addr << static_cast<uint64_t>(data) << cpu_id << syscall_nr << parquet::EndRow;
     }
 
     return true;
