@@ -12,7 +12,7 @@ std::string run_plot_cmd(const std::string &cmd);
 
 int main(int argc, char** argv)
 {
-    CLI::App app{"pmemanalyze - A Persistent Memory Trace Replaying Tool"};
+    CLI::App app{"pmemanalyze - A Persistent Memory Trace Replaying Tool (compiled at: " + std::string(__DATE__) + " " + std::string(__TIME__) + ")"};
 
     bool is_verbose = false;
     const unsigned int num_threads = 1;
