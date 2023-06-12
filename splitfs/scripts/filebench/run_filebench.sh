@@ -8,10 +8,11 @@ pmem_dir=/mnt/pmem_emul
 run_filebench()
 {
     fs=$1
+    workload=$2
     for run in 1 2 3
     do
         sudo rm -rf $pmem_dir/*
-        sudo taskset -c 0-15 ./run_fs.sh $fs $run
+        sudo taskset -c 0-15 ./run_fs.sh $fs $run $workload
         sleep 5
     done
 }
@@ -54,4 +55,4 @@ make clean
 make -e
 sudo $setup_dir/dax_config.sh
 cd $current_dir
-run_filebench splitfs-posix 1 copyfiles-small.f
+run_filebench splitfs-posix copyfiles-small.f
