@@ -27,7 +27,7 @@ cd $current_dir
 
 
 #$PRECMD fio --name=fio-randrw-50 --directory=/mnt/pmem_emul --size=100M --rw=randrw --bs=4K  --rwmixread=100 --rwmixwrite=0  --ioengine=sync
-sudo pmemtrace $args splitfs-fio-randrw-50 $PRECMD fio --name=fio-randrw-50 --directory=/mnt/pmem_emul --size=100M --rw=randrw --bs=4K  --rwmixread=100 --rwmixwrite=0  --ioengine=sync
+sudo pmemtrace $args splitfs-fio-randrw-50 $PRECMD fio --name=fio-randrw-50 --directory=/mnt/pmem_emul --size=500M --rw=randrw --bs=1K  --rwmixread=50 --rwmixwrite=50  --ioengine=sync
 
 #sudo env "PATH=$PATH" $PRECMD fio --name=splitfs-fio-randrw-0 --directory=/mnt/pmem_emul --size=1Gb --rw=randrw --bs=4K  --rwmixread=50 --rwmixwrite=50  --ioengine=sync
 #sudo env "PATH=$PATH" pmemtrace /dev/ndctl0 splitfs-fio-randrw-25 fio --name=fio-randrw-25 --directory=/mnt/pmem_emul --size=2Gb --rw=randrw --bs=4K  --rwmixread=25 --rwmixwrite=75  --ioengine=sync

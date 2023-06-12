@@ -1089,15 +1089,17 @@ void _nvp_init2(void)
 	int rc;
 	struct InodeToMapping *tempMapping;
 
-	int fd_dev = open("/dev/ndctl0", O_RDWR);
+	int fd_dev = _hub_find_fileop("posix")->OPEN("/dev/ndctl0", O_RDWR);
+
 	if (fd_dev < 0)
 	{
 		fprintf(stderr, "Failed to open device!\n");
 		exit(EXIT_FAILURE);
 	}
 
-    rc = ioctl(fd_dev, ND_CMD_TRACE_TOGGLE_OFF);
+	rc = _hub_find_fileop("posix")->IOCTL(fd_dev, ND_CMD_TRACE_TOGGLE_OFF);
 	MSG("Disabled tracing while setting up update log.\n");
+	
 
 	assert(!posix_memalign(((void**)&_nvp_zbuf), 4096, 4096));
 
@@ -1277,6 +1279,8 @@ void _nvp_init2(void)
 	//queue_initialize(over_staging_mmap_queue);
 
 #endif
+
+	
 
 	MMAP_PAGE_SIZE = getpagesize();
 	MMAP_HUGEPAGE_SIZE = 2097152;
@@ -1556,10 +1560,9 @@ void _nvp_init2(void)
 	else
 		execv_done = 0;
 
-	rc = ioctl(fd_dev, ND_CMD_TRACE_TOGGLE_ON);
+	rc = _hub_find_fileop("posix")->IOCTL(fd_dev, ND_CMD_TRACE_TOGGLE_ON);
+	_hub_find_fileop("posix")->CLOSE(fd_dev);
 	MSG("Enabled tracing.\n");
-
-	close(fd_dev);
 }
 
 void nvp_transfer_to_free_dr_pool(struct NVNode *node)
