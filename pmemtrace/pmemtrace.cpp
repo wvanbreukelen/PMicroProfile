@@ -501,7 +501,7 @@ int main(int argc, char** argv)
 	bool disable_sampling = false;
 	unsigned int enable_multicore = false;
 
- 	CLI::App app{"pmemtrace - A Persistent Memory Micro-Architecture Aware Trace Capture Tool"};
+ 	CLI::App app{"pmemtrace - A Persistent Memory Micro-Architecture Aware Trace Capture Tool (compiled at: " + std::string(__DATE__) + " " + std::string(__TIME__) + ")"};
 
 	app.add_option("tracename", trace_name, "Trace name")
         ->required();
