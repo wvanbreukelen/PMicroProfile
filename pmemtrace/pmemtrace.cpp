@@ -479,9 +479,6 @@ bool compress_trace(std::filesystem::path read_path, std::filesystem::path write
 
 		//std::cout << timestamp_sec << " " << static_cast<uint32_t>(op) << " " << std::hex << opcode << " " << std::dec << opcode_size << " 0x" << std::hex << abs_addr << " 0x" << rel_addr << " 0x" << data << " " << std::dec << cpu_id << std::endl;
 
-		if (syscall_nr > 0)
-			std::cout << std::dec << syscall_nr << std::endl;
-
 		os << timestamp_sec << static_cast<uint32_t>(op) << opcode << opcode_size << abs_addr << rel_addr << static_cast<uint64_t>(data) << cpu_id << syscall_nr << parquet::EndRow;
     }
 

@@ -1,4 +1,4 @@
-## Analysize microarchitectural performance: Ext4-DAX <-> SplitFS
+## Analysize microarchitectural performance: Ext4-DAX <-> SplitFS baseline
 
 ## Prerequisites
 - Working VM installation to extract traces, which included installing all dependencies and pmemtrace itself using install script (see Thesis Artifact for installation steps);
@@ -7,8 +7,8 @@
 - Python 3 (including matplotlib package);
 
 ## Reproducing trace files (done inside VM)
-1. Ext4-DAX: execute the `run_ext4dax.sh` script. This script generates a `.parquet` file that can be replayed in `pmemanalyze`
-2. SplitFS: execute the `run_splitfs.sh` script. Again, This script generates a `.parquet` file that can be replayed in `pmemanalyze`
+1. Ext4-DAX: execute the `run_ext4dax_500M_50_50_rw.sh` script. This script generates a `.parquet` file that can be replayed in `pmemanalyze`
+2. SplitFS: execute the `run_splitfs_500M_50_50_rw.sh` script. Again, This script generates a `.parquet` file that can be replayed in `pmemanalyze`
 
 ## Performing performance analyze (real machine)
 1. Copy the trace files from the VM to the machine that has real PMEM using a tool like `scp`.
