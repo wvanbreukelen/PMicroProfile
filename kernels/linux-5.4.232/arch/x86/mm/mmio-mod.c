@@ -385,9 +385,6 @@ static void ioremap_trace_core(resource_size_t offset, unsigned long size,
 				}
 			}
 			
-			//goto not_enabled;
-			// unregister_kmmio_probe(&trace_in_list->probe);>
-			// list_del(&trace_in_list->list);
 		}
 	}
 
@@ -743,7 +740,7 @@ void mmiotrace_task_exit(struct task_struct *task)
 
 	list_for_each_entry_safe(trace, tmp, &trace_list, list) {
 		if (trace->probe.user_task_pid == task->pid) {
-			if ((ret = unregister_kmmio_probe(&trace->probe, 1)) < 0) {
+			if ((ret = unregister_kmmio_probe(&trace->probe, 0)) < 0) {
 				pr_warn("mmiotrace_task_exit: Unable to disarm probe %p (ret: %d)\n", &trace->probe, ret);
 			}
 
