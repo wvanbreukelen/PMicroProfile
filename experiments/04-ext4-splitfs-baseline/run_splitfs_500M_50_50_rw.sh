@@ -6,7 +6,7 @@ setup_dir=`readlink -f ../../splitfs/scripts/configs`
 
 PRECMD="$source_dir/run_boost.sh -p $source_dir -t nvp_nvp.tree"
 
-args="-s 30 --duty-cycle 0.8 --disable-sampling"
+args="-s 30 --duty-cycle 0.99"
 sudo rm -rf /mnt/pmem_emul/*
 
 date
