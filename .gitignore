@@ -29,6 +29,8 @@ build/
 *.o
 *.d
 *.parquet
+*.egg
+
 trace_extractor/*.txt
 
 

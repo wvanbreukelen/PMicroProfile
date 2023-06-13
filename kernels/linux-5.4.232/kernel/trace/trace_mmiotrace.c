@@ -181,45 +181,45 @@ static enum print_line_t mmio_print_rw(struct trace_iterator *iter)
 	switch (rw->opcode) {
 	case MMIO_READ:
 		trace_seq_printf(s,
-			"R %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d\n",
+			"R %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d %u\n",
 			rw->width, rw->opcode_cpu, secs, usec_rem, rw->map_id,
 			(unsigned long long)rw->phys,
-			rw->value, rw->pc, proc_id);
+			rw->value, rw->pc, proc_id, rw->syscall_nr);
 		break;
 	case MMIO_WRITE:
 		trace_seq_printf(s,
-			"W %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d\n",
+			"W %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d %u\n",
 			rw->width, rw->opcode_cpu, secs, usec_rem, rw->map_id,
 			(unsigned long long)rw->phys,
-			rw->value, rw->pc, proc_id);
+			rw->value, rw->pc, proc_id, rw->syscall_nr);
 		break;
 	case MMIO_CLFLUSH:
 		trace_seq_printf(s,
-			"F %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d\n",
+			"F %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d %u\n",
 			rw->width, rw->opcode_cpu, secs, usec_rem, rw->map_id,
 			(unsigned long long)rw->phys,
-			rw->value, rw->pc, proc_id);
+			rw->value, rw->pc, proc_id, rw->syscall_nr);
 		break;
 	case MMIO_MFENCE:
 		trace_seq_printf(s,
-			"M %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d\n",
+			"M %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d %u\n",
 			rw->width, rw->opcode_cpu, secs, usec_rem, rw->map_id,
 			(unsigned long long)rw->phys,
-			rw->value, rw->pc, proc_id);
+			rw->value, rw->pc, proc_id, 0);
 		break;
 	case MMIO_SFENCE:
 		trace_seq_printf(s,
-			"S %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d\n",
+			"S %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d %u\n",
 			rw->width, rw->opcode_cpu, secs, usec_rem, rw->map_id,
 			(unsigned long long)rw->phys,
-			rw->value, rw->pc, proc_id);
+			rw->value, rw->pc, proc_id, 0);
 		break;
 	case MMIO_LFENCE:
 		trace_seq_printf(s,
-			"L %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d\n",
+			"L %d 0x%x %u.%06lu %d 0x%llx 0x%llx 0x%lx %d %u\n",
 			rw->width, rw->opcode_cpu, secs, usec_rem, rw->map_id,
 			(unsigned long long)rw->phys,
-			rw->value, rw->pc, proc_id);
+			rw->value, rw->pc, proc_id, 0);
 		break;
 	case MMIO_UNKNOWN_OP:
 		trace_seq_printf(s,
