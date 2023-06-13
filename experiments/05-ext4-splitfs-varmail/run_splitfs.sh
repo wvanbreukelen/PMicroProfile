@@ -14,7 +14,7 @@ pmem_dir=/mnt/pmem_emul
 
 PRECMD="$source_dir/run_boost.sh -p $source_dir -t nvp_nvp.tree"
 
-args="-s 30 --duty-cycle 0.1"
+args="-s 30 --duty-cycle 0.95"
 sudo rm -rf /mnt/pmem_emul/*
 
 date
