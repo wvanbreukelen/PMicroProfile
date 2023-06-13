@@ -772,8 +772,22 @@ int unregister_kmmio_probe(struct kmmio_probe *p, int dirty)
 	struct task_struct *user_task;
 	int experienced_vm_switch = 0;
 	int res = -EFAULT;
+	int is_task_dead = 0;
 
-	if (dirty) {
+
+	if (p->user_task_pid) {
+		user_task = find_task_by_vpid(p->user_task_pid);
+
+		if (!user_task || user_task->state == TASK_DEAD) {
+			is_task_dead = 1;
+
+			return res;
+		}
+
+	}
+
+
+	if (dirty || is_task_dead) {
 		if ((&p->list))
 			list_del_rcu(&p->list);
 		kmmio_count--;
@@ -787,7 +801,6 @@ int unregister_kmmio_probe(struct kmmio_probe *p, int dirty)
 			goto out;
 		}
 		drelease->release_list = release_list;
-
 		return 0;
 	}
 
@@ -820,6 +833,8 @@ int unregister_kmmio_probe(struct kmmio_probe *p, int dirty)
 			// 		goto out;
 			// 	}
 			// }
+
+
 
 			if (!pte && current->mm)
 				pte = lookup_user_address(addr, &l, current->mm);
