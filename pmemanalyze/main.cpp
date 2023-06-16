@@ -6,6 +6,9 @@
 #include "trace.hpp"
 #include "bench_suite.hpp"
 
+size_t cli_sample_rate = 0;
+size_t cli_sample_duty_cycle = 0;
+
 //#define BENCH_MAP_SIZE (28UL * 1024 * 1024 * 1024)
 
 std::string run_plot_cmd(const std::string &cmd);
@@ -50,11 +53,16 @@ int main(int argc, char** argv)
         ->default_val(false);
     app.add_option("d, --device", pmem_device_loc, "Location of Persistent Memory DAX device. Enter 'dram' to use DRAM instead.")
         ->default_val("/dev/dax0.0");
-    
     app.add_flag("--plot", do_plot, "Set this flag to plot results.")
         ->default_val(false);
     app.add_option("--plot-file", plot_path, "Set the file to plot (default: out.csv)")
         ->default_val("out.csv")->excludes(trace_file_option);
+
+    app.add_option("--sample-rate", cli_sample_rate, "Sample rate in hertz.")
+        ->default_val(100);
+    app.add_option("--duty-cycle", cli_sample_duty_cycle, "Sample duty cycle in percentage [1-100].")
+        ->default_val(25)->expected(1, 100);
+
     // app.add_option("-s,--num-samples", num_samples, "Number of samples to collect.")
     //     ->default_val(2000);
 
@@ -71,6 +79,7 @@ int main(int argc, char** argv)
         return 0;
     }
 
+    set_sampling_rate(cli_sample_rate, cli_sample_duty_cycle);
 
     if (!std::filesystem::exists(trace_file)) {
         std::cerr << "Trace file " + trace_file + " does not exists, please specify trace file, e.g. pmemanalyze trace.parquet" << std::endl;
@@ -91,7 +100,14 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    std::cout << "Trace: #reads: " << trace.get_total(TraceOperation::READ) << " #writes: " << trace.get_total(TraceOperation::WRITE) << " #flushes: " << trace.get_total(TraceOperation::CLFLUSH);
+    std::cout << 
+        "Trace: #reads: " << trace.get_total(TraceOperation::READ) <<
+        " #writes: " << trace.get_total(TraceOperation::WRITE) <<
+        " #flushes: " << trace.get_total(TraceOperation::CLFLUSH) <<
+        " #mfence" << trace.get_total(TraceOperation::MFENCE) <<
+        " #sfence" << trace.get_total(TraceOperation::SFENCE) <<
+        " #lfence" << trace.get_total(TraceOperation::LFENCE);
+        
     std::cout << " (size: " << (trace.size() * sizeof(TraceEntry)) / (1024 * 1024) << " MiB)" << std::endl;
 
     BenchSuite bsuite(trace, pmem_device_loc, (bench_map_size_gib * 1024 * 1024 * 1024), num_threads, num_samples, force_dram, do_fallback_ram, do_cache_warming);

@@ -34,6 +34,9 @@ print(df.columns)
 # Remove the first row, as its measurements are sometimes unstable.
 df = df.iloc[5:]
 
+corr_matrix = df.corr()
+print(corr_matrix)
+
 df.insert(1, 'timestamp_sec', df['timestamp'] / 1e9)
 df.insert(1, 'sample_duration_sec', df['sample_duration'] / 1e9)
 
@@ -115,7 +118,7 @@ df['smoothed_wa'] = df['wa'].rolling(window_size, center=True).mean()
 with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
     print(df.loc[[6]])
 
-fig, (ax1, ax2, ax3, ax4, ax5, ax6, ax7) = plt.subplots(nrows=7, ncols=1, figsize=(12, 10))
+fig, (ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8) = plt.subplots(nrows=8, ncols=1, figsize=(12, 10))
 
 fig.suptitle("pmemanalyze 200 MiB FIO benchmark, 100% / 0% R/W ratio (repeated 25 times)")
 
@@ -163,7 +166,7 @@ ax4.legend()
 ax5.plot(df['timestamp_sec'], df['total_addr_distance_normalized'], label='Address Distance')
 
 ax5.set_title("Inner-Sample Address Distance (ISAD)\nClose to 0.0 -> high spacial locality, Close to 1.0 -> low spacial locality)")
-ax5.set_ylim([0.0, 1.0])
+ax5.set_ylim([0.0, 0.5])
 ax5.set_ylabel('ISAD')
 
 ax6.plot(df['timestamp_sec'], df['ra'], label='RA')
@@ -177,6 +180,9 @@ ax7.plot(df['timestamp_sec'], (df['total_read_write'] / (1024 * 1024)), label='T
 # ax7.plot(df['timestamp_sec'], (df['bytes_written'].cumsum() / (1024 * 1024)), label='Data Written')
 ax7.legend()
 
+ax8.plot(df['timestamp_sec'], df['num_barriers'] , label='Total Number of Barriers')
+# ax7.plot(df['timestamp_sec'], (df['bytes_written'].cumsum() / (1024 * 1024)), label='Data Written')
+ax8.legend()
 
 plt.tight_layout()
 

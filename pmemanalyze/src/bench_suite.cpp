@@ -459,7 +459,9 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 
                     // Determine penalty.
                     if (prev_addr != nullptr) {
-                        if (reinterpret_cast<char*>(entry.dax_addr) - (reinterpret_cast<char*>(prev_addr) + prev_addr_opsize) > 0)
+                        // if (reinterpret_cast<char*>(entry.dax_addr) - (reinterpret_cast<char*>(prev_addr) + prev_addr_opsize) > 0)
+                        //     ++((*cur_sample)->total_addr_distance);
+                        if (static_cast<ptrdiff_t>(reinterpret_cast<char*>(entry.dax_addr) - (reinterpret_cast<char*>(prev_addr))) > 256)
                             ++((*cur_sample)->total_addr_distance);
                     }
                     prev_addr = entry.dax_addr;

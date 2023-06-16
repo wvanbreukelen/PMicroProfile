@@ -12,17 +12,20 @@
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
-#define SAMPLE_RATE  100  //50000000
-#define SAMPLE_DUTY_CYCLE 75
+static size_t sample_rate = 100;
+static size_t sample_duty_cycle = 75;
+
+// #define SAMPLE_RATE  100  //50000000
+// #define SAMPLE_DUTY_CYCLE 75
 //#define SAMPLE_LENGTH 8000000  //500000
 #define ENABLE_DCOLLECTION
 
 // period_on = (period * (thread_data->duty_cycle)) / 100;
 // 	period_off = (period * ((100 - thread_data->duty_cycle))) / 100;
 
-static constexpr unsigned long SAMPLE_PERIOD = 1000000000L / SAMPLE_RATE;
-static constexpr unsigned long SAMPLE_PERIOD_ON_US = (SAMPLE_PERIOD * SAMPLE_DUTY_CYCLE) / 100;
-static constexpr unsigned long SAMPLE_PERIOD_OFF_US = (SAMPLE_PERIOD * (100 - SAMPLE_DUTY_CYCLE)) / 100;
+static unsigned long SAMPLE_PERIOD = 1000000000L / sample_rate;
+static unsigned long SAMPLE_PERIOD_ON_US = (SAMPLE_PERIOD * sample_duty_cycle) / 100;
+static unsigned long SAMPLE_PERIOD_OFF_US = (SAMPLE_PERIOD * (100 - sample_duty_cycle)) / 100;
 
 // See: https://perfmon-events.intel.com/cascadelake_server.html
 #define EVENT_UNC_M_CLOCKTICKS 0x00 // umask=0x0,event=0x0 
@@ -57,6 +60,15 @@ static constexpr unsigned long SAMPLE_PERIOD_OFF_US = (SAMPLE_PERIOD * (100 - SA
 
 #define WRITE_SIMD_256(mem_addr, offset, data) \
   _mm256_store_si256(reinterpret_cast<__m256i*>((mem_addr) + ((offset)*CACHE_LINE_SIZE)), data)
+
+inline void set_sampling_rate(const size_t freq, const size_t duty_cycle)
+{
+    sample_rate = freq;
+    sample_duty_cycle = duty_cycle;
+
+    SAMPLE_PERIOD_ON_US = (SAMPLE_PERIOD * sample_duty_cycle) / 100;
+    SAMPLE_PERIOD_OFF_US = (SAMPLE_PERIOD * (100 - sample_duty_cycle)) / 100;
+}
 
 
 class BenchSuite {
