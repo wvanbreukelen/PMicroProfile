@@ -12,8 +12,8 @@
 
 static constexpr size_t CACHE_LINE_SIZE = 64;
 
-static size_t sample_rate = 100;
-static size_t sample_duty_cycle = 75;
+extern size_t sample_rate;
+extern size_t sample_duty_cycle;
 
 // #define SAMPLE_RATE  100  //50000000
 // #define SAMPLE_DUTY_CYCLE 75
@@ -23,9 +23,9 @@ static size_t sample_duty_cycle = 75;
 // period_on = (period * (thread_data->duty_cycle)) / 100;
 // 	period_off = (period * ((100 - thread_data->duty_cycle))) / 100;
 
-static unsigned long SAMPLE_PERIOD = 1000000000L / sample_rate;
-static unsigned long SAMPLE_PERIOD_ON_US = (SAMPLE_PERIOD * sample_duty_cycle) / 100;
-static unsigned long SAMPLE_PERIOD_OFF_US = (SAMPLE_PERIOD * (100 - sample_duty_cycle)) / 100;
+extern unsigned long SAMPLE_PERIOD;
+extern unsigned long SAMPLE_PERIOD_ON_US;
+extern unsigned long SAMPLE_PERIOD_OFF_US;
 
 // See: https://perfmon-events.intel.com/cascadelake_server.html
 #define EVENT_UNC_M_CLOCKTICKS 0x00 // umask=0x0,event=0x0 
@@ -69,6 +69,8 @@ inline void set_sampling_rate(const size_t freq, const size_t duty_cycle)
     SAMPLE_PERIOD = 1000000000L / sample_rate;
     SAMPLE_PERIOD_ON_US = (SAMPLE_PERIOD * sample_duty_cycle) / 100;
     SAMPLE_PERIOD_OFF_US = (SAMPLE_PERIOD * (100 - sample_duty_cycle)) / 100;
+
+    std::cout << SAMPLE_PERIOD_ON_US << std::endl;
 }
 
 

@@ -17,6 +17,12 @@
 #include "pmc.hpp"
 #include "io.hpp"
 
+unsigned long SAMPLE_PERIOD = 1000000000L / sample_rate;
+unsigned long SAMPLE_PERIOD_ON_US = (SAMPLE_PERIOD * sample_duty_cycle) / 100;
+unsigned long SAMPLE_PERIOD_OFF_US = (SAMPLE_PERIOD * (100 - sample_duty_cycle)) / 100;
+size_t sample_rate = 100;
+size_t sample_duty_cycle = 75;
+
 using std::chrono::duration_cast;
 
 std::chrono::time_point<std::chrono::high_resolution_clock> time_start;
@@ -266,7 +272,7 @@ static inline uint64_t next_pow2_fast(uint64_t x)
 
 static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur_sample, ssize_t* total_bytes, unsigned long long *_latest_sample_time, struct io_stat* stat)
 {
-    constexpr uint64_t sample_mask = (1024 - 1);
+    constexpr uint64_t sample_mask = ((1u << 2) - 1);
     bool is_sampling = false;
     auto cur_time_us = std::chrono::high_resolution_clock::now();
 
@@ -275,8 +281,6 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
     void* prev_addr = nullptr;
     size_t prev_addr_opsize = 0;
     size_t z = 0;
-
-
 
     for (const TraceEntry& entry : trace_file) {
         #ifdef ENABLE_DCOLLECTION
