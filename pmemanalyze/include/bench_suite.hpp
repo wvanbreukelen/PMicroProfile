@@ -66,6 +66,7 @@ inline void set_sampling_rate(const size_t freq, const size_t duty_cycle)
     sample_rate = freq;
     sample_duty_cycle = duty_cycle;
 
+    SAMPLE_PERIOD = 1000000000L / sample_rate;
     SAMPLE_PERIOD_ON_US = (SAMPLE_PERIOD * sample_duty_cycle) / 100;
     SAMPLE_PERIOD_OFF_US = (SAMPLE_PERIOD * (100 - sample_duty_cycle)) / 100;
 }
