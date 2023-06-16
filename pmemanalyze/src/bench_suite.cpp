@@ -282,10 +282,6 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
     size_t prev_addr_opsize = 0;
     size_t z = 0;
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 0bca32cc9efcb21280988d2de1f7e1a7f969bb6a
     for (const TraceEntry& entry : trace_file) {
         #ifdef ENABLE_DCOLLECTION
         if (unlikely((z & sample_mask) == 0)) {  // (cur_time - latest_sample_time) >= SAMPLE_LENGTH
