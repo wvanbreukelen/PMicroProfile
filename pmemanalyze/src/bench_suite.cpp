@@ -283,69 +283,69 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
     size_t z = 0;
 
     for (const TraceEntry& entry : trace_file) {
-        // #ifdef ENABLE_DCOLLECTION
-        // if (unlikely((z & sample_mask) == 0)) {
-        //     cur_time_us = std::chrono::high_resolution_clock::now();
-        //     const auto duration_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(cur_time_us - latest_sample_time_us);
-        //     if (is_sampling) {
-        //         if (duration_diff.count() >= SAMPLE_PERIOD_ON_US) {
-		// 	        (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((cur_time_us - time_start));
-        //             (*cur_sample)->sample_duration = duration_diff;
+        #ifdef ENABLE_DCOLLECTION
+        if (unlikely((z & sample_mask) == 0)) {
+            cur_time_us = std::chrono::high_resolution_clock::now();
+            const auto duration_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(cur_time_us - latest_sample_time_us);
+            if (is_sampling) {
+                if (duration_diff.count() >= SAMPLE_PERIOD_ON_US) {
+			        (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((cur_time_us - time_start));
+                    (*cur_sample)->sample_duration = duration_diff;
 
-        //             pmc.disable_imc_probes();
-        //             pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_disable();
+                    pmc.disable_imc_probes();
+                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_disable();
 
-        //             is_sampling = false;
+                    is_sampling = false;
 
-        //             //const auto time_now = std::chrono::high_resolution_clock::now();
+                    //const auto time_now = std::chrono::high_resolution_clock::now();
                     
-        //             //(*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - time_start));
-        //             //(*cur_sample)->9600sample_duration = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - latest_sample_time_us));
+                    //(*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - time_start));
+                    //(*cur_sample)->sample_duration = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - latest_sample_time_us));
 
-        //             pmc.get_probe(EVENT_UNC_M_PMM_WPQ_INSERTS).probe_count(&((*cur_sample)->wpq_inserts));
-        //             pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->wpq_occupancy));
+                    pmc.get_probe(EVENT_UNC_M_PMM_WPQ_INSERTS).probe_count(&((*cur_sample)->wpq_inserts));
+                    pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->wpq_occupancy));
     
-        //             pmc.get_probe(EVENT_UNC_M_PMM_RPQ_INSERTS).probe_count(&((*cur_sample)->rpq_inserts));
-        //             pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->rpq_occupancy));
+                    pmc.get_probe(EVENT_UNC_M_PMM_RPQ_INSERTS).probe_count(&((*cur_sample)->rpq_inserts));
+                    pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->rpq_occupancy));
 
-        //             pmc.get_probe(EVENT_UNC_M_RPQ_INSERTS).probe_count(&((*cur_sample)->dram_rpq_inserts));
-        //             pmc.get_probe(EVENT_UNC_M_RPQ_OCCUPANCY).probe_count(&((*cur_sample)->dram_rpq_occupancy));
+                    pmc.get_probe(EVENT_UNC_M_RPQ_INSERTS).probe_count(&((*cur_sample)->dram_rpq_inserts));
+                    pmc.get_probe(EVENT_UNC_M_RPQ_OCCUPANCY).probe_count(&((*cur_sample)->dram_rpq_occupancy));
 
-        //             pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single(&((*cur_sample)->unc_ticks));
+                    pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single(&((*cur_sample)->unc_ticks));
 
-        //             pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_count_single(&((*cur_sample)->l3_misses_local_pmm));
-        //             pmc.get_probe(EVENT_MEM_INST_RETIRED_ALL_STORES).probe_count_single(&((*cur_sample)->retired_all_stores));
-		//             pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_count_single(&((*cur_sample)->pmm_any_snoop));
-        //             pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_count_single(&((*cur_sample)->dram_l3_miss_any_snoop));
+                    pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_count_single(&((*cur_sample)->l3_misses_local_pmm));
+                    pmc.get_probe(EVENT_MEM_INST_RETIRED_ALL_STORES).probe_count_single(&((*cur_sample)->retired_all_stores));
+		            pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_count_single(&((*cur_sample)->pmm_any_snoop));
+                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_count_single(&((*cur_sample)->dram_l3_miss_any_snoop));
 
-        //             (*cur_sample)->total_bytes_read_write = *(total_bytes);
+                    (*cur_sample)->total_bytes_read_write = *(total_bytes);
 
-        //             (*cur_sample)++;
-        //             ++(stat->num_collected_samples);
+                    (*cur_sample)++;
+                    ++(stat->num_collected_samples);
 
-        //             if (unlikely(stat->num_collected_samples > MAX_SAMPLES)) {
-        //                 std::cerr << "Number of collected sample exteeds MAX_SAMPLES (= " << std::dec << MAX_SAMPLES << "), please increase!" << std::endl;
-        //                 //pthread_exit(NULL);
-        //             }
+                    if (unlikely(stat->num_collected_samples > MAX_SAMPLES)) {
+                        std::cerr << "Number of collected sample exteeds MAX_SAMPLES (= " << std::dec << MAX_SAMPLES << "), please increase!" << std::endl;
+                        //pthread_exit(NULL);
+                    }
                     
-        //             latest_sample_time_us = cur_time_us;
-        //         }
-        //     } else if (duration_diff.count() >= SAMPLE_PERIOD_OFF_US) {
-        //         is_sampling = true;
-        //         latest_sample_time_us = cur_time_us;
-        //         prev_addr = nullptr;
-        //         prev_addr_opsize = 0;
+                    latest_sample_time_us = cur_time_us;
+                }
+            } else if (duration_diff.count() >= SAMPLE_PERIOD_OFF_US) {
+                is_sampling = true;
+                latest_sample_time_us = cur_time_us;
+                prev_addr = nullptr;
+                prev_addr_opsize = 0;
 
-        //         pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
-        //         pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_enable();
+                pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
+                pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_enable();
 
-        //         pmc.reset_imc_probes();
-        //         pmc.enable_imc_probes();
-        //     }
-        // }
+                pmc.reset_imc_probes();
+                pmc.enable_imc_probes();
+            }
+        }
 
-        // ++z;
-        // #endif
+        ++z;
+        #endif
 
         switch (entry.op) {
             case TraceOperation::READ:
@@ -579,7 +579,6 @@ static void* do_work(void *arg)
     // wpq_occupancy_probe.probe_reset();
     // rpq_occupancy_probe.probe_reset();
     pmc.reset_imc_probes();
-    pmc.enable_imc_probes();
     #endif
     //probe_enable(wpq_probe);
 
@@ -607,7 +606,6 @@ static void* do_work(void *arg)
 
     #ifdef ENABLE_DCOLLECTION
     pmc.disable_imc_probes();
-    pmc.read_samples();
     pmc.remove_imc_probes();
     #endif
 

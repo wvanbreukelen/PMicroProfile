@@ -1,6 +1,5 @@
 #include "pmc.hpp"
 
-#include <fcntl.h>
 #include <filesystem>
 #include <regex>
 #include <fstream>
@@ -8,10 +7,7 @@
 
 
 
-
-
 //#define PMC_VERBOSE
-
 
 
 static long perf_event_open(struct perf_event_attr* event_attr, pid_t pid, int cpu,
@@ -52,9 +48,6 @@ bool PMC::init()
         }
     }
 
-    this->mmap_size = (1+1) * sysconf(_SC_PAGESIZE);
-    this->pgmsk = 1 * sysconf(_SC_PAGESIZE) - 1;
-
     return true;
 }
 
@@ -71,15 +64,10 @@ int PMC::add_probe(const unsigned int event_id, const int imc_id, const int pid,
 
     memset(&pe, 0, sizeof(struct perf_event_attr));
 
-    pe.mmap = 1;
-    pe.mmap_data = 1;
-
     pe.type = (imc_id == -1) ? PERF_TYPE_RAW : imc_id;
     pe.size = sizeof(struct perf_event_attr);
     pe.config = event_id;
     pe.sample_type = PERF_SAMPLE_IDENTIFIER;
-    pe.sample_period = 2000;
-    pe.freq = 0;
 	
  
     pe.disabled = 1;
@@ -139,16 +127,9 @@ bool PMC::add_imc_probe(const unsigned int event_id, const bool is_single)
         if ((fd = this->add_probe(event_id, this->imc_ids[i], -1)) < 0) {
             return false;
         }
-        probe.mmap_buf = (struct perf_event_mmap_page*)
-            mmap(NULL, this->mmap_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-        probe.mmap_size = this->mmap_size;
-
-        if (probe.mmap_buf == MAP_FAILED)
-            return 1;
 
         ++(probe.num_probes);
         probe.fd_probes[i] = fd;
-
         #ifdef PMC_VERBOSE
         std::cout << std::dec << fd << " ";
         #endif
@@ -238,13 +219,6 @@ void PMC::reset_imc_probes() const
         	this->probes[i].probe_reset();
 }
 
-void PMC::read_samples()
-{
-    for (size_t i = 0; i < this->num_probes; ++i)
-        if (this->probes[i].is_imc())
-            this->read_samples_probe(this->probes[i]);
-}
-
 bool PMC::remove_probe(const int fd) const
 {
     if (fd < 0)
@@ -272,107 +246,4 @@ bool PMC::remove_imc_probes() const
     return res;
 }
 
-int PMC::read_samples_probe(Probe &probe)
-{
-    struct perf_event_header ehdr;
-    int ret;
-
-
-    for(;;) 
-    {
-        ret = read_mmap_buffer(probe.mmap_buf,(char*)&ehdr,sizeof(ehdr));
-        if(ret)
-            return 0; // no more samples
-
-        switch(ehdr.type) 
-        {
-            case PERF_RECORD_SAMPLE:
-                process_single_sample(probe.mmap_buf);
-                break;
-            case PERF_RECORD_EXIT:
-                process_exit_sample(probe.mmap_buf);
-                break;
-            case PERF_RECORD_LOST:
-                process_lost_sample(probe.mmap_buf);
-                break;
-            case PERF_RECORD_THROTTLE:
-                process_freq_sample(probe.mmap_buf);
-                break;
-            case PERF_RECORD_UNTHROTTLE:
-                process_freq_sample(probe.mmap_buf);
-                break;
-            default:
-                //std::cerr << "Unknown sample type ";
-                //std::cerr << ehdr.type << std::endl;
-                skip_mmap_buffer(probe.mmap_buf,sizeof(ehdr));
-        }
-    }
-}
-
-int PMC::process_single_sample(struct perf_event_mmap_page *mmap_buf)
-{
-    struct perf_event_sample pes;
-    // Fill up our sample
-    memset(&pes,0,sizeof(pes));
-
-
-    read_mmap_buffer(mmap_buf,(char*)&pes.id,sizeof(uint64_t));
-
-    std::cout << "value: " << pes.id;
-
-    return 0;
-}
-
-int PMC::read_mmap_buffer(struct perf_event_mmap_page *mmap_buf, char *out, size_t sz)
-{
-	char *data;
-	unsigned long tail;
-	size_t avail_sz, m, c;
-
-	data = ((char *)mmap_buf)+sysconf(_SC_PAGESIZE);
-	tail = mmap_buf->data_tail & pgmsk;
-	avail_sz = mmap_buf->data_head - mmap_buf->data_tail;
-	if (sz > avail_sz)
-		return -1;
-	c = pgmsk + 1 -  tail;
-	m = c < sz ? c : sz;
-	memcpy(out, data+tail, m);
-	if ((sz - m) > 0)
-		memcpy(out+m, data, sz - m);
-	mmap_buf->data_tail += sz;
-
-	return 0;
-}
-
-void PMC::skip_mmap_buffer(struct perf_event_mmap_page *mmap_buf, size_t sz)
-{
-    if ((mmap_buf->data_tail + sz) > mmap_buf->data_head)
-        sz = mmap_buf->data_head - mmap_buf->data_tail;
-
-    mmap_buf->data_tail += sz;
-}
-
-void PMC::process_lost_sample(struct perf_event_mmap_page *mmap_buf)
-{
-	struct { uint64_t id, lost; } lost;
-    int ret;
-
-	ret = read_mmap_buffer(mmap_buf,(char*)&lost,sizeof(lost));
-}
-
-void PMC::process_exit_sample(struct perf_event_mmap_page *mmap_buf)
-{
-	struct { pid_t pid, ppid, tid, ptid; } grp;
-	int ret;
-
-	ret = read_mmap_buffer(mmap_buf,(char*)&grp,sizeof(grp));
-}
-
-void PMC::process_freq_sample(struct perf_event_mmap_page *mmap_buf)
-{
-	struct { uint64_t time, id, stream_id; } thr;
-	int ret;
-
-	ret = read_mmap_buffer(mmap_buf,(char*)&thr, sizeof(thr));
-}
 
