@@ -272,11 +272,11 @@ static inline uint64_t next_pow2_fast(uint64_t x)
 
 static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur_sample, ssize_t* total_bytes, unsigned long long *_latest_sample_time, struct io_stat* stat)
 {
-    constexpr uint64_t sample_mask = ((1u << 2) - 1);
+    constexpr uint64_t sample_mask = ((1u << 8) - 1);
     bool is_sampling = false;
-    unsigned long long cur_time_us = clock::now();
+    auto cur_time_us = std::chrono::high_resolution_clock::now();
 
-    unsigned long long latest_sample_time = *(_latest_sample_time);
+    //unsigned long long latest_sample_time = *(_latest_sample_time);
     auto latest_sample_time_us = std::chrono::high_resolution_clock::now();
     void* prev_addr = nullptr;
     size_t prev_addr_opsize = 0;
@@ -284,16 +284,13 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 
     for (const TraceEntry& entry : trace_file) {
         #ifdef ENABLE_DCOLLECTION
-        if (unlikely((z & sample_mask) == 0)) {  // (cur_time - latest_sample_time) >= SAMPLE_LENGTH
-            //cur_time = __builtin_ia32_rdtsc();
-            cur_time_us = clock::now();
-	    //std::cout << std::dec << (cur_time_us / 1000000000) << " s" << std::endl;
-
+        if (unlikely((z & sample_mask) == 0)) {
+            cur_time_us = std::chrono::high_resolution_clock::now();
+            const auto duration_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(cur_time_us - latest_sample_time_us);
             if (is_sampling) {
-                if ((cur_time_us - latest_sample_time) >= SAMPLE_PERIOD_ON_US) {
-                    const auto time_now = std::chrono::high_resolution_clock::now();
-			        (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - time_start));
-                    (*cur_sample)->sample_duration = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - latest_sample_time_us));
+                if (duration_diff.count() >= SAMPLE_PERIOD_ON_US) {
+			        (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((cur_time_us - time_start));
+                    (*cur_sample)->sample_duration = duration_diff;
 
                     pmc.disable_imc_probes();
                     pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_disable();
@@ -321,9 +318,6 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 		            pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_count_single(&((*cur_sample)->pmm_any_snoop));
                     pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_count_single(&((*cur_sample)->dram_l3_miss_any_snoop));
 
-
-                    //pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM).probe_count_single(&((*cur_sample)->l3_misses_remote_pmm));
-
                     (*cur_sample)->total_bytes_read_write = *(total_bytes);
 
                     (*cur_sample)++;
@@ -334,22 +328,19 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                         //pthread_exit(NULL);
                     }
                     
-                    latest_sample_time = cur_time_us;
+                    latest_sample_time_us = cur_time_us;
                 }
-            } else {
-                if ((cur_time_us - latest_sample_time) >= SAMPLE_PERIOD_OFF_US) {
-                    is_sampling = true;
-                    latest_sample_time = cur_time_us;
-                    latest_sample_time_us = std::chrono::high_resolution_clock::now();
-                    prev_addr = nullptr;
-                    prev_addr_opsize = 0;
+            } else if (duration_diff.count() >= SAMPLE_PERIOD_OFF_US) {
+                is_sampling = true;
+                latest_sample_time_us = cur_time_us;
+                prev_addr = nullptr;
+                prev_addr_opsize = 0;
 
-                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
-                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_enable();
+                pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
+                pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_enable();
 
-                    pmc.reset_imc_probes();
-                    pmc.enable_imc_probes();
-                }
+                pmc.reset_imc_probes();
+                pmc.enable_imc_probes();
             }
         }
 
@@ -502,7 +493,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
         }
     }
 
-    *(_latest_sample_time) = latest_sample_time;
+    //*(_latest_sample_time) = latest_sample_time;
 }
 
 static void* do_work(void *arg)
