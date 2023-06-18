@@ -354,6 +354,11 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                         read_value<uint8_t>(entry, is_sampling, (*cur_sample));
                         break;
                     }
+		    case 2:
+		    {
+			read_value<uint16_t>(entry, is_sampling, (*cur_sample));
+			break;
+		    }
                     case 4:
                     {
                         read_value<uint32_t>(entry, is_sampling, (*cur_sample));
@@ -401,14 +406,29 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 switch (entry.opcode)
                 {
                 case 0xA4: // 1 byte size
+		case 0x88:
                 {
-                    write_mov_8(entry, is_sampling, (*cur_sample));
+                    write_mov<uint8_t>(entry, is_sampling, (*cur_sample));
                     break;
                 }
-                case 0x4444:
+		case 0x89:
+		{
+		    write_mov<uint32_t>(entry, is_sampling, (*cur_sample));
+		    break;
+		}
+		case 0xC5:
+		{
+		    write_mov<uint64_t>(entry, is_sampling, (*cur_sample));
+		    break;
+		}
                 case 0xC30F: // 4-8 bytes - MOVNTI
                 {
                     write_movntq_64(entry, is_sampling, (*cur_sample));
+                    break;
+                }
+		case 0x110F: // 8 bytes - MOVUPS
+                {
+                    write_mov<float>(entry, is_sampling, (*cur_sample));
                     break;
                 }
                 case 0xE70F: // 16 bytes - MOVNTDQ
