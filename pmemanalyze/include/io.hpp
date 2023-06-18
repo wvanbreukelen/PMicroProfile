@@ -39,7 +39,8 @@ inline void read_value(const TraceEntry& entry, const bool is_sampling, struct i
     (void) temp_var;
 }
 
-inline void write_mov_8(const TraceEntry& entry, const bool is_sampling, struct io_sample *const cur_sample)
+template<typename T>
+inline void write_mov(const TraceEntry& entry, const bool is_sampling, struct io_sample *const cur_sample)
 {
     #ifdef ENABLE_DCOLLECTION
     if (is_sampling) {
@@ -47,20 +48,20 @@ inline void write_mov_8(const TraceEntry& entry, const bool is_sampling, struct 
         
         if (do_lat_measurement) {
             const auto op_start = std::chrono::steady_clock::now();
-            *(static_cast<uint8_t*>(entry.dax_addr)) = static_cast<uint8_t>(entry.data);
+            *(static_cast<T*>(entry.dax_addr)) = static_cast<T>(entry.data);
             const auto op_end = std::chrono::steady_clock::now();
 
             cur_sample->write_inst_cycles += std::chrono::duration_cast<std::chrono::nanoseconds>(op_end - op_start).count();
             cur_sample->write_inst_cycles_samples++;
         } else {
-            *(static_cast<uint8_t*>(entry.dax_addr)) = static_cast<uint8_t>(entry.data);
+            *(static_cast<T*>(entry.dax_addr)) = static_cast<T>(entry.data);
         }
         ++(cur_sample->num_classic_rw);
     } else {
-        *(static_cast<unsigned char*>(entry.dax_addr)) = static_cast<unsigned char>(entry.data);
+        *(static_cast<T*>(entry.dax_addr)) = static_cast<T>(entry.data);
     }
     #else
-        *(static_cast<unsigned char*>(entry.dax_addr)) = static_cast<unsigned char>(entry.data);
+        *(static_cast<T*>(entry.dax_addr)) = static_cast<T>(entry.data);
     #endif
 }
 
