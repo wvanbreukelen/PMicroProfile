@@ -12,9 +12,9 @@ inline void read_value(const TraceEntry& entry, const bool is_sampling, struct i
 
     #ifdef ENABLE_DCOLLECTION
     if (unlikely(is_sampling)) {
-        const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+        //const unsigned long long start_ticks = __builtin_ia32_rdtsc();
         temp_var = *(static_cast<T*>(entry.dax_addr));
-        cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        //cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
         ++(cur_sample->num_classic_rw);
     } else {
         temp_var = *(static_cast<T*>(entry.dax_addr));
@@ -114,7 +114,7 @@ inline void write_movntq_64(const TraceEntry& entry, const bool is_sampling, str
 
     #ifdef ENABLE_DCOLLECTION
     if (unlikely(is_sampling)) {
-        const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+        //const unsigned long long start_ticks = __builtin_ia32_rdtsc();
         #ifdef STRICT_CONSISTENCY
         _mm_sfence();
         #endif
@@ -127,7 +127,7 @@ inline void write_movntq_64(const TraceEntry& entry, const bool is_sampling, str
         _mm_sfence();
         #endif
 
-        cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        //cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
         ++(cur_sample->num_movntq);
     } else {
         #ifdef STRICT_CONSISTENCY

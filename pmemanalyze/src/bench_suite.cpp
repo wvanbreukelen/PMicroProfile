@@ -293,7 +293,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     (*cur_sample)->sample_duration = duration_diff;
 
                     pmc.disable_imc_probes();
-                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_disable();
+                    //pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_disable();
 
                     is_sampling = false;
 
@@ -303,20 +303,20 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     //(*cur_sample)->sample_duration = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - latest_sample_time_us));
 
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_INSERTS).probe_count(&((*cur_sample)->wpq_inserts));
-                    pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->wpq_occupancy));
+                    //pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->wpq_occupancy));
     
-                    pmc.get_probe(EVENT_UNC_M_PMM_RPQ_INSERTS).probe_count(&((*cur_sample)->rpq_inserts));
-                    pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->rpq_occupancy));
+                    //pmc.get_probe(EVENT_UNC_M_PMM_RPQ_INSERTS).probe_count(&((*cur_sample)->rpq_inserts));
+                    //pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->rpq_occupancy));
 
-                    pmc.get_probe(EVENT_UNC_M_RPQ_INSERTS).probe_count(&((*cur_sample)->dram_rpq_inserts));
-                    pmc.get_probe(EVENT_UNC_M_RPQ_OCCUPANCY).probe_count(&((*cur_sample)->dram_rpq_occupancy));
+                    //pmc.get_probe(EVENT_UNC_M_RPQ_INSERTS).probe_count(&((*cur_sample)->dram_rpq_inserts));
+                    //pmc.get_probe(EVENT_UNC_M_RPQ_OCCUPANCY).probe_count(&((*cur_sample)->dram_rpq_occupancy));
 
-                    pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single(&((*cur_sample)->unc_ticks));
+                    //pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single(&((*cur_sample)->unc_ticks));
 
-                    pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_count_single(&((*cur_sample)->l3_misses_local_pmm));
-                    pmc.get_probe(EVENT_MEM_INST_RETIRED_ALL_STORES).probe_count_single(&((*cur_sample)->retired_all_stores));
-		            pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_count_single(&((*cur_sample)->pmm_any_snoop));
-                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_count_single(&((*cur_sample)->dram_l3_miss_any_snoop));
+                    //pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_count_single(&((*cur_sample)->l3_misses_local_pmm));
+                    //pmc.get_probe(EVENT_MEM_INST_RETIRED_ALL_STORES).probe_count_single(&((*cur_sample)->retired_all_stores));
+		            //pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_count_single(&((*cur_sample)->pmm_any_snoop));
+                    //pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_count_single(&((*cur_sample)->dram_l3_miss_any_snoop));
 
                     (*cur_sample)->total_bytes_read_write = *(total_bytes);
 
@@ -336,8 +336,8 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 prev_addr = nullptr;
                 prev_addr_opsize = 0;
 
-                pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
-                pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_enable();
+                //pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
+                //pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_enable();
 
                 pmc.reset_imc_probes();
                 pmc.enable_imc_probes();
@@ -440,10 +440,9 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 
                     // Determine penalty.
                     if (prev_addr != nullptr) {
-                        // if (reinterpret_cast<char*>(entry.dax_addr) - (reinterpret_cast<char*>(prev_addr) + prev_addr_opsize) > 0)
-                        //     ++((*cur_sample)->total_addr_distance);
-                        if (static_cast<ptrdiff_t>(reinterpret_cast<char*>(entry.dax_addr) - (reinterpret_cast<char*>(prev_addr))) > 256)
-                            ++((*cur_sample)->total_addr_distance);
+                         if (reinterpret_cast<char*>(entry.dax_addr) - (reinterpret_cast<char*>(prev_addr) + prev_addr_opsize) > 0)
+                             ++((*cur_sample)->total_addr_distance);
+                       
                     }
                     prev_addr = entry.dax_addr;
                     prev_addr_opsize = entry.op_size;
@@ -520,52 +519,51 @@ static void* do_work(void *arg)
     #ifdef ENABLE_DCOLLECTION
     //struct iMCProbe unc_ticks_probe{}, wpq_probe{}, rpq_probe{}, wpq_occupancy_probe{}, rpq_occupancy_probe{};
 
-    if (!pmc.add_imc_probe(EVENT_UNC_M_CLOCKTICKS, true)) {
-        std::cerr << "Unable to add EVENT_UNC_M_CLOCKTICKS probe!" << std::endl;
+    //if (!pmc.add_imc_probe(EVENT_UNC_M_CLOCKTICKS, true)) {
+      //  std::cerr << "Unable to add EVENT_UNC_M_CLOCKTICKS probe!" << std::endl;
         //pthread_exit(NULL);
-    }
+    //}
 
     if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS)) {
         std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_INSERTS probe!" << std::endl;
         //pthread_exit(NULL);
     }
 
-    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_INSERTS)) {
-        std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_INSERTS probe!" << std::endl;
+    //if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_INSERTS)) {
+        //std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_INSERTS probe!" << std::endl;
         //pthread_exit(NULL);
-    }
+    //}
 
-    if (!pmc.add_imc_probe(EVENT_UNC_M_RPQ_INSERTS)) {
-        std::cerr << "Unable to add EVENT_UNC_M_RPQ_INSERTS probe!" << std::endl;
+    //if (!pmc.add_imc_probe(EVENT_UNC_M_RPQ_INSERTS)) {
+        //std::cerr << "Unable to add EVENT_UNC_M_RPQ_INSERTS probe!" << std::endl;
         //pthread_exit(NULL);
-    }
+    //}
 
-    if (!pmc.add_imc_probe(EVENT_UNC_M_RPQ_OCCUPANCY)) {
-        std::cerr << "Unable to add EVENT_UNC_M_RPQ_OCCUPANCY probe!" << std::endl;
+    //if (!pmc.add_imc_probe(EVENT_UNC_M_RPQ_OCCUPANCY)) {
+        //std::cerr << "Unable to add EVENT_UNC_M_RPQ_OCCUPANCY probe!" << std::endl;
         //pthread_exit(NULL);
-    }
+    //}
 
-    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL)) {
-        std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL probe!" << std::endl;
+    //if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL)) {
+        //std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL probe!" << std::endl;
         //pthread_exit(NULL);
-    }
-
-    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL)) {
-        std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL probe!" << std::endl;
+    //}
+    //if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL)) {
+        //std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL probe!" << std::endl;
         //pthread_exit(NULL);
-    }
+    //}
 
-    if (!pmc.add_offcore_probe(EVENT_MEM_INST_RETIRED_ALL_STORES, syscall(SYS_gettid))) {
-        std::cerr << "Unable to add EVENT_MEM_INST_RETIRED_ALL_STORES probe!" << std::endl;
-    }
+    //if (!pmc.add_offcore_probe(EVENT_MEM_INST_RETIRED_ALL_STORES, syscall(SYS_gettid))) {
+        //std::cerr << "Unable to add EVENT_MEM_INST_RETIRED_ALL_STORES probe!" << std::endl;
+    //}
 
-    if (!pmc.add_offcore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM, syscall(SYS_gettid))) {
-        std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM probe!" << std::endl;
+    //if (!pmc.add_offcore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM, syscall(SYS_gettid))) {
+        //std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM probe!" << std::endl;
         //pthread_exit(NULL);
-    }
+    //}
 
-    pmc.add_offcore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_PMM_HIT_LOCAL_ANY_SNOOP); // L2: 0x3f80400010  0x804007F7
-    pmc.add_offcore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP);
+    //pmc.add_offcore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_PMM_HIT_LOCAL_ANY_SNOOP); // L2: 0x3f80400010  0x804007F7
+    //pmc.add_offcore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP);
 
     //if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM, syscall(SYS_gettid))) {
     //    std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM probe!" << std::endl;
@@ -578,9 +576,13 @@ static void* do_work(void *arg)
     // rpq_probe.probe_reset();
     // wpq_occupancy_probe.probe_reset();
     // rpq_occupancy_probe.probe_reset();
-    pmc.reset_imc_probes();
+    //pmc.reset_imc_probes();
     #endif
     //probe_enable(wpq_probe);
+
+    #ifdef ENABLE_DCOLLECTION
+	pmc.reset_imc_probes();
+    #endif
 
     cur_sample = &(stat->samples[0]);
 
@@ -647,6 +649,16 @@ bool BenchSuite::run(const size_t replay_rounds)
     this->drop_caches();
 
     assert(sysconf(_SC_NPROCESSORS_ONLN) > static_cast<long>(this->num_threads));
+
+    std::cout << "Preparing Optane..." << std::endl;
+
+    for (char* addr = static_cast<char*>(this->mem_area); addr < (static_cast<char*>(this->mem_area) + this->mem_size); addr += 512) {
+        __m128i random_value = _mm_set_epi64x(rand(), rand());
+        _mm_stream_si128((__m128i*) addr, random_value);
+    }
+
+    std::cout << "Done!" << std::endl;
+
 
 
     pthread_attr_t attr;
