@@ -291,10 +291,8 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 if (duration_diff.count() >= SAMPLE_PERIOD_ON_US) {
 			        (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((cur_time_us - time_start));
                    
-		    pmc.disable_imc_probes();
+		    //pmc.disable_imc_probes();
 		    (*cur_sample)->sample_duration = duration_diff;
-
-                    //pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_disable();
 
                     is_sampling = false;
 
@@ -316,10 +314,10 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
 
                     //pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single(&((*cur_sample)->unc_ticks));
 
-                    //pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_count_single(&((*cur_sample)->l3_misses_local_pmm));
+                    pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_count_single(&((*cur_sample)->l3_misses_local_pmm));
                     //pmc.get_probe(EVENT_MEM_INST_RETIRED_ALL_STORES).probe_count_single(&((*cur_sample)->retired_all_stores));
-		            //pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_count_single(&((*cur_sample)->pmm_any_snoop));
-                    //pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_count_single(&((*cur_sample)->dram_l3_miss_any_snoop));
+		    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_count_single(&((*cur_sample)->pmm_any_snoop));
+                    pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_count_single(&((*cur_sample)->dram_l3_miss_any_snoop));
 
                     (*cur_sample)->total_bytes_read_write = *(total_bytes);
 
@@ -339,10 +337,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 prev_addr = nullptr;
                 prev_addr_opsize = 0;
 
-                //pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
-                //pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_enable();
-
-                pmc.reset_enable_imc_probes();
+                pmc.reset_imc_probes();
             }
         }
 
@@ -559,13 +554,13 @@ static void* do_work(void *arg)
         //std::cerr << "Unable to add EVENT_MEM_INST_RETIRED_ALL_STORES probe!" << std::endl;
     //}
 
-    //if (!pmc.add_offcore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM, syscall(SYS_gettid))) {
-        //std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM probe!" << std::endl;
+    if (!pmc.add_offcore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM, syscall(SYS_gettid))) {
+        std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM probe!" << std::endl;
         //pthread_exit(NULL);
-    //}
+    }
 
-    //pmc.add_offcore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_PMM_HIT_LOCAL_ANY_SNOOP); // L2: 0x3f80400010  0x804007F7
-    //pmc.add_offcore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP);
+    pmc.add_offcore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_PMM_HIT_LOCAL_ANY_SNOOP); // L2: 0x3f80400010  0x804007F7
+    pmc.add_offcore_probe(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, syscall(SYS_gettid), MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP);
 
     //if (!pmc.add_oncore_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM, syscall(SYS_gettid))) {
     //    std::cerr << "Unable to add EVENT_MEM_LOAD_L3_MISS_RETIRED_REMOTE_PMM probe!" << std::endl;
@@ -583,7 +578,10 @@ static void* do_work(void *arg)
     //probe_enable(wpq_probe);
 
     #ifdef ENABLE_DCOLLECTION
-	pmc.reset_imc_probes();
+	pmc.reset_enable_imc_probes();
+	pmc.get_probe(EVENT_MEM_LOAD_L3_MISS_RETIRED_LOCAL_PMM).probe_reset_enable();
+	pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_PMM_HIT_LOCAL_ANY_SNOOP).probe_reset_enable();
+	pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset_enable();
     #endif
 
     cur_sample = &(stat->samples[0]);
