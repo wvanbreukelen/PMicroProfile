@@ -79,6 +79,8 @@ df['avg_latency_dev_read_dram'] = (1e9 * (df['dram_rpq_occupancy'] / df['dram_rp
 df['ra'] = (df['rpq_inserts'] * 64) / df['bytes_read']
 df['wa'] = (df['wpq_inserts'] * 64) / df['bytes_written']
 
+
+
 # Source: https://github.com/andikleen/pmu-tools/blob/master/clx_server_ratios.py (line 661)
 df['pmem_read_bw'] = (df['rpq_inserts'] * 64 / 1e9) / df['sample_duration_sec']
 df['dram_read_bw'] = (df['dram_rpq_inserts'] * 64 / 1e9) / df['sample_duration_sec']
@@ -124,6 +126,8 @@ df['smoothed_avg_latency_inst_read'] = df['avg_latency_inst_read'].rolling(windo
 df['smoothed_ra'] = df['ra'].rolling(window_size, center=True).mean()
 df['smoothed_wa'] = df['wa'].rolling(window_size, center=True).mean()
 
+df.replace([np.inf, -np.inf], np.nan, inplace=True)
+df.dropna(subset=["wa", "ra"], how="all", inplace=True)
 
 
 # Print the contents of the DataFrame
@@ -140,9 +144,9 @@ elif plots_cat == "perf":
 elif plots_cat == "latency":
     fig, (ax_rw, ax_lat_read, ax_lat_write) = plt.subplots(nrows=3, ncols=1, figsize=(6, 5))
 elif plots_cat == "dram":
-    fig, (ax_dload, ax_l3_miss_dram, ax_l3_miss_pmm) = plt.subplots(nrows=3, ncols=1, figsize=(6, 5))
+    fig, (ax_dload, ax_l3_miss_dram, ax_l3_miss_pmm) = plt.subplots(nrows=3, ncols=1, figsize=(5, 4))
 
-# fig.suptitle("pmemanalyze 200 MiB FIO benchmark, 100% / 0% R/W ratio (repeated 25 times)")
+fig.suptitle("Filebench Varmail Ext4-DAX, repeated 10 times", size=12)
 
 if plots_cat == "all" or plots_cat == "workload" or plots_cat == "perf" or plots_cat == "latency":
     # Plot the number of reads and writes on the top subplot
@@ -152,14 +156,19 @@ if plots_cat == "all" or plots_cat == "workload" or plots_cat == "perf" or plots
     # ax1.plot(df['timestamp_sec'], df['num_barriers'], label='Number of Barriers')
 
     #  Writes: {:.2f} Flushes: {:.2f}
-    ax_rw.text(1.0, 1.25, 'Reads: {:.2f} % Writes: {:.2f} %\nFlushes: {:.2f} %'.format((df['num_reads'].sum() / df['total_ops'].sum()) * 100.0, (df['num_writes'].sum() / df['total_ops'].sum()) * 100.0, (df['num_flushes'].sum() / df['total_ops'].sum()) * 100.0),
+    ax_rw.text(1.0, 1.33, 'Reads: {:.2f} % Writes: {:.2f} %\nFlushes: {:.2f} %'.format((df['num_reads'].sum() / df['total_ops'].sum()) * 100.0, (df['num_writes'].sum() / df['total_ops'].sum()) * 100.0, (df['num_flushes'].sum() / df['total_ops'].sum()) * 100.0),
         horizontalalignment='right',
         verticalalignment='top', size=6, transform=ax_rw.transAxes)
     
     ax_rw.set_ylabel('# Operations (log)')
     ax_rw.set_yscale('log')
     ax_rw.set_title("Number of Retired Instructions", size=title_font_size)
-    ax_rw.legend(prop={'size': 8})
+    box = ax_rw.get_position()
+    ax_rw.set_position([box.x0, box.y0 + box.height * 0.1,
+                 box.width, box.height * 0.9])
+
+    ax_rw.legend(loc='upper center', bbox_to_anchor=(0.5, -0.30),
+          fancybox=True, ncol=3, prop={'size': 8})
 
 if plots_cat == "workload":
     ax_bar.plot(df['timestamp_sec'], df['num_barriers'] , label='Total Number of Barriers')
@@ -170,7 +179,7 @@ if plots_cat == "workload":
 if plots_cat == "all" or plots_cat == "perf":
     ax_bw.plot(df['timestamp_sec'], df['pmem_read_bw'], label='Read')
     ax_bw.plot(df['timestamp_sec'], df['pmem_write_bw'], label='Write')
-    ax_bw.text(1.0, 1.25, 'Avg. read: {:.3f} GB/s\nAvg. write: {:.3f} GB/s'.format(df['pmem_read_bw'].mean(), df['pmem_write_bw'].mean()),
+    ax_bw.text(1.0, 1.33, 'Avg. read: {:.3f} GB/s\nAvg. write: {:.3f} GB/s'.format(df['pmem_read_bw'].mean(), df['pmem_write_bw'].mean()),
         horizontalalignment='right',
         verticalalignment='top', size=6, transform=ax_bw.transAxes)
     ax_bw.set_ylabel('GB/s')
@@ -221,7 +230,7 @@ if plots_cat == "all" or plots_cat == "perf":
     ax_amp.set_xlabel('Time (s)')
     ax_amp.set_ylabel('Factor')
     ax_amp.set_title("Device Read/Write Amplification", size=title_font_size)
-    ax_amp.text(1.0, 1.25, 'Avg. RA: {:.2f}\nAvg. WA: {:.2f}'.format(df['ra'].mean(), df['wa'].mean()),
+    ax_amp.text(1.0, 1.33, 'Avg. RA: {:.2f}\nAvg. WA: {:.2f}'.format(df['ra'].mean(), df['wa'].mean()),
         horizontalalignment='right',
         verticalalignment='top', size=6, transform=ax_amp.transAxes)
     ax_amp.legend()
