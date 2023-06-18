@@ -5,6 +5,13 @@
 
 #include "bench_suite.hpp"
 
+static __inline__ unsigned long long tick()
+{
+  unsigned hi, lo;
+  __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
+  return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
+}
+
 template<typename T>
 inline void read_value(const TraceEntry& entry, const bool is_sampling, struct io_sample *const cur_sample)
 {
@@ -12,9 +19,9 @@ inline void read_value(const TraceEntry& entry, const bool is_sampling, struct i
 
     #ifdef ENABLE_DCOLLECTION
     if (unlikely(is_sampling)) {
-        //const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+        //const uint64_t start_ticks = tick();
         temp_var = *(static_cast<T*>(entry.dax_addr));
-        //cur_sample->read_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        //cur_sample->read_inst_cycles += (tick() - start_ticks);
         ++(cur_sample->num_classic_rw);
     } else {
         temp_var = *(static_cast<T*>(entry.dax_addr));
@@ -30,7 +37,7 @@ inline void write_mov_8(const TraceEntry& entry, const bool is_sampling, struct 
 {
     #ifdef ENABLE_DCOLLECTION
     if (unlikely(is_sampling)) {
-        const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+        //const unsigned long long start_ticks = __builtin_ia32_rdtsc();
         #ifdef STRICT_CONSISTENCY
         _mm_sfence();
         #endif
@@ -42,7 +49,7 @@ inline void write_mov_8(const TraceEntry& entry, const bool is_sampling, struct 
         _mm_sfence();
         #endif
 
-        cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        //cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
         ++(cur_sample->num_classic_rw);
     } else {
         #ifdef STRICT_CONSISTENCY
@@ -65,7 +72,7 @@ inline void write_movnti_32(const TraceEntry& entry, const bool is_sampling, str
 {
     #ifdef ENABLE_DCOLLECTION
     if (unlikely(is_sampling)) {
-        const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+        //const unsigned long long start_ticks = __builtin_ia32_rdtsc();
         #ifdef STRICT_CONSISTENCY
         _mm_sfence();
         #endif
@@ -78,7 +85,7 @@ inline void write_movnti_32(const TraceEntry& entry, const bool is_sampling, str
         _mm_sfence();
         #endif
 
-        cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        //cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
         ++(cur_sample->num_movnti);
     } else {
         #ifdef STRICT_CONSISTENCY
@@ -114,7 +121,7 @@ inline void write_movntq_64(const TraceEntry& entry, const bool is_sampling, str
 
     #ifdef ENABLE_DCOLLECTION
     if (unlikely(is_sampling)) {
-        //const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+        //const uint64_t start_ticks = tick();
         #ifdef STRICT_CONSISTENCY
         _mm_sfence();
         #endif
@@ -127,7 +134,7 @@ inline void write_movntq_64(const TraceEntry& entry, const bool is_sampling, str
         _mm_sfence();
         #endif
 
-        //cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        //cur_sample->write_inst_cycles += (tick() - start_ticks);
         ++(cur_sample->num_movntq);
     } else {
         #ifdef STRICT_CONSISTENCY
@@ -162,7 +169,7 @@ inline void write_movntqd_128(const TraceEntry& entry, const bool is_sampling, s
 
     #ifdef ENABLE_DCOLLECTION
     if (unlikely(is_sampling)) {
-        const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+        //const unsigned long long start_ticks = __builtin_ia32_rdtsc();
         #ifdef STRICT_CONSISTENCY
         _mm_sfence();
         #endif
@@ -175,7 +182,7 @@ inline void write_movntqd_128(const TraceEntry& entry, const bool is_sampling, s
         _mm_sfence();
         #endif
 
-        cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        //cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
         ++(cur_sample->num_movntqd);
     } else {
         #ifdef STRICT_CONSISTENCY
@@ -210,7 +217,7 @@ inline void write_movntps_128(const TraceEntry& entry, const bool is_sampling, s
 
     #ifdef ENABLE_DCOLLECTION
     if (unlikely(is_sampling)) {
-        const unsigned long long start_ticks = __builtin_ia32_rdtsc();
+        //const unsigned long long start_ticks = __builtin_ia32_rdtsc();
         #ifdef STRICT_CONSISTENCY
         _mm_sfence();
         #endif
@@ -223,7 +230,7 @@ inline void write_movntps_128(const TraceEntry& entry, const bool is_sampling, s
         _mm_sfence();
         #endif
 
-        cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+        //cur_sample->write_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
         ++(cur_sample->num_movntps);
     } else {
         #ifdef STRICT_CONSISTENCY
@@ -256,9 +263,9 @@ inline void flush_clflush(const TraceEntry& entry, const bool is_sampling, struc
 {
     #ifdef ENABLE_DCOLLECTION
         if (is_sampling) {
-            unsigned long long start_ticks = __builtin_ia32_rdtsc();
+            //unsigned long long start_ticks = __builtin_ia32_rdtsc();
             _mm_clflushopt(entry.dax_addr);
-            cur_sample->flush_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
+            //cur_sample->flush_inst_cycles += (__builtin_ia32_rdtsc() - start_ticks);
         } else {
             _mm_clflushopt(entry.dax_addr);
         }

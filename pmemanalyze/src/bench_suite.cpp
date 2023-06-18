@@ -290,9 +290,10 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
             if (is_sampling) {
                 if (duration_diff.count() >= SAMPLE_PERIOD_ON_US) {
 			        (*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((cur_time_us - time_start));
-                    (*cur_sample)->sample_duration = duration_diff;
+                   
+		    pmc.disable_imc_probes();
+		    (*cur_sample)->sample_duration = duration_diff;
 
-                    pmc.disable_imc_probes();
                     //pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_disable();
 
                     is_sampling = false;
@@ -302,10 +303,12 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                     //(*cur_sample)->time_since_start = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - time_start));
                     //(*cur_sample)->sample_duration = std::chrono::duration_cast<std::chrono::nanoseconds>((time_now - latest_sample_time_us));
 
+		    pmc.get_probe(EVENT_UNC_M_CLOCKTICKS).probe_count_single(&((*cur_sample)->unc_ticks));
+
                     pmc.get_probe(EVENT_UNC_M_PMM_WPQ_INSERTS).probe_count(&((*cur_sample)->wpq_inserts));
-                    //pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->wpq_occupancy));
+                    pmc.get_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->wpq_occupancy));
     
-                    //pmc.get_probe(EVENT_UNC_M_PMM_RPQ_INSERTS).probe_count(&((*cur_sample)->rpq_inserts));
+                    pmc.get_probe(EVENT_UNC_M_PMM_RPQ_INSERTS).probe_count(&((*cur_sample)->rpq_inserts));
                     //pmc.get_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL).probe_count(&((*cur_sample)->rpq_occupancy));
 
                     //pmc.get_probe(EVENT_UNC_M_RPQ_INSERTS).probe_count(&((*cur_sample)->dram_rpq_inserts));
@@ -518,20 +521,20 @@ static void* do_work(void *arg)
     #ifdef ENABLE_DCOLLECTION
     //struct iMCProbe unc_ticks_probe{}, wpq_probe{}, rpq_probe{}, wpq_occupancy_probe{}, rpq_occupancy_probe{};
 
-    //if (!pmc.add_imc_probe(EVENT_UNC_M_CLOCKTICKS, true)) {
+    if (!pmc.add_imc_probe(EVENT_UNC_M_CLOCKTICKS, true)) {
       //  std::cerr << "Unable to add EVENT_UNC_M_CLOCKTICKS probe!" << std::endl;
         //pthread_exit(NULL);
-    //}
+    }
 
     if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_INSERTS)) {
         std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_INSERTS probe!" << std::endl;
         //pthread_exit(NULL);
     }
 
-    //if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_INSERTS)) {
-        //std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_INSERTS probe!" << std::endl;
+    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_INSERTS)) {
+        std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_INSERTS probe!" << std::endl;
         //pthread_exit(NULL);
-    //}
+    }
 
     //if (!pmc.add_imc_probe(EVENT_UNC_M_RPQ_INSERTS)) {
         //std::cerr << "Unable to add EVENT_UNC_M_RPQ_INSERTS probe!" << std::endl;
@@ -543,10 +546,10 @@ static void* do_work(void *arg)
         //pthread_exit(NULL);
     //}
 
-    //if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL)) {
-        //std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL probe!" << std::endl;
+    if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL)) {
+        std::cerr << "Unable to add EVENT_UNC_M_PMM_WPQ_OCCUPANCY_ALL probe!" << std::endl;
         //pthread_exit(NULL);
-    //}
+    }
     //if (!pmc.add_imc_probe(EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL)) {
         //std::cerr << "Unable to add EVENT_UNC_M_PMM_RPQ_OCCUPANCY_ALL probe!" << std::endl;
         //pthread_exit(NULL);
@@ -651,7 +654,7 @@ bool BenchSuite::run(const size_t replay_rounds)
 
     std::cout << "Preparing Optane..." << std::endl;
 
-    for (char* addr = static_cast<char*>(this->mem_area); addr < (static_cast<char*>(this->mem_area) + this->mem_size); addr += 512) {
+    for (char* addr = static_cast<char*>(this->mem_area); addr < (static_cast<char*>(this->mem_area) + this->mem_size); addr += 1024) {
         __m128i random_value = _mm_set_epi64x(rand(), rand());
         _mm_stream_si128((__m128i*) addr, random_value);
     }
