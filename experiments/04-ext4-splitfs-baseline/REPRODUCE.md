@@ -13,6 +13,16 @@
 ## Performing performance analyze (real machine)
 1. Copy the trace files from the VM to the machine that has real PMEM using a tool like `scp`.
 2. Ensure you have installed `pmemreplay` by executing the `../../install-real-machine.sh` script.
-3. Configure PMEM as a devdax device: `../../mount-devdax.sh`
-4. Replay both compressed trace files using `pmemanalyze`: `sudo pmemanalyze --device /dev/dax0.0 **TRACE_FILE**.parquet`.
-5. Plot results: `sudo pmemanalyze --plot`.
+3. In system with multiple Optane DIMMs, make sure interleaving is disabled:
+
+```
+ndctl destroy-namespace -f all
+ipmctl create -goal PersistentMemoryType=AppDirectNotInterleaved
+# Reboot now!
+# Execute after reboot:
+ndctl create-namespace
+```
+
+4. Configure PMEM as a devdax device: `../../mount-devdax.sh`
+5. Replay both compressed trace files using `pmemanalyze`: `sudo pmemanalyze --device /dev/dax0.0 **TRACE_FILE**.parquet`.
+6. Plot results: `sudo pmemanalyze --plot`.
