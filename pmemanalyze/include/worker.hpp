@@ -33,6 +33,10 @@ public:
     unsigned long long write_inst_cycles = 0;
     unsigned long long flush_inst_cycles = 0;
 
+    unsigned long long read_inst_cycles_samples = 0;
+    unsigned long long write_inst_cycles_samples = 0;
+    unsigned long long flush_inst_cycles_samples = 0;
+
     unsigned long long unc_ticks = 0;
 
     unsigned long long rpq_inserts = 0;
