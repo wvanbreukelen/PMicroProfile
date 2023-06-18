@@ -69,6 +69,10 @@ Stream& operator<<(Stream& os, const io_sample& sample) {
        << sample.write_inst_cycles << ","
        << sample.num_flushes << ","
        << sample.flush_inst_cycles << ","
+       
+       << sample.read_inst_cycles_samples << ","
+       << sample.write_inst_cycles_samples << ","
+       << sample.flush_inst_cycles_samples << ","
        << sample.bytes_read << ","
        << sample.bytes_written << ","
 
