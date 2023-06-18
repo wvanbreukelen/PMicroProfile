@@ -90,7 +90,8 @@ df['pmem_write_bw'] = (df['wpq_inserts'] * 64 / 1e9) / df['sample_duration_sec']
 # df['bytes_read'] = df['bytes_read'] / (1024 * 1024)
 # df['bytes_written'] = df['bytes_written'] / (1024 * 1024)
 
-df['total_addr_distance_normalized'] = df['total_addr_distance'] / (df['num_reads'] + df['num_writes'] + df['num_barriers'] + df['num_flushes'])
+df['total_ops'] = df['num_reads'] + df['num_writes'] + df['num_flushes']
+df['total_addr_distance_normalized'] = df['total_addr_distance'] / (df['total_ops'] + df['num_barriers'])
 
 # Average latency of data read request
 # df['avg_latency_pmem_read'] = df['rpq_occupancy'] / df['rpq_inserts']
@@ -149,10 +150,15 @@ if plots_cat == "all" or plots_cat == "workload" or plots_cat == "perf" or plots
     ax_rw.plot(df['timestamp_sec'], df['num_writes'], label='Number of Writes')
     ax_rw.plot(df['timestamp_sec'], df['num_flushes'], label='Number of Flushes')
     # ax1.plot(df['timestamp_sec'], df['num_barriers'], label='Number of Barriers')
+
+    #  Writes: {:.2f} Flushes: {:.2f}
+    ax_rw.text(1.0, 1.25, 'Reads: {:.2f} % Writes: {:.2f} %\nFlushes: {:.2f} %'.format((df['num_reads'].sum() / df['total_ops'].sum()) * 100.0, (df['num_writes'].sum() / df['total_ops'].sum()) * 100.0, (df['num_flushes'].sum() / df['total_ops'].sum()) * 100.0),
+        horizontalalignment='right',
+        verticalalignment='top', size=6, transform=ax_rw.transAxes)
     
     ax_rw.set_ylabel('# Operations (log)')
     ax_rw.set_yscale('log')
-    ax_rw.set_title("Retired instructions over time", size=title_font_size)
+    ax_rw.set_title("Number of Retired Instructions", size=title_font_size)
     ax_rw.legend(prop={'size': 8})
 
 if plots_cat == "workload":
@@ -164,10 +170,9 @@ if plots_cat == "workload":
 if plots_cat == "all" or plots_cat == "perf":
     ax_bw.plot(df['timestamp_sec'], df['pmem_read_bw'], label='Read')
     ax_bw.plot(df['timestamp_sec'], df['pmem_write_bw'], label='Write')
-    ax_bw.text(1.0, 1.25, 'Avg. read {:.3f} GB/s\nAvg. write {:.3f} GB/s'.format(df['pmem_read_bw'].mean(), df['pmem_write_bw'].mean()),
+    ax_bw.text(1.0, 1.25, 'Avg. read: {:.3f} GB/s\nAvg. write: {:.3f} GB/s'.format(df['pmem_read_bw'].mean(), df['pmem_write_bw'].mean()),
         horizontalalignment='right',
         verticalalignment='top', size=6, transform=ax_bw.transAxes)
-    ax_bw.set_xlabel('Time (s)')
     ax_bw.set_ylabel('GB/s')
     ax_bw.set_title("PMEM Bandwidth", size=title_font_size)
     ax_bw.legend()
@@ -203,13 +208,6 @@ if plots_cat == "all":
     ax_lat_pebs.set_title("Instruction Latency: measured using PEBS PMEM counters", size=title_font_size)
     ax_lat_pebs.legend()
 
-# Plot the bytes read and written on the bottom subplot
-# ax3.plot(df['timestamp_sec'], df['smoothed_bytes_read'].cumsum(), label='Bytes Read')
-# ax3.plot(df['timestamp_sec'], df['smoothed_bytes_written'].cumsum(), label='Bytes Written')
-# ax3.set_xlabel('Time (s)')
-# ax3.set_ylabel('Mebibyte (MiB)')
-# ax3.legend()
-
 if plots_cat == "all" or plots_cat == "workload":
     ax_isad.plot(df['timestamp_sec'], df['total_addr_distance_normalized'], label='Address Distance')
 
@@ -223,6 +221,9 @@ if plots_cat == "all" or plots_cat == "perf":
     ax_amp.set_xlabel('Time (s)')
     ax_amp.set_ylabel('Factor')
     ax_amp.set_title("Device Read/Write Amplification", size=title_font_size)
+    ax_amp.text(1.0, 1.25, 'Avg. RA: {:.2f}\nAvg. WA: {:.2f}'.format(df['ra'].mean(), df['wa'].mean()),
+        horizontalalignment='right',
+        verticalalignment='top', size=6, transform=ax_amp.transAxes)
     ax_amp.legend()
 
 if plots_cat == "all":
@@ -240,17 +241,18 @@ if plots_cat == "dram":
     ax_dload.set_xlabel('Time (s)')
     ax_dload.set_title("PMEM direct loads")
 
+    ax_l3_miss_pmm.plot(df['timestamp_sec'], df['l3_misses_local_pmm'])
+    ax_l3_miss_pmm.set_ylabel('Count')
+    ax_l3_miss_pmm.set_xlabel('Time (s)')
+    ax_l3_miss_pmm.set_title("PMEM L3 Cache Misses")
+
     ax_l3_miss_dram.plot(df['timestamp_sec'], df['any_scoop_l3_miss_dram'])
     # ax7.plot(df['timestamp_sec'], df['l3_misses_local_pmm'], label='Cache miss PMEM')
     ax_l3_miss_dram.set_ylabel('Count')
     ax_l3_miss_dram.set_xlabel('Time (s)')
     ax_l3_miss_dram.set_title("DRAM L3 Cache Misses")
 
-    # ax8.plot(df['timestamp_sec'], df['any_scoop_l3_miss_dram'], label='Cache miss DRAM')
-    ax_l3_miss_pmm.plot(df['timestamp_sec'], df['l3_misses_local_pmm'])
-    ax_l3_miss_pmm.set_ylabel('Count')
-    ax_l3_miss_pmm.set_xlabel('Time (s)')
-    ax_l3_miss_pmm.set_title("PMEM L3 Cache Misses")
+
 
 plt.tight_layout()
 
