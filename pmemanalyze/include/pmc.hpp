@@ -34,6 +34,14 @@ public:
        	    (void) ioctl(this->fd_probes[i], PERF_EVENT_IOC_ENABLE, 0);
     }
 
+    inline void probe_reset_enable() const
+    {
+        for (size_t i = 0; i < this->num_probes; ++i) {
+       	    (void) ioctl(this->fd_probes[i], PERF_EVENT_IOC_RESET, 0);
+            (void) ioctl(this->fd_probes[i], PERF_EVENT_IOC_ENABLE, 0);
+        }
+    }
+
     inline void probe_disable() const
     {
         for (size_t i = 0; i < this->num_probes; ++i)
@@ -56,10 +64,6 @@ public:
         ssize_t bytes_read;
         if (this->num_probes > 0)
             bytes_read = read(this->fd_probes[0], count, sizeof(count));
-
-	if (bytes_read != sizeof(count))
-		assert(false);
-	//std::cout << "Bytes read: " << bytes_read << std::endl;
     }
 
     inline void set_imc() {
@@ -88,6 +92,7 @@ public:
     void enable_imc_probes() const;
     void disable_imc_probes() const;
     void reset_imc_probes() const;
+    void reset_enable_imc_probes() const;
 
     bool remove_probe(const int fd) const;
     bool remove_imc_probes() const;

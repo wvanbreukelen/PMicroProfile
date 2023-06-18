@@ -205,17 +205,24 @@ void PMC::enable_imc_probes() const
         	this->probes[i].probe_enable();
 }
 
+void PMC::reset_enable_imc_probes() const
+{
+    for (size_t i = 0; i < this->num_probes; ++i)
+	    if (this->probes[i].is_imc())
+            this->probes[i].probe_reset_enable();
+}
+
 void PMC::disable_imc_probes() const
 {
     for (size_t i = 0; i < this->num_probes; ++i)
-	if (this->probes[i].is_imc())
-        	this->probes[i].probe_disable();
+	    if (this->probes[i].is_imc())
+            this->probes[i].probe_disable();
 }
 
 void PMC::reset_imc_probes() const
 {
     for (size_t i = 0; i < this->num_probes; ++i)
-	if (this->probes[i].is_imc())
+	    if (this->probes[i].is_imc())
         	this->probes[i].probe_reset();
 }
 

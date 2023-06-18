@@ -339,8 +339,7 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 //pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_reset();
                 //pmc.get_probe_msr(EVENT_MEM_PMM_HIT_LOCAL_ANY_SNOOP, MSR_L3_MISS_LOCAL_DRAM_ANY_SNOOP).probe_enable();
 
-                pmc.reset_imc_probes();
-                pmc.enable_imc_probes();
+                pmc.reset_enable_imc_probes();
             }
         }
 
