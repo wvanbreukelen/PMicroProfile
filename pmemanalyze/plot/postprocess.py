@@ -266,18 +266,15 @@ if plots_cat == "all":
 
 if plots_cat == "dram":
     ax_dload.plot(df['timestamp_sec'], df['any_scoop_pmm'])
-    ax_dload.set_xlabel('Time (s)')
+    ax_dload.set_ylabel('Count')
     ax_dload.set_title("PMEM direct loads")
 
     ax_l3_miss_pmm.plot(df['timestamp_sec'], df['l3_misses_local_pmm'])
     ax_l3_miss_pmm.set_ylabel('Count')
-    ax_l3_miss_pmm.set_xlabel('Time (s)')
     ax_l3_miss_pmm.set_title("PMEM L3 Cache Misses")
 
     ax_l3_miss_dram.plot(df['timestamp_sec'], df['any_scoop_l3_miss_dram'])
-    # ax7.plot(df['timestamp_sec'], df['l3_misses_local_pmm'], label='Cache miss PMEM')
     ax_l3_miss_dram.set_ylabel('Count')
-    ax_l3_miss_dram.set_xlabel('Time (s)')
     ax_l3_miss_dram.set_title("DRAM L3 Cache Misses")
 
 
