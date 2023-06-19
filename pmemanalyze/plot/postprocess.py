@@ -95,7 +95,7 @@ df['pmem_write_bw'] = (df['wpq_inserts'] * 64 / 1e9) / df['sample_duration_sec']
 # df['bytes_written'] = df['bytes_written'] / (1024 * 1024)
 
 df['total_ops'] = df['num_reads'] + df['num_writes'] + df['num_flushes']
-df['total_addr_distance_normalized'] = df['total_addr_distance'] / (df['total_ops'] + df['num_barriers'])
+df['total_addr_distance_normalized'] = df['total_addr_distance'] / (df['total_ops'])
 df['num_barriers'] = df['num_barriers'].astype(int)
 # Average latency of data read request
 # df['avg_latency_pmem_read'] = df['rpq_occupancy'] / df['rpq_inserts']
@@ -152,6 +152,14 @@ elif plots_cat == "dram":
 fig.suptitle("Filebench Varmail Ext4-DAX, repeated 10 times", size=12)
 fig.text(0.5, 0.01, 'Time (s)', ha='center')
 
+
+mask = df.columns.str.contains('retired_mov*')
+
+num_writes_nt = df.loc[:,mask].sum(axis=1).sum()
+percentage_not_nt = ((df['num_writes'].sum() - num_writes_nt) / df['num_writes'].sum()) * 100.0
+percentage_nt = 100.0 - percentage_not_nt
+
+
 if plots_cat == "all" or plots_cat == "workload":
     # Plot the number of reads and writes on the top subplot
     ax_rw.plot(df['timestamp_sec'], df['num_reads'], label='Number of Reads')
@@ -160,11 +168,11 @@ if plots_cat == "all" or plots_cat == "workload":
     # ax1.plot(df['timestamp_sec'], df['num_barriers'], label='Number of Barriers')
 
     #  Writes: {:.2f} Flushes: {:.2f}
-    ax_rw.text(1.0, stat_margin, 'Reads: {:.2f} % Writes: {:.2f} %\nFlushes: {:.2f} %'.format((df['num_reads'].sum() / df['total_ops'].sum()) * 100.0, (df['num_writes'].sum() / df['total_ops'].sum()) * 100.0, (df['num_flushes'].sum() / df['total_ops'].sum()) * 100.0),
+    ax_rw.text(1.0, stat_margin, 'Reads: {:.2f}% Writes: {:.2f}%\n({:.2f}% is NT) Flushes: {:.2f}%'.format((df['num_reads'].sum() / df['total_ops'].sum()) * 100.0, (df['num_writes'].sum() / df['total_ops'].sum()) * 100.0, percentage_nt, (df['num_flushes'].sum() / df['total_ops'].sum()) * 100.0),
         horizontalalignment='right',
         verticalalignment='top', size=6, transform=ax_rw.transAxes)
     
-    ax_rw.set_ylabel('# Operations (log)')
+    ax_rw.set_ylabel('Count (log)')
     ax_rw.set_yscale('log')
     ax_rw.set_title("Number of Retired Instructions", size=title_font_size)
     box = ax_rw.get_position()
@@ -174,11 +182,11 @@ if plots_cat == "all" or plots_cat == "workload":
     ax_rw.legend(loc='upper center', bbox_to_anchor=(0.5, -0.30),
           fancybox=True, ncol=3, prop={'size': 8})
 
-if plots_cat == "workload":
-    ax_bar.plot(df['timestamp_sec'], df['num_barriers'] , label='Total Number of Barriers')
-    ax_bar.set_xlabel('Time (s)')
+if plots_cat == "all" or plots_cat == "workload":
+    ax_bar.plot(df['timestamp_sec'], df['num_barriers'])
+    ax_bar.set_ylabel('Count')
+    ax_bar.set_title("Number of Memory Barriers", size=title_font_size)
     # ax7.plot(df['timestamp_sec'], (df['bytes_written'].cumsum() / (1024 * 1024)), label='Data Written')
-    ax_bar.legend(prop={'size': 8})
 
 
 if plots_cat == "all" or plots_cat == "perf":
@@ -229,6 +237,10 @@ if plots_cat == "all" or plots_cat == "workload":
     # ax5.set_ylim([0.0, 0.5])
     ax_isad.set_ylabel('ISAD')
 
+    ax_isad.text(1.0, 1.25, 'Avg. {:.4f} (std: {:.4f})'.format(df['total_addr_distance_normalized'].mean(), df['total_addr_distance_normalized'].std()),
+        horizontalalignment='right',
+        verticalalignment='top', size=6, transform=ax_isad.transAxes)
+
 
 if plots_cat == "all" or plots_cat == "perf":
     ax_amp.plot(df['timestamp_sec'], df['ra'], label='RA', marker='o', markersize=2, linestyle='None')
@@ -251,12 +263,6 @@ if plots_cat == "all":
     ax_totals.plot(df['timestamp_sec'], (df['total_read_write'] / (1024 * 1024)), label='Total Read/Write')
     # ax7.plot(df['timestamp_sec'], (df['bytes_written'].cumsum() / (1024 * 1024)), label='Data Written')
     ax_totals.legend()
-
-if plots_cat == "all":
-    ax_bar.plot(df['timestamp_sec'], df['num_barriers'] , label='Total Number of Barriers')
-    # ax7.plot(df['timestamp_sec'], (df['bytes_written'].cumsum() / (1024 * 1024)), label='Data Written')
-    
-    ax_bar.legend()
 
 if plots_cat == "dram":
     ax_dload.plot(df['timestamp_sec'], df['any_scoop_pmm'])
