@@ -349,36 +349,36 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
             {
                 switch (entry.op_size)
                 {
-                    case 1:
-                    {
-                        read_value<uint8_t>(entry, is_sampling, (*cur_sample));
-                        break;
-                    }
-		    case 2:
-		    {
-			read_value<uint16_t>(entry, is_sampling, (*cur_sample));
-			break;
-		    }
-                    case 4:
-                    {
-                        read_value<uint32_t>(entry, is_sampling, (*cur_sample));
-                        break;
-                    }
-                    case 8:
-                    {
-                        read_value<uint64_t>(entry, is_sampling, (*cur_sample));
-                        break;
-                    }
-                    case 16:
-                    {
-                        read_value<__uint128_t>(entry, is_sampling, (*cur_sample));
-                        break;
-                    }
-                    default:
-                        std::cerr << "Unsupported op size " << std::dec << entry.op_size << "!" << std::endl;
-                        
-                        //pthread_exit(NULL);
-                        break;
+                case 1:
+                {
+                    read_value<uint8_t>(entry, is_sampling, (*cur_sample));
+                    break;
+                }
+                case 2:
+                {
+                    read_value<uint16_t>(entry, is_sampling, (*cur_sample));
+                    break;
+                }
+                case 4:
+                {
+                    read_value<uint32_t>(entry, is_sampling, (*cur_sample));
+                    break;
+                }
+                case 8:
+                {
+                    read_value<uint64_t>(entry, is_sampling, (*cur_sample));
+                    break;
+                }
+                case 16:
+                {
+                    read_value<__uint128_t>(entry, is_sampling, (*cur_sample));
+                    break;
+                }
+                default:
+                    std::cerr << "Unsupported op size " << std::dec << entry.op_size << "!" << std::endl;
+                    
+                    //pthread_exit(NULL);
+                    break;
                 }
 
                 #ifdef ENABLE_DCOLLECTION
@@ -406,27 +406,27 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 switch (entry.opcode)
                 {
                 case 0xA4: // 1 byte size
-		case 0x88:
+                case 0x88:
                 {
                     write_mov<uint8_t>(entry, is_sampling, (*cur_sample));
                     break;
                 }
-		case 0x89:
-		{
-		    write_mov<uint32_t>(entry, is_sampling, (*cur_sample));
-		    break;
-		}
-		case 0xC5:
-		{
-		    write_mov<uint64_t>(entry, is_sampling, (*cur_sample));
-		    break;
-		}
+                case 0x89:
+                {
+                    write_mov<uint32_t>(entry, is_sampling, (*cur_sample));
+                    break;
+                }
+                case 0xC5:
+                {
+                    write_mov<uint64_t>(entry, is_sampling, (*cur_sample));
+                    break;
+                }
                 case 0xC30F: // 4-8 bytes - MOVNTI
                 {
                     write_movntq_64(entry, is_sampling, (*cur_sample));
                     break;
                 }
-		case 0x110F: // 8 bytes - MOVUPS
+		        case 0x110F: // 8 bytes - MOVUPS
                 {
                     write_mov<float>(entry, is_sampling, (*cur_sample));
                     break;
@@ -474,15 +474,17 @@ static void replay_trace(TraceFile &trace_file, PMC &pmc, struct io_sample** cur
                 flush_clflush(entry, is_sampling, *cur_sample);
 
                 #ifdef ENABLE_DCOLLECTION
-                ++((*cur_sample)->num_flushes);
+                if (is_sampling) {
+                    ++((*cur_sample)->num_flushes);
 
-                // Determine penalty.
-                if (prev_addr != nullptr) {
-                    if (reinterpret_cast<char*>(entry.dax_addr) - (reinterpret_cast<char*>(prev_addr) + prev_addr_opsize) > 0)
-                        ++((*cur_sample)->total_addr_distance);
+                    // Determine penalty.
+                    if (prev_addr != nullptr) {
+                        if (reinterpret_cast<char*>(entry.dax_addr) - (reinterpret_cast<char*>(prev_addr) + prev_addr_opsize) > 0)
+                            ++((*cur_sample)->total_addr_distance);
+                    }
+                    prev_addr = entry.dax_addr;
+                    prev_addr_opsize = entry.op_size;
                 }
-                prev_addr = entry.dax_addr;
-                prev_addr_opsize = entry.op_size;
                 #endif
                 break;
             }

@@ -4,6 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
+import matplotlib.ticker as mticker
+
 
 def NormalizeData(data):
     return (data - np.min(data)) / (np.max(data) - np.min(data))
@@ -94,7 +96,7 @@ df['pmem_write_bw'] = (df['wpq_inserts'] * 64 / 1e9) / df['sample_duration_sec']
 
 df['total_ops'] = df['num_reads'] + df['num_writes'] + df['num_flushes']
 df['total_addr_distance_normalized'] = df['total_addr_distance'] / (df['total_ops'] + df['num_barriers'])
-
+df['num_barriers'] = df['num_barriers'].astype(int)
 # Average latency of data read request
 # df['avg_latency_pmem_read'] = df['rpq_occupancy'] / df['rpq_inserts']
 
@@ -134,21 +136,23 @@ df.dropna(subset=["wa", "ra"], how="all", inplace=True)
 with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
     print(df.loc[[6]])
 
+stat_margin = 1.45
 
 if plots_cat == "all":
-    fig, (ax_rw, ax_bw, ax_lat_read, ax_lat_write, ax_lat_pebs, ax_isad, ax_amp, ax_totals, ax_bar) = plt.subplots(nrows=9, ncols=1, figsize=(12, 10))
+    fig, (ax_rw, ax_bw, ax_lat_read, ax_lat_write, ax_lat_pebs, ax_isad, ax_amp, ax_totals, ax_bar) = plt.subplots(nrows=9, ncols=1, figsize=(12, 10), sharex=True)
 elif plots_cat == "workload":
-    fig, (ax_rw, ax_bar, ax_isad) = plt.subplots(nrows=3, ncols=1, figsize=(6, 5))
+    fig, (ax_rw, ax_bar, ax_isad) = plt.subplots(nrows=3, ncols=1, figsize=(6, 4), sharex=True)
 elif plots_cat == "perf":
-    fig, (ax_rw, ax_bw, ax_amp) = plt.subplots(nrows=3, ncols=1, figsize=(6, 5))
+    fig, (ax_bw, ax_amp, ax_lat_read, ax_lat_write) = plt.subplots(nrows=4, ncols=1, figsize=(6, 4.8), sharex=True)
 elif plots_cat == "latency":
-    fig, (ax_rw, ax_lat_read, ax_lat_write) = plt.subplots(nrows=3, ncols=1, figsize=(6, 5))
+    fig, (ax_rw, ax_lat_read, ax_lat_write) = plt.subplots(nrows=3, ncols=1, figsize=(6, 5), sharex=True)
 elif plots_cat == "dram":
-    fig, (ax_dload, ax_l3_miss_dram, ax_l3_miss_pmm) = plt.subplots(nrows=3, ncols=1, figsize=(5, 4))
+    fig, (ax_dload, ax_l3_miss_dram, ax_l3_miss_pmm) = plt.subplots(nrows=3, ncols=1, figsize=(5, 4), sharex=True)
 
 fig.suptitle("Filebench Varmail Ext4-DAX, repeated 10 times", size=12)
+fig.text(0.5, 0.01, 'Time (s)', ha='center')
 
-if plots_cat == "all" or plots_cat == "workload" or plots_cat == "perf" or plots_cat == "latency":
+if plots_cat == "all" or plots_cat == "workload":
     # Plot the number of reads and writes on the top subplot
     ax_rw.plot(df['timestamp_sec'], df['num_reads'], label='Number of Reads')
     ax_rw.plot(df['timestamp_sec'], df['num_writes'], label='Number of Writes')
@@ -156,7 +160,7 @@ if plots_cat == "all" or plots_cat == "workload" or plots_cat == "perf" or plots
     # ax1.plot(df['timestamp_sec'], df['num_barriers'], label='Number of Barriers')
 
     #  Writes: {:.2f} Flushes: {:.2f}
-    ax_rw.text(1.0, 1.33, 'Reads: {:.2f} % Writes: {:.2f} %\nFlushes: {:.2f} %'.format((df['num_reads'].sum() / df['total_ops'].sum()) * 100.0, (df['num_writes'].sum() / df['total_ops'].sum()) * 100.0, (df['num_flushes'].sum() / df['total_ops'].sum()) * 100.0),
+    ax_rw.text(1.0, stat_margin, 'Reads: {:.2f} % Writes: {:.2f} %\nFlushes: {:.2f} %'.format((df['num_reads'].sum() / df['total_ops'].sum()) * 100.0, (df['num_writes'].sum() / df['total_ops'].sum()) * 100.0, (df['num_flushes'].sum() / df['total_ops'].sum()) * 100.0),
         horizontalalignment='right',
         verticalalignment='top', size=6, transform=ax_rw.transAxes)
     
@@ -176,22 +180,27 @@ if plots_cat == "workload":
     # ax7.plot(df['timestamp_sec'], (df['bytes_written'].cumsum() / (1024 * 1024)), label='Data Written')
     ax_bar.legend(prop={'size': 8})
 
+
 if plots_cat == "all" or plots_cat == "perf":
     ax_bw.plot(df['timestamp_sec'], df['pmem_read_bw'], label='Read')
     ax_bw.plot(df['timestamp_sec'], df['pmem_write_bw'], label='Write')
-    ax_bw.text(1.0, 1.33, 'Avg. read: {:.3f} GB/s\nAvg. write: {:.3f} GB/s'.format(df['pmem_read_bw'].mean(), df['pmem_write_bw'].mean()),
+    ax_bw.text(1.0, stat_margin, 'Avg. read: {:.3f} GB/s\nAvg. write: {:.3f} GB/s'.format(df['pmem_read_bw'].mean(), df['pmem_write_bw'].mean()),
         horizontalalignment='right',
         verticalalignment='top', size=6, transform=ax_bw.transAxes)
     ax_bw.set_ylabel('GB/s')
     ax_bw.set_title("PMEM Bandwidth", size=title_font_size)
-    ax_bw.legend()
+    box = ax_bw.get_position()
+    ax_bw.set_position([box.x0, box.y0 + box.height * 0.1,
+                 box.width, box.height * 0.9])
 
-if plots_cat == "all" or plots_cat == "latency":
+    ax_bw.legend(loc='upper center', bbox_to_anchor=(0.5, 0.0),
+          fancybox=True, ncol=3, prop={'size': 8})
+    
+
+if plots_cat == "all" or plots_cat == "latency" or plots_cat == "perf":
     # Plot the average latency per write operation on the middle subplot
     ax_lat_read.plot(df['timestamp_sec'], df['avg_latency_inst_read'], marker='o', markersize=2, linestyle='None')
-    # ax_lat.plot(df['timestamp_sec'], df['avg_latency_inst_write'], label='Write')
-    ax_lat_read.set_xlabel('Time (s)')
-    ax_lat_read.set_ylabel('Nanoseconds')
+    ax_lat_read.set_ylabel('ns')
     ax_lat_read.set_title("Instruction Read Latency", size=title_font_size)
     ax_lat_read.text(1.0, 1.25, 'Avg. {:.2f} ns (std: {:.2f})'.format(df['avg_latency_inst_read'].mean(), df['avg_latency_inst_read'].std()),
         horizontalalignment='right',
@@ -199,20 +208,16 @@ if plots_cat == "all" or plots_cat == "latency":
     # ax_lat_read.legend()
 
     ax_lat_write.plot(df['timestamp_sec'], df['avg_latency_inst_write'], marker='o', markersize=2, c='darkorange', linestyle='None')
-    # ax_lat.plot(df['timestamp_sec'], df['avg_latency_inst_write'], label='Write')
-    ax_lat_write.set_xlabel('Time (s)')
-    ax_lat_write.set_ylabel('Nanoseconds')
+    ax_lat_write.set_ylabel('ns')
     ax_lat_write.set_title("Instruction Write Latency", size=title_font_size)
     ax_lat_write.text(1.0, 1.25, 'Avg. {:.2f} ns (std: {:.2f})'.format(df['avg_latency_inst_write'].mean(), df['avg_latency_inst_write'].std()),
         horizontalalignment='right',
         verticalalignment='top', size=6, transform=ax_lat_write.transAxes)
-    # ax_lat_write.legend()
 
 # ax4.plot(df['timestamp_sec'], df['avg_latency_dev_read_dram'], label='DRAM Read Latency')
 if plots_cat == "all":
     ax_lat_pebs.plot(df['timestamp_sec'], df['avg_latency_dev_read'], label='Read')
     # ax_lat_pebs.plot(df['timestamp_sec'], df['avg_latency_dev_write'], label='Write')
-    ax_lat_pebs.set_xlabel('Time (s)')
     ax_lat_pebs.set_ylabel('Latency (ns)')
     ax_lat_pebs.set_title("Instruction Latency: measured using PEBS PMEM counters", size=title_font_size)
     ax_lat_pebs.legend()
@@ -224,16 +229,23 @@ if plots_cat == "all" or plots_cat == "workload":
     # ax5.set_ylim([0.0, 0.5])
     ax_isad.set_ylabel('ISAD')
 
+
 if plots_cat == "all" or plots_cat == "perf":
     ax_amp.plot(df['timestamp_sec'], df['ra'], label='RA', marker='o', markersize=2, linestyle='None')
     ax_amp.plot(df['timestamp_sec'], df['wa'], label='WA', marker='o', markersize=2, linestyle='None')
-    ax_amp.set_xlabel('Time (s)')
+    # ax_amp.set_xlabel('Time (s)')
     ax_amp.set_ylabel('Factor')
     ax_amp.set_title("Device Read/Write Amplification", size=title_font_size)
-    ax_amp.text(1.0, 1.33, 'Avg. RA: {:.2f}\nAvg. WA: {:.2f}'.format(df['ra'].mean(), df['wa'].mean()),
+    ax_amp.text(1.0, stat_margin, 'Avg. RA: {:.2f}\nAvg. WA: {:.2f}'.format(df['ra'].mean(), df['wa'].mean()),
         horizontalalignment='right',
         verticalalignment='top', size=6, transform=ax_amp.transAxes)
-    ax_amp.legend()
+    box = ax_amp.get_position()
+    ax_amp.set_position([box.x0, box.y0 + box.height * 0.1,
+                 box.width, box.height * 0.9])
+
+    ax_amp.legend(loc='upper center', bbox_to_anchor=(0.5, 0.0),
+          fancybox=True, ncol=3, prop={'size': 8})
+
 
 if plots_cat == "all":
     ax_totals.plot(df['timestamp_sec'], (df['total_read_write'] / (1024 * 1024)), label='Total Read/Write')
@@ -243,6 +255,7 @@ if plots_cat == "all":
 if plots_cat == "all":
     ax_bar.plot(df['timestamp_sec'], df['num_barriers'] , label='Total Number of Barriers')
     # ax7.plot(df['timestamp_sec'], (df['bytes_written'].cumsum() / (1024 * 1024)), label='Data Written')
+    
     ax_bar.legend()
 
 if plots_cat == "dram":
