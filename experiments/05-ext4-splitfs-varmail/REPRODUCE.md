@@ -1,4 +1,4 @@
-## Analysize microarchitectural performance: Ext4-DAX <-> SplitFS varmail
+## Analyse microarchitectural performance: Ext4-DAX <-> SplitFS varmail
 
 ## Prerequisites
 - Working VM installation to extract traces, which included installing all dependencies and pmemtrace itself using install script (see Thesis Artifact for installation steps);

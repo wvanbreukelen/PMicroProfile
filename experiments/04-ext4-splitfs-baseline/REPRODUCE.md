@@ -1,9 +1,9 @@
-## Analysize microarchitectural performance: Ext4-DAX <-> SplitFS baseline
+## Analyse microarchitectural performance: Ext4-DAX <-> SplitFS baseline
 
 ## Prerequisites
 - Working VM installation to extract traces, which included installing all dependencies and pmemtrace itself using install script (see Thesis Artifact for installation steps);
      * (!) Please make sure that you installed the Clang compiling, including the provided pass, by adding the `--build-llvm` flag, i.e.: `../../install-real-machine.sh --build-llvm`.
-- Working Linux 5.* machine, with real Persistent Memory. Kernel must be build with DAX support (Ubuntu includes DAX support by default).
+- Working Linux https://github.com/wvanbreukelen/PMicroTune5.* machine, with real Persistent Memory. Kernel must be build with DAX support (Ubuntu includes DAX support by default).
 - Python 3 (including matplotlib package);
 
 ## Reproducing trace files (done inside VM)
