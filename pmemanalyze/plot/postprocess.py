@@ -16,7 +16,7 @@ script_name = os.path.basename(__file__)
 plots_cat = "all"
 cur_filesystem = "SplitFS"
 title_font_size = 14
-info_font_size = 9
+info_font_size = 10
 axes_font_size = 14
 legend_font_size = 11
 
@@ -147,7 +147,7 @@ if plots_cat == "all":
     fig, (ax_rw, ax_bw, ax_lat_read, ax_lat_write, ax_lat_pebs, ax_isad, ax_amp, ax_totals, ax_bar) = plt.subplots(nrows=9, ncols=1, figsize=(12, 10), sharex=True)
     fig.text(0.5, 0.01, 'Time (s)', ha='center', size=axes_font_size)
 elif plots_cat == "workload_rw":
-    fig, (ax_rw) = plt.subplots(nrows=1, ncols=1, figsize=(8.5, 2.5))
+    fig, (ax_rw) = plt.subplots(nrows=1, ncols=1, figsize=(9.4, 2.7))
     fig.text(0.5, 0.02, 'Time (s)', ha='center', size=axes_font_size)
 elif plots_cat == "workload":
     fig, (ax_rw, ax_bar, ax_isad) = plt.subplots(nrows=3, ncols=1, figsize=(6, 4), sharex=True)
