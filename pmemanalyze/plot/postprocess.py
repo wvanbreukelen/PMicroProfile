@@ -7,6 +7,13 @@ from scipy import stats
 import matplotlib.ticker as mticker
 import seaborn
 
+def remove_outliers(df, col):
+    Q1 = df[col].quantile(0.25)
+    Q3 = df[col].quantile(0.75)
+    IQR = Q3 - Q1
+    print(Q1, Q3, IQR)
+    df = df[(df[col] > (Q1 - 1.5 * IQR)) & (df[col] < (Q3 + 1.5 * IQR))]
+    return df
 
 def NormalizeData(data):
     return (data - np.min(data)) / (np.max(data) - np.min(data))
@@ -16,9 +23,9 @@ script_name = os.path.basename(__file__)
 plots_cat = "all"
 cur_filesystem = "SplitFS"
 title_font_size = 14
-info_font_size = 10
+info_font_size = 11
 axes_font_size = 14
-legend_font_size = 11
+legend_font_size = 12
 
 # Check if a filename was provided as a command-line argument
 if len(sys.argv) < 2:
@@ -105,15 +112,6 @@ df['num_barriers'] = df['num_barriers'].astype(int)
 # Average latency of data read request
 # df['avg_latency_pmem_read'] = df['rpq_occupancy'] / df['rpq_inserts']
 
-cols = ['wa']
-
-# multiplier = 2.0  # Adjust this value to remove fewer or more outliers
-
-# Q1 = df.quantile(0.25)
-# Q3 = df.quantile(0.75)
-# IQR = Q3 - Q1
-
-# df = df[~((df[cols] < (Q1 - multiplier * IQR)) | (df[cols] > (Q3 + multiplier * IQR))).any(axis=1)]
 
 
 
@@ -137,6 +135,9 @@ df.replace([np.inf, -np.inf], np.nan, inplace=True)
 df.dropna(subset=["wa", "ra"], how="all", inplace=True)
 
 
+
+
+
 # Print the contents of the DataFrame
 with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
     print(df.loc[[6]])
@@ -155,9 +156,10 @@ elif plots_cat == "workload":
 elif plots_cat == "perf":
     fig, (ax_bw, ax_amp, ax_lat_read, ax_lat_write) = plt.subplots(nrows=4, ncols=1, figsize=(6, 4), sharex=True)
     fig.text(0.5, 0.01, 'Time (s)', ha='center')
+elif plots_cat == "bw":
+    fig, (ax_bw) = plt.subplots(nrows=1, ncols=1, figsize=(8, 2))
 elif plots_cat == "amp":
-    fig, (ax_bw, ax_amp) = plt.subplots(nrows=2, ncols=1, figsize=(6, 2), sharex=True)
-    fig.text(0.5, 0.02, 'Time (s)', ha='center')
+    fig, (ax_amp) = plt.subplots(nrows=1, ncols=1, figsize=(8, 2.2))
 elif plots_cat == "latency":
     fig, (ax_lat_read) = plt.subplots(nrows=1, ncols=1, figsize=(3, 2), sharex=False)
     # fig.text(0.5, 0.01, 'Time (s)', ha='center')
@@ -207,7 +209,24 @@ if plots_cat == "all" or plots_cat == "workload":
     # ax7.plot(df['timestamp_sec'], (df['bytes_written'].cumsum() / (1024 * 1024)), label='Data Written')
 
 
-if plots_cat == "all" or plots_cat == "perf" or plots_cat == "amp":
+if plots_cat == "bw":
+    ax_bw.plot(df['timestamp_sec'], df['pmem_read_bw'], label='Read')
+    ax_bw.plot(df['timestamp_sec'], df['pmem_write_bw'], label='Write')
+    ax_bw.text(1.0, 1.45, 'Avg. read: {:.3f} GB/s\nAvg. write: {:.3f} GB/s'.format(df['pmem_read_bw'].mean(), df['pmem_write_bw'].mean()),
+        horizontalalignment='right',
+        verticalalignment='top', size=info_font_size, transform=ax_bw.transAxes)
+    ax_bw.set_ylabel('GB/s', fontsize=axes_font_size)
+    ax_bw.set_title("Bandwidth {}".format(cur_filesystem), size=title_font_size)
+    ax_bw.set_xlabel('Time (sec)', fontsize=axes_font_size)
+    box = ax_bw.get_position()
+    ax_bw.set_position([box.x0, box.y0 + box.height * 0.1,
+                 box.width, box.height * 0.9])
+
+    ax_bw.legend(prop={'size': legend_font_size})
+    # ax_bw.legend(loc='upper center', bbox_to_anchor=(0.5, 0.0),
+    #       fancybox=True, ncol=3, prop={'size': legend_font_size})
+
+if plots_cat == "all" or plots_cat == "perf":
     ax_bw.plot(df['timestamp_sec'], df['pmem_read_bw'], label='Read')
     ax_bw.plot(df['timestamp_sec'], df['pmem_write_bw'], label='Write')
     ax_bw.text(1.0, stat_margin, 'Avg. read: {:.3f} GB/s\nAvg. write: {:.3f} GB/s'.format(df['pmem_read_bw'].mean(), df['pmem_write_bw'].mean()),
@@ -266,7 +285,7 @@ if plots_cat == "all" or plots_cat == "perf" or plots_cat == "amp":
     ax_amp.plot(df['timestamp_sec'], df['wa'], label='WA', marker='o', markersize=2, linestyle='None')
     # ax_amp.set_xlabel('Time (s)')
     ax_amp.set_ylabel('Factor', fontsize=axes_font_size)
-    ax_amp.set_title("Device Read/Write Amplification", size=title_font_size)
+    ax_amp.set_title("Device Read/Write Amplification {}".format(cur_filesystem), size=title_font_size)
     ax_amp.text(1.0, stat_margin, 'Avg. RA: {:.2f}\nAvg. WA: {:.2f}'.format(df['ra'].mean(), df['wa'].mean()),
         horizontalalignment='right', 
         verticalalignment='top', size=info_font_size, transform=ax_amp.transAxes)
@@ -277,6 +296,8 @@ if plots_cat == "all" or plots_cat == "perf" or plots_cat == "amp":
     if plots_cat != "amp":
         ax_amp.legend(loc='upper center', bbox_to_anchor=(0.5, 0.0),
             fancybox=True, ncol=3, prop={'size': 8})
+    else:
+        ax_amp.set_xlabel('Time (sec)', size=axes_font_size)
 
 
 if plots_cat == "all":
