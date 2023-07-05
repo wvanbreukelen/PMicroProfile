@@ -115,6 +115,6 @@ python3 pmemanalyze/plot/postprocess.py perf data.csv
 ![Example Metric](./plots/experiments/pmemanalyze_varmail_ext4dax_dram.png)
 
 
-## Experiments
+## Reproducing Experiments
 
 All experiments can be found in the `experiments/` folder. Each experiment is assigned a `REPRODUCE.md` readme file with further instructions to reproduce experiment results.
