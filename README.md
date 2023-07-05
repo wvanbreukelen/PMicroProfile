@@ -4,14 +4,14 @@ PMicroProfile is a performance profiling framework that can be used to evaluate 
 
 Currently, PMicroProfile only supports Intel Optane DC Persistent Memory.
 
-# Design
+## Design
 
 PMicroProfile consists of two tools that complement each other:
 
 - _pmemtrace_: a tool that captures file system access patterns in the form of machine instructions (e.g. `movnti`)
 - _pmemanalyze_: a tool that replays caputured traces and calculates performance metrics (see example below)
 
-# Installation
+## Installation
 
 The installation instructions for both _pmemtrace_ and _pmemanalyze_ tools are provided below.
 
@@ -72,7 +72,7 @@ $ ./install-real-machine.sh
 cd experiments
 ```
 
-# Usage
+## Usage
 
 To enable access tracing when executing a CLI command, use the following syntax: `sudo pmemtrace [OPTIONS] experiment_name [COMMAND]`. When executing the command, _pmemtrace_ configures the in-kernel infrastructure to log low-level PMEM accesses and then executes the provided command. In order to decrease tracing overhead, one may use a sampling-based data collection strategy by passing the `--sample-rate` (in hertz) and `--duty-cycle` (in percentage) arguments. To capture all events, the `--disable-sampling` flag must be provided. Example usage:
 
@@ -100,7 +100,7 @@ sudo pmemanalyze --device /dev/dax0.0 [trace_file].parquet
 
 The raw (unprocessed) performance statistics will be stored in a `data.csv` file.
 
-# Plotting
+## Plotting
 Plotting is done by using the `postprocess.py` Python script and consists of loading a `data.csv` file:
 
 ```bash
@@ -115,6 +115,6 @@ python3 pmemanalyze/plot/postprocess.py perf data.csv
 ![Example Metric](./plots/experiments/pmemanalyze_varmail_ext4dax_dram.png)
 
 
-# Experiments
+## Experiments
 
 All experiments can be found in the `experiments/` folder. Each experiment is assigned a `REPRODUCE.md` readme file with further instructions to reproduce experiment results.
