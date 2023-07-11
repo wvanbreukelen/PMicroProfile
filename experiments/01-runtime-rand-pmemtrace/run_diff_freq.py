@@ -5,7 +5,7 @@ import os
 import matplotlib.pyplot as plt
 
 # Define the file sizes to run the commands with
-frequencies = [10, 20, 40, 60, 120]
+frequencies = [20, 40, 60, 120]
 duty_cycles = [0.5, 0.7, 0.9, 0.95]
 num_runs = 2
 
