@@ -30,14 +30,16 @@ def main():
     # Run the first command with pmemtrace
     print("Running command with pmemtrace...")
     print("-----------------------------")
-    freq_values = []
-    accuracy_values = []
+
 
     fig, axes = plt.subplots(nrows=2, ncols=2)
 
     i = 0
 
     for duty_cycle in duty_cycles:
+        freq_values = []
+        accuracy_values = []
+        
         for freq in frequencies:
             times = [run_command_with_pmemtrace(freq, duty_cycle) for i in range(num_runs)]
             avg_time = statistics.mean(times)
