@@ -58,7 +58,7 @@ def main():
             accuracy = (total_write_bytes_traced * 100) / (16 * 1024 * 1024)
             
             freq_values.append(freq)
-            accuracy_values.append(accuracy)
+            accuracy_values.append(total_write_bytes_traced / avg_time)
             
             print(f"D: {duty_cycle * 100}% HZ: {freq:<8} {avg_time:.3f} ({std_dev:.3f} std. dev.) write bytes traced: {total_write_bytes_traced} ({accuracy:.3f}% accuracy)")
         
@@ -69,7 +69,7 @@ def main():
         i += 1
 
     plt.setp(axes[-1, :], xlabel='Frequency (Hz)')
-    plt.setp(axes[:, 0], ylabel='Accuracy (%)')
+    plt.setp(axes[:, 0], ylabel='Accuracy/sec (%)')
 
     # fig.grid(True)
     plt.tight_layout()
