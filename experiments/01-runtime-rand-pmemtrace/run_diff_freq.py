@@ -65,6 +65,7 @@ def main():
         # Plot the line graph
         axes.flatten()[i].plot(freq_values, accuracy_values, marker='o')
         axes.flatten()[i].set_title(f"{duty_cycle * 100}% duty cycle", fontsize=8)
+        axes.flatten()[i].set_ylim(0.5, 2.5)
         
         i += 1
 
