@@ -29,7 +29,7 @@ set $meandirwidth=100000
 set $cnt=2000000
 set $filesize=cvar(type=cvar-gamma,parameters=mean:4096;gamma:1.5)
 set $nthreads=1
-set $iosize=4k
+set $iosize=1k
 set $meanappendsize=1k
 set $iters=1
 

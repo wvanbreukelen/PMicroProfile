@@ -69,5 +69,9 @@ ax.figure.autofmt_xdate(rotation=45)
 # plt.clf()
 
 
+
 plt.tight_layout()
+
+plt.savefig("fs-performance-breakdown.pdf", bbox_inches='tight')
+plt.savefig("pmemtrace-overhead.png", bbox_inches='tight', dpi=800)
 plt.show()

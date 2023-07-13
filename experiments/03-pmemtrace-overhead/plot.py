@@ -11,6 +11,9 @@ def plot_column(groups, column_name, label):
 data = pd.read_csv('results.csv')
 
 
+
+plt.figure(figsize=(6, 4))
+
 # group data by overhead type
 groups = data.groupby('working_set_size')
 
@@ -35,7 +38,12 @@ plt.ylabel('Percentage of Run Time (%)')
 # show legend
 plt.legend(prop={'size': 8})
 
+
+
 plt.tight_layout()
+
+plt.savefig("pmemtrace-overhead.pdf", bbox_inches='tight')
+
 
 # show plot
 plt.show()

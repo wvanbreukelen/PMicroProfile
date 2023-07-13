@@ -25,4 +25,9 @@ ndctl create-namespace
 
 4. Configure PMEM as a devdax device: `../../mount-devdax.sh`
 5. Replay both compressed trace files using `pmemanalyze`: `sudo pmemanalyze --device /dev/dax0.0 **TRACE_FILE**.parquet`.
-6. Plot results: `sudo pmemanalyze --plot`.
+6. Plot results:
+```bash
+python3 pmemanalyze/plot/postprocess.py workload data.csv
+python3 pmemanalyze/plot/postprocess.py perf data.csv
+python3 pmemanalyze/plot/postprocess.py bandwidth data.csv
+```
