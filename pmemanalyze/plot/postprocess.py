@@ -20,7 +20,7 @@ def NormalizeData(data):
 
 # Get the script name
 script_name = os.path.basename(__file__)
-plots_cat = "all"
+plots_cat = "workload"
 cur_filesystem = "SplitFS"
 title_font_size = 14
 info_font_size = 11
@@ -135,12 +135,12 @@ df.replace([np.inf, -np.inf], np.nan, inplace=True)
 df.dropna(subset=["wa", "ra"], how="all", inplace=True)
 
 
+df = remove_outliers(df, "wa")
 
 
-
-# Print the contents of the DataFrame
-with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-    print(df.loc[[6]])
+# # Print the contents of the DataFrame
+# with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+#     print(df.loc[[6]])
 
 stat_margin = 1.55
 
@@ -151,11 +151,23 @@ elif plots_cat == "workload_rw":
     fig, (ax_rw) = plt.subplots(nrows=1, ncols=1, figsize=(9.4, 2.7))
     fig.text(0.5, 0.02, 'Time (s)', ha='center', size=axes_font_size)
 elif plots_cat == "workload":
-    fig, (ax_rw, ax_bar, ax_isad) = plt.subplots(nrows=3, ncols=1, figsize=(6, 4), sharex=True)
+    stat_margin = 1.65
+    title_font_size = 11
+    info_font_size = 8
+    axes_font_size = 11
+    legend_font_size = 10
+    fig, (ax_rw, ax_bar, ax_isad) = plt.subplots(nrows=3, ncols=1, figsize=(8, 4), sharex=True)
     fig.text(0.5, 0.01, 'Time (s)', ha='center')
+    fig.suptitle(f"Filebench Varmail {cur_filesystem}, repeated 10 times")
 elif plots_cat == "perf":
-    fig, (ax_bw, ax_amp, ax_lat_read, ax_lat_write) = plt.subplots(nrows=4, ncols=1, figsize=(6, 4), sharex=True)
+    stat_margin = 1.65
+    title_font_size = 11
+    info_font_size = 8
+    axes_font_size = 11
+    legend_font_size = 10
+    fig, (ax_bw, ax_amp, ax_lat_read, ax_lat_write) = plt.subplots(nrows=4, ncols=1, figsize=(6, 4.8), sharex=True)
     fig.text(0.5, 0.01, 'Time (s)', ha='center')
+    fig.suptitle(f"Filebench Varmail {cur_filesystem}, repeated 50 times")
 elif plots_cat == "bw":
     fig, (ax_bw) = plt.subplots(nrows=1, ncols=1, figsize=(8, 2))
 elif plots_cat == "amp":
@@ -196,8 +208,8 @@ if plots_cat == "all" or plots_cat == "workload" or plots_cat == "workload_rw":
     ax_rw.set_yscale('log')
     ax_rw.set_title("Number of Retired Instructions {}".format(cur_filesystem), size=title_font_size)
     box = ax_rw.get_position()
-    ax_rw.set_position([box.x0, box.y0 + box.height * 0.1,
-                 box.width, box.height * 0.9])
+    ax_rw.set_position([box.x0, box.y0 + box.height * 0.15,
+                 box.width, box.height * 0.85])
 
     ax_rw.legend(loc='upper center', bbox_to_anchor=(0.5, -0.30),
           fancybox=True, ncol=3, prop={'size': legend_font_size})
@@ -205,7 +217,7 @@ if plots_cat == "all" or plots_cat == "workload" or plots_cat == "workload_rw":
 if plots_cat == "all" or plots_cat == "workload":
     ax_bar.plot(df['timestamp_sec'], df['num_barriers'])
     ax_bar.set_ylabel('Count', fontsize=axes_font_size)
-    ax_bar.set_title("Number of Memory Barriers", size=title_font_size)
+    ax_bar.set_title("Number of Memory Fences", size=title_font_size)
     # ax7.plot(df['timestamp_sec'], (df['bytes_written'].cumsum() / (1024 * 1024)), label='Data Written')
 
 
@@ -248,7 +260,7 @@ if plots_cat == "all" or plots_cat == "latency" or plots_cat == "perf":
     ax_lat_read.set_ylabel('ns', fontsize=axes_font_size)
     # ax_lat_read.set_xlabel('Time (sec)', fontsize=axes_font_size)
     ax_lat_read.set_title("Instruction Read Latency", size=title_font_size)
-    ax_lat_read.text(1.0, 1.1, 'Avg. {:.2f} ns ($\sigma$={:.2f})'.format(df['avg_latency_inst_read'].mean(), df['avg_latency_inst_read'].std()),
+    ax_lat_read.text(1.0, stat_margin - 0.2, 'Avg. {:.2f} ns ($\sigma$={:.2f})'.format(df['avg_latency_inst_read'].mean(), df['avg_latency_inst_read'].std()),
         horizontalalignment='right',
         verticalalignment='top', size=info_font_size, transform=ax_lat_read.transAxes)
     # ax_lat_read.legend()
@@ -256,7 +268,7 @@ if plots_cat == "all" or plots_cat == "latency" or plots_cat == "perf":
     ax_lat_write.plot(df['timestamp_sec'], df['avg_latency_inst_write'], marker='o', markersize=2, c='darkorange', linestyle='None')
     ax_lat_write.set_ylabel('ns', fontsize=axes_font_size)
     ax_lat_write.set_title("Instruction Write Latency", size=title_font_size)
-    ax_lat_write.text(1.0, 1.1, 'Avg. {:.2f} ns ($\sigma$={:.2f})'.format(df['avg_latency_inst_write'].mean(), df['avg_latency_inst_write'].std()),
+    ax_lat_write.text(1.0, stat_margin - 0.2, 'Avg. {:.2f} ns ($\sigma$={:.2f})'.format(df['avg_latency_inst_write'].mean(), df['avg_latency_inst_write'].std()),
         horizontalalignment='right',
         verticalalignment='top', size=info_font_size, transform=ax_lat_write.transAxes)
 
@@ -275,10 +287,9 @@ if plots_cat == "all" or plots_cat == "workload":
     # ax5.set_ylim([0.0, 0.5])
     ax_isad.set_ylabel('ISAD')
 
-    ax_isad.text(1.0, 1.25, 'Avg. {:.4f} ($\sigma$ {:.4f})'.format(df['total_addr_distance_normalized'].mean(), df['total_addr_distance_normalized'].std()),
+    ax_isad.text(1.0, stat_margin - 0.2, 'Avg. {:.4f} ($\sigma$={:.4f})'.format(df['total_addr_distance_normalized'].mean(), df['total_addr_distance_normalized'].std()),
         horizontalalignment='right',
         verticalalignment='top', size=info_font_size, transform=ax_isad.transAxes)
-
 
 if plots_cat == "all" or plots_cat == "perf" or plots_cat == "amp":
     ax_amp.plot(df['timestamp_sec'], df['ra'], label='RA', marker='o', markersize=2, linestyle='None')
@@ -380,7 +391,7 @@ plt.yticks(fontsize=axes_font_size)
 
 plt.tight_layout()
 
-plt.savefig("test.png", format="png", dpi=400)
+plt.savefig(f"{plots_cat}_{cur_filesystem}.pdf", bbox_inches='tight')
 
 # Display the plot
 plt.show()
